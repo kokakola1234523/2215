@@ -1,1 +1,579 @@
+-- << Configuration >> --
+local Whitelisted_Users = {
+    "2B9K2", -- ⚠️ ឈ្មោះទី១
+    "ZEREF885",            -- ⚠️ ឈ្មោះទី២
+    "LIONELMESSI101JR",-- ⚠️ លោកអ្នកអាចថែមឈ្មោះបន្តបន្ទាប់ទៀតបានដោយប្រើសញ្ញាក្បៀស (,)
+    "BFQX_lenny2",
+    "Mastercreator2012",
+    "wheniwasyourmen1629",
+    "Blacksigma12345lulu",
+    "SATORUGOJO202673",
+    "yingyb099",
+    "NeonBearSpark",
+    "Nit20103",
+    "tech_hack4",
+    "seang_640",
+    "kouneng0505",
+    "AlexSantro71",
+    "seang_640",
+    "SaKuRa_gg132",
+    "Brak_Reaksa",
+    "XxTurb0PixelatedN0va",
+    "kira007302",
+    "Bropol98",
+    "kingmonzin",
+    "Garaa1269",
+    "PiSUNF13",
+    "Ah_C34",
+    "corazon_835",
+    "Rozuk16",
+    "Caccie_lampa",
+    "Sa123zz191200",
+    "aque_ace60",
+    "Danzakaisi3",
+    "KillAnime4",
+    "Bunlayll008",
+    "AkoSiMambert",
+    "KirkRose4906",
+    "Burikets1178",
+    "BNT98_noob",
+    "Broheng0110",
+    "Thanlosing",
+    "W4ZXR",
+    "Iuebrknd",
+    "XxSparklyDuckxX2002",
+    "Jbfght36",
+    "TTR_9760",
+    "rattany9",
+    "HRrhKPzN2307",
+    "C7YOUFF",
+    "net1138",
+    "vovovo_398",
+    "SOKTORN2009",
+    "MONL_241",
+    "XxPh03nixFlam3Mystic",
+    "GOJOOO12343",
+    "Hongza_0",
+    "Khgchfjcyfc",
+    "MARAcr7777",
+    "leap100A1",
+    "Hong_LyKG",
+    "SIPDER_man20124",
+    "chenkk6",
+    "BALARYNAKAPUGI",
+    "LYCHHAY123456",
+    "1bigqqqq6",
+    "DJVIP062",
+    "JinLong20069",
+    "Kougami_3",
+    "PU_robot99",
+    "Anhahvit174",
+    "lose_store1",
+    "max_JBO1",
+    "Noukie169", 
+    "FlworMeZ",
+    "leap3112014",
+    "Johan_Liebert9990",
+    "Johan_Hunter9",
+    "CoffeEn2o",
+    "menghak2005",
+    "MillikMC",
+    "sadsadff5678",
+    "Girl_badgirl6",
+    "technology12428",
+    "Kingfight0168",
+    "Henry_MOON63",
+    "slanhnhmen198",
+    "Johnnyboyy0826",
+    "azumissj",
+    "KurtKhaki4",
+    "Henry_MOON63",
+    "SopenKh8"
+}
+local Target_Key = "MY_EXCLUSIVE_KEY_2026" -- ⚠️ សូមប្តូរ Key នេះតាមចិត្តរបស់អ្នក
 
+-- << Whitelist Check (Multi-Username) >> --
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- ឆែកមើលថាតើឈ្មោះ LocalPlayer មាននៅក្នុងតារាង Whitelist ដែរឬទេ
+if not table.find(Whitelisted_Users, LocalPlayer.Name) then
+    LocalPlayer:Kick(" តម្រូវអោយបង់​ ៣០០០រៀល ទាក់ទងទៅ(Telegram: @TWOBKTWOSELLER )")
+    return
+end
+
+
+local HENG = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local MainWindow = HENG:CreateWindow({
+    Name = "Grow a Garden 2",
+    LoadingTitle = "Welcome ",
+    LoadingSubtitle = "@2BK2",
+    ConfigurationSaving = {Enabled = true, FolderName = nil, FileName = "BK Hub" },
+    Discord = {Enabled = false, Invite = "https://t.me/TWOBKTWO", RememberJoins = true },
+    KeySystem = false,
+    KeySettings = {
+        Title = "BK Hub",
+        Subtitle = "Key System",
+        Note = "ដើម្បីអាចលេងបាន​បង់​២០០0រៀល Telegram @TWOBKTWOSELLER",
+        FileName = "SiriusKey",
+        SaveKey = true,
+        GrabKeyFromSite = false,
+        Key = "BK_87542N335"
+    }
+})
+
+-- บង្កើត Tabs
+local MainTab = MainWindow:CreateTab("Main", "home")
+local Tab1 = MainWindow:CreateTab("Send Items") 
+
+-- Send Setup
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Networking = require(ReplicatedStorage.SharedModules.Networking)
+
+-- ដែនកំណត់អថេរ (Variables)
+local TargetUsername = "2B9K2"
+local SelectedSeed = "Bamboo"
+local SelectedGear = "Super Watering Can"
+local SelectedSprinkler = "Super Sprinkler"
+local Amount = 1
+
+local SprinklerOptions = {"Super Sprinkler"}
+local GearOptions = {"Super Watering Can"}
+local SeedOptions = {"Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Apple", "Bamboo","Corn","Cactus", "Pineapple", "Baby Cactus", "Horned Melon",
+"Mushroom", "Green Bean", "Banana", "Grape", "Coconut", "Glow Mushroom", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", "Poison Ivy", "Venus Fly Trap", "Pomegranate",
+"Poison Apple", "Venom Spitter", "Ghost Pepper", "Moon Bloom", "Dragon's Breath", "Hypno Bloom", "Rocket Pop", "Fire Fern", "Rainbow", "Mega", "Gold" }
+
+-- អនុគមន៍ស្វែងរក UserId
+local function getUserId(username)
+    local success, userId = pcall(function()
+        return Players:GetUserIdFromNameAsync(username)
+    end)
+    if success then return userId end
+    return nil
+end
+
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+
+-- Variables សម្រាប់ Main Feature
+local Plots = Workspace.Gardens
+local VisitedFruits = {}
+
+-- Modules
+local FruitValueCalc = require(ReplicatedStorage:WaitForChild("SharedModules"):WaitForChild("FruitValueCalc"))
+
+-- Functions សម្រាប់ Main Feature
+local GetHumanoid = function(Player)
+    if not Player then return nil end
+    local Character = Player.Character
+    return (Character and Character:FindFirstChildOfClass("Humanoid"))
+end
+
+local GetRoot = function(Player)
+    local Humanoid = GetHumanoid(Player)
+    return (Humanoid and Humanoid.RootPart)
+end
+
+local GetPlot = function(Player)
+    if not Player then return nil end
+    for _, Plot in next, Plots:GetChildren() do
+        if (Plot:GetAttribute("OwnerUserId") == Player.UserId) then
+            return Plot
+        end
+    end
+end
+
+local CalculateValue = function(Fruit)
+    if not Fruit then return 0 end
+    local FruitName = Fruit:GetAttribute("CorePartName") or Fruit:GetAttribute("PlantName")
+    local SizeMultiplier = Fruit:GetAttribute("SizeMulti") or Fruit:GetAttribute("Age")
+    local Mutation = Fruit:GetAttribute("Mutation")
+    return FruitValueCalc(FruitName, SizeMultiplier, Mutation, LocalPlayer, 1)
+end
+
+local GetNextFruit = function()
+    local HighValue = 0
+    local TargetItem = nil
+    for _, Plot in next, Plots:GetChildren() do
+        local Owner = Players:GetPlayerByUserId(Plot:GetAttribute("OwnerUserId") or LocalPlayer.UserId)
+        if (not Owner or Owner == LocalPlayer) then continue end
+        local PlantsFolder = Plot:FindFirstChild("Plants")
+        if not PlantsFolder then continue end
+        for _, Plant in next, PlantsFolder:GetChildren() do
+            local Fruits = Plant:FindFirstChild("Fruits")
+            if (Fruits) then
+                for _, Fruit in next, Fruits:GetChildren() do
+                    if VisitedFruits[Fruit] then continue end
+                    local HarvestPart = Fruit:FindFirstChild("HarvestPart")
+                    if HarvestPart and HarvestPart:FindFirstChild("StealPrompt") then
+                        local Value = CalculateValue(Fruit)
+                        if Value >= HighValue then
+                            HighValue = Value
+                            TargetItem = Fruit
+                        end
+                    end
+                end
+            else
+                if not VisitedFruits[Plant] then
+                    local HarvestPart = Plant:FindFirstChild("HarvestPart")
+                    if HarvestPart and HarvestPart:FindFirstChild("StealPrompt") then
+                        local Value = CalculateValue(Plant)
+                        if Value >= HighValue then
+                            HighValue = Value
+                            TargetItem = Plant
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return TargetItem
+end
+
+local ReturnToPlot = function()
+    local MyPlot = GetPlot(LocalPlayer)
+    local RefPart = MyPlot and MyPlot:FindFirstChild("PlotSizeReference")
+    if not RefPart then return end
+    for Index = 1, 5 do
+        local Root = GetRoot(LocalPlayer)
+        if (Root) then
+            Root.CFrame = RefPart.CFrame
+            task.wait(0.05)
+        end
+    end
+end
+
+local NightTime = function()
+    local Night = ReplicatedStorage:FindFirstChild("Night")
+    return Night and Night.Value or false
+end
+
+local Steal = function(Fruit)
+    if (not Fruit or not NightTime()) then return end
+    local HarvestPart = Fruit:FindFirstChild("HarvestPart")
+    if (HarvestPart) then
+        local UserId = tonumber(Fruit:GetAttribute("UserId"))
+        local PlantId = Fruit:GetAttribute("PlantId")
+        local FruitId = Fruit:GetAttribute("FruitId")
+        if not UserId then return end
+        local Root = GetRoot(LocalPlayer)
+        if (Root) then
+            VisitedFruits[Fruit] = true
+            Root.CFrame = HarvestPart.CFrame
+            task.wait(0.05) -- Adjusted from 0.03 for reliability
+            Networking.Steal.BeginSteal:Fire(UserId, PlantId, FruitId or "")
+            Networking.Steal.CompleteSteal:Fire()
+            task.wait(0.05) -- Adjusted from 0.02
+        end
+    end
+end
+
+--- -- << Rayfield UI Tab 1: Main >> ---
+local Toggle = MainTab:CreateToggle({
+    Name = '<font size="24"><b>លួចដំណាំគេ​</b></font>Only at Night',
+    CurrentValue = false,
+    Flag = "StealToggle",
+    Callback = function(Value)
+        _G.AutoSteal = Value
+        if Value then
+            task.spawn(function()
+                while _G.AutoSteal do
+                    if NightTime() then
+                        local StartTime = tick()
+                        while NightTime() and _G.AutoSteal do
+                            if (tick() - StartTime >= 10) then
+                                ReturnToPlot()
+                                task.wait(2)
+                                StartTime = tick()
+                            end
+                            local NextTarget = GetNextFruit()
+                            if NextTarget and _G.AutoSteal then
+                                Steal(NextTarget)
+                            else
+                                break
+                            end
+                            task.wait(0.05)
+                        end
+                        ReturnToPlot()
+                        table.clear(VisitedFruits)
+                    end
+                    task.wait(0.5)
+                end
+            end)
+        else
+            task.spawn(ReturnToPlot)
+        end
+    end,
+})
+
+_G.SellAll = false
+MainTab:CreateToggle({
+    Name = '<font size="24"><b>លក់ទាំងអស់​</b></font>Auto sell',
+    CurrentValue = false,
+    Flag = "Toggle_AlwaysSell",
+    Callback = function(Value)
+        _G.SellAll = Value
+        if _G.SellAll then
+            task.spawn(function()
+                while _G.SellAll do
+                    local success, result = pcall(function()
+                        return Networking.NPCS.SellAll:Fire()
+                    end)
+                    if success and result and result.Success then
+                        if result.SoldCount > 0 then
+                            print("Automatically sold " .. tostring(result.SoldCount) .. " fruits for " .. tostring(result.SellPrice) .. "¢!")
+                        end
+                    else
+                        warn("Auto-sell failed or inventory empty.")
+                    end
+                    task.wait(1)
+                end
+            end)
+        end
+    end,
+})
+
+local gardens = game.Workspace:WaitForChild("Gardens")
+local OwnerPlot
+while OwnerPlot == nil do
+    task.wait(0.1)
+    for _, plot in pairs(gardens:GetChildren()) do
+        if plot:GetAttribute("Owner") == game.Players.LocalPlayer.Name then
+            OwnerPlot = plot
+            break
+        end
+    end
+end
+
+local function isGrown(plant)
+    local maxAge = plant:GetAttribute("MaxAge")
+    local currentAge = plant:GetAttribute("Age")
+    if maxAge == nil or currentAge == nil then
+        return false
+    end
+    return currentAge >= maxAge
+end
+
+local function getharvestableplants()
+    local plants = {}
+    if not OwnerPlot then return plants end
+    
+    local plantsFolder = OwnerPlot:FindFirstChild("Plants")
+    if not plantsFolder then return plants end
+
+    for _, plant in pairs(plantsFolder:GetChildren()) do
+        local fruitsFolder = plant:FindFirstChild("Fruits")
+        if fruitsFolder then
+            for _, fruit in pairs(fruitsFolder:GetChildren()) do
+                if fruit:IsA("Model") and isGrown(fruit) then
+                    table.insert(plants, fruit)
+                end
+            end
+        else
+            if plant:IsA("Model") and isGrown(plant) then
+                table.insert(plants, plant)
+            end
+        end
+    end
+    return plants
+end
+
+local function harvest(plant)
+    if not plant then return end
+    local id = plant:GetAttribute("PlantId")
+    local fruitid = plant:GetAttribute("FruitId") or ""
+    if id then
+        Networking.Garden.CollectFruit:Fire(id, fruitid)
+    end
+end
+
+_G.AutoHarvest = false -- Removed 'local' keyword to fix syntax error
+
+MainTab:CreateToggle({
+   Name = '<font size="24"><b>ប្រមូលផល​</b></font>Harvest',
+   CurrentValue = false,
+   Flag = "AutoHarvestFlag", 
+   Callback = function(Value)
+       _G.AutoHarvest = Value
+       if _G.AutoHarvest then
+           task.spawn(function()
+               while _G.AutoHarvest do
+                   for _, v in pairs(getharvestableplants()) do
+                       if not _G.AutoHarvest then break end
+                       harvest(v)
+                   end
+                   task.wait(0.1)
+               end
+           end)
+       end
+   end,
+})
+
+MainTab:CreateSlider({
+    Name = '<font size="24"><b>ល្បឿនដើរ</b></font>Walk Speed',
+    Range = {16, 30},
+    Increment = 1,
+    Suffix = "WalkSpeed",
+    CurrentValue = 16,
+    Flag = "Slider8",
+    Callback = function(v)
+        local Hum = GetHumanoid(LocalPlayer)
+        if Hum then Hum.WalkSpeed = v end
+    end,
+})
+
+MainTab:CreateSlider({
+    Name = '<font size="24"><b>ហោះ</b></font>Fly',
+    Range = {1, 100},
+    Increment = 1,
+    Suffix = "HipHeight",
+    CurrentValue = 0,
+    Flag = "Slider2",
+    Callback = function(v)
+        local Hum = GetHumanoid(LocalPlayer)
+        if Hum then Hum.HipHeight = v end
+    end,
+})
+
+--- -- << Rayfield UI Tab 2: Send Items >> ---
+Tab1:CreateInput({
+   Name = '<font size="24"><b>ឈ្មោះដើមអ្នកទទួល​</b></font> User',
+   CurrentValue = TargetUsername, 
+   PlaceholderText = "Enter username...",
+   RemoveTextAfterFocusLost = false,
+   Flag = "MailTargetUser",
+   Callback = function(Text)
+       TargetUsername = Text
+   end,
+})
+
+Tab1:CreateDropdown({
+   Name = '<font size="24"><b>ជ្រើសរើសគ្រាប់ពូជ​</b></font> Seeds',
+   Options = SeedOptions, 
+   CurrentOption = {SelectedSeed},
+   MultipleOptions = false,
+   Flag = "MailSeedType", 
+   Callback = function(Options)
+       SelectedSeed = Options[1]
+   end,
+})
+
+Tab1:CreateDropdown({
+   Name = '<font size="24"><b>ជ្រើសរើសគាស់ទឹក​</b></font> Watering Cans',
+   Options = GearOptions, 
+   CurrentOption = {SelectedGear},
+   MultipleOptions = false,
+   Flag = "MailGearType", 
+   Callback = function(Options)
+       SelectedGear = Options[1]
+   end,
+})
+
+Tab1:CreateDropdown({
+   Name = '<font size="24"><b>ជ្រើសរើសប្រព័ន្ធស្រោចទឹក​</b></font> Sprinklers',
+   Options = SprinklerOptions, 
+   CurrentOption = {SelectedSprinkler},
+   MultipleOptions = false,
+   Flag = "MailSprinklerType", 
+   Callback = function(Options)
+       SelectedSprinkler = Options[1]
+   end,
+})
+
+Tab1:CreateInput({
+   Name = '<font size="24"><b>កំណត់បរិមាណផ្ញើរ​</b></font> Amount',
+   PlaceholderText = "ដាក់តម្លៃ...",
+   CurrentValue = tostring(Amount), 
+   RemoveTextAfterFocusLost = false,
+   Flag = "MailAmount", 
+   Callback = function(Text)
+       local numericValue = tonumber(Text)
+       if numericValue then
+           Amount = numericValue
+       end
+   end,
+})
+
+Tab1:CreateButton({
+   Name = '<font size="24"><b>ផ្ញើគ្រាប់ពូជ​</b></font> Send Seeds',
+   Callback = function()
+       local targetId = getUserId(TargetUsername)
+       if targetId then
+           HENG:Notify({Title = "Mailbox", Content = "កំពុងរៀបចំផ្ញើទៅកាន់: " .. TargetUsername, Duration = 3, Image = 4483362458})
+           local itemsToSend = {
+               {
+                   Category = "Seeds",             
+                   ItemKey = SelectedSeed, 
+                   Count = Amount          
+               }
+           }
+           task.wait(0.5)
+           local success, err = pcall(function()
+               Networking.Mailbox.SendBatch:Fire(targetId, itemsToSend, "Auto Sent!")
+           end)
+           if success then
+               HENG:Notify({Title = "ជោគជ័យ", Content = "បានបញ្ជូនគ្រាប់ពូជទៅកាន់ប្រអប់សាររួចរាល់!", Duration = 5, Image = 4483362458})
+           else
+               HENG:Notify({Title = "កំហុសប្រព័ន្ធ", Content = "មានបញ្ហា: " .. tostring(err), Duration = 5, Image = 4483362458})
+           end
+       else
+           HENG:Notify({Title = "រកមិនឃើញ", Content = "រកមិនឃើញគណនីឈ្មោះ " .. TargetUsername .. " ឡើយ!", Duration = 5, Image = 4483362458})
+       end
+   end,
+})
+
+Tab1:CreateButton({
+   Name = '<font size="24"><b>ផ្ញើធុងស្រោចទឹក​</b></font> Super Watering',
+   Callback = function()
+       local targetId = getUserId(TargetUsername)
+       if targetId then
+           HENG:Notify({Title = "Mailbox", Content = "កំពុងរៀបចំផ្ញើទៅកាន់: " .. TargetUsername, Duration = 3, Image = 4483362458})
+           local itemsToSend = {
+               {
+                   Category = "WateringCans",             
+                   ItemKey = SelectedGear, 
+                   Count = Amount          
+               }
+           }
+           task.wait(0.5)
+           local success, err = pcall(function()
+               Networking.Mailbox.SendBatch:Fire(targetId, itemsToSend, "Auto Sent!")
+           end)
+           if success then
+               HENG:Notify({Title = "ជោគជ័យ", Content = "បានបញ្ជូនធុងស្រោចទឹកទៅកាន់ប្រអប់សាររួចរាល់!", Duration = 5, Image = 4483362458})
+           else
+               HENG:Notify({Title = "កំហុសប្រព័ន្ធ", Content = "មានបញ្ហា: " .. tostring(err), Duration = 5, Image = 4483362458})
+           end
+       else
+           HENG:Notify({Title = "រកមិនឃើញ", Content = "រកមិនឃើញគណនីឈ្មោះ " .. TargetUsername .. " ឡើយ!", Duration = 5, Image = 4483362458})
+       end
+   end,
+})
+
+Tab1:CreateButton({
+   Name = '<font size="24"><b>ផ្ញើប្រព័ន្ធស្រោចទឹក​</b></font> Send Sprinklers',
+   Callback = function()
+       local targetId = getUserId(TargetUsername)
+       if targetId then
+           HENG:Notify({Title = "Mailbox", Content = "កំពុងរៀបចំផ្ញើទៅកាន់: " .. TargetUsername, Duration = 3, Image = 4483362458})
+           local itemsToSend = {
+               {
+                   Category = "Sprinklers",             
+                   ItemKey = SelectedSprinkler, 
+                   Count = Amount          
+               }
+           }
+           task.wait(0.5)
+           local success, err = pcall(function()
+               Networking.Mailbox.SendBatch:Fire(targetId, itemsToSend, "Auto Sent!")
+           end)
+           if success then
+               HENG:Notify({Title = "ជោគជ័យ", Content = "បានបញ្ជូនប្រព័ន្ធស្រោចទឹកទៅកាន់ប្រអប់សាររួចរាល់!", Duration = 5, Image = 4483362458})
+           else
+               HENG:Notify({Title = "កំហុសប្រព័ន្ធ", Content = "មានបញ្ហា: " .. tostring(err), Duration = 5, Image = 4483362458})
+           end
+       else
+           HENG:Notify({Title = "រកមិនឃើញ", Content = "រកមិនឃើញគណនីឈ្មោះ " .. TargetUsername .. " ឡើយ!", Duration = 5, Image = 4483362458})
+       end
+   end,
+})
