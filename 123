@@ -98,7 +98,7 @@ local LocalPlayer = Players.LocalPlayer
 
 -- ឆែកមើលថាតើឈ្មោះ LocalPlayer មាននៅក្នុងតារាង Whitelist ដែរឬទេ
 if not table.find(Whitelisted_Users, LocalPlayer.Name) then
-    LocalPlayer:Kick(" តម្រូវអោយបង់​ ៣០០០រៀល ទាក់ទងទៅ(Telegram: @TWOBKTWOSELLER )")
+    LocalPlayer:Kick(" តម្រូវអោយបង់​ ៤០០០ពាន់រៀល ទាក់ទងទៅ(Telegram: @TWOBKTWOSELLER )")
     return
 end
 
