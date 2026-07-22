@@ -1,105 +1,96 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Window = Rayfield:CreateWindow({
    Name = "Chaktomuk II",
-   Icon = 0, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
+   Icon = 0,
    LoadingTitle = "lodsl",
    LoadingSubtitle = "by Heng",
-   ShowText = "Wellcom", -- for mobile users to unhide Rayfield, change if you'd like
-   Theme = "Default", -- Check https://docs.sirius.menu/rayfield/configuration/themes
+   ShowText = "Welcome",
+   Theme = "Default",
 
-   ToggleUIKeybind = "K", -- The keybind to toggle the UI visibility (string like "K" or Enum.KeyCode)
+   ToggleUIKeybind = "K",
 
    DisableRayfieldPrompts = false,
-   DisableBuildWarnings = false, -- Prevents Rayfield from emitting warnings when the script has a version mismatch with the interface.
-
-   -- ScriptID = "sid_xxxxxxxxxxxx", -- Your Script ID from developer.sirius.menu — enables analytics, managed keys, and script hosting
+   DisableBuildWarnings = false,
 
    ConfigurationSaving = {
       Enabled = true,
-      FolderName = nil, -- Create a custom folder for your hub/game
+      FolderName = nil,
       FileName = "Big Hub"
    },
 
    Discord = {
-      Enabled = false, -- Prompt the user to join your Discord server if their executor supports it
-      Invite = "", -- The Discord invite code, do not include Discord.gg/. E.g. Discord.gg/ABCD would be ABCD
-      RememberJoins = true -- Set this to false to make them join the Discord every time they load it up
+      Enabled = false, 
+      Invite = "", 
+      RememberJoins = true 
    },
 
-   KeySystem = false, -- Set this to true to use our key system
+   KeySystem = false, 
    KeySettings = {
       Title = "Untitled",
       Subtitle = "Key System",
-      Note = "No method of obtaining the key is provided", -- Use this to tell the user how to get a key
-      FileName = "Key", -- It is recommended to use something unique, as other scripts using Rayfield may overwrite your key file
-      SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
-      GrabKeyFromSite = false, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
-      Key = {"Hello"} -- List of keys that the system will accept, can be RAW file links (pastebin, github, etc.) or simple strings ("hello", "key22")
+      Note = "No method of obtaining the key is provided", 
+      FileName = "Key", 
+      SaveKey = true, 
+      GrabKeyFromSite = false, 
+      Key = {"Hello"} 
    }
 })
 
-local Tab = Window:CreateTab("Farm") -- Title, Image
-local Tab2 = Window:CreateTab("Store") -- Title, Image
+local Tab = Window:CreateTab("Farm") 
+local Tab2 = Window:CreateTab("Store") 
 
 local Players = game:GetService("Players")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local GuiService = game:GetService("GuiService")
+local RunService = game:GetService("RunService")
+
 local LocalPlayer = Players.LocalPlayer
 
--- Function សម្រាប់ចុច UI Object ដោយកំណត់ទីតាំងលំអៀង (Offset)
+-- Function to click UI Object with offset
 local function autoClickUIWithOffset(guiObject)
     if guiObject and guiObject.AbsolutePosition and guiObject.AbsoluteSize then
-        
-        -- កំណត់ចម្ងាយដែលចង់ឱ្យចុចចុះក្រោមពីចំណុចកណ្តាល (គិតជា Pixel)
-        -- បើចង់ឱ្យចុះក្រោមទៀត បង្កើនលេខនេះ។ បើចង់ឱ្យឡើងលើ ដាក់លេខដក (ឧទាហរណ៍ -10)
         local yOffset = 45
-
-        -- គណនារកចំណុចកណ្តាល X
         local centerX = guiObject.AbsolutePosition.X + (guiObject.AbsoluteSize.X / 2)
-        
-        -- គណនារកចំណុចកណ្តាល Y រួចបូកថែម Offset ដើម្បីឱ្យចុចចុះក្រោមបន្តិច
         local centerYWithOffset = guiObject.AbsolutePosition.Y + (guiObject.AbsoluteSize.Y / 2) + yOffset
         
-        -- បញ្ជាឱ្យប្រព័ន្ធចុច (Touch/Click) ទៅលើទីតាំងដែលបានគណនា
         VirtualInputManager:SendMouseButtonEvent(centerX, centerYWithOffset, 0, true, game, 1)
-        task.wait(0.05) -- រង់ចាំបន្តិចដើម្បីឱ្យប្រព័ន្ធទទួលដឹង
+        task.wait(0.05)
         VirtualInputManager:SendMouseButtonEvent(centerX, centerYWithOffset, 0, false, game, 1)
-        
-        -- បោះពុម្ពប្រាប់ដើម្បីស្រួល Check (អាចលុបចេញបានបើលែងត្រូវការ)
-        -- print("Clicked at Y offset: " .. yOffset)
     end
 end
 
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local LocalPlayer = Players.LocalPlayer
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local GuiService = game:GetService("GuiService")
-
 local FishingSystem = ReplicatedStorage:WaitForChild("FishingSystem", 7)
-if not FishingSystem then return warn("[Error] មិនរកឃើញប្រព័ន្ធស្ទូចត្រីទេ!") end
+if not FishingSystem then return warn("[Error] Fishing system not found!") end
 
 local FishingModules = FishingSystem:WaitForChild("FishingModules", 5)
 local ShakeSystem = FishingModules and require(FishingModules:WaitForChild("ShakeSystem"))
 local MinigameSystem = FishingModules and require(FishingModules:WaitForChild("MinigameSystem"))
 local PowerBarSystem = FishingModules and FishingModules:FindFirstChild("PowerBarSystem") and require(FishingModules.PowerBarSystem)
 
--- ភ្ជាប់ទៅកាន់ប៊ូតុង TapMobile (សម្រាប់តែ Mobile ទេ)
+-- Connect to TapMobile button
 local playerGui = LocalPlayer:WaitForChild("PlayerGui")
 local fishingGui = playerGui:WaitForChild("FishingGui", 7)
 local tapMobileParent = fishingGui and fishingGui:WaitForChild("TapMobile", 5)
 local tapMobileButton = tapMobileParent and tapMobileParent:WaitForChild("TapMobile", 5)
 
--- Configuration Flag
+-- Configuration Flags
 _G.AutoFishingPerfectV16 = false
+_G.FishingDeviceMode = "PC"
+_G.AutoSellOnFull = false
+_G.AutoTapMobile = false
 
--- កំណត់ត្រាចំនួនត្រីដែលស្ទូចបាន ដើម្បីធ្វើការសម្រាកស្វ័យប្រវត្តិ (Anti-Pattern Break)
+local isSelling = false 
+local isEating = false 
+
+-- Fishing break counter
 local fishCaughtSession = 0
-local nextBreakLimit = math.random(5, 12) -- សម្រាកម្តងរាល់ពេលស្ទូចបានចន្លោះពី ៥ ទៅ ១២ ក្បាល
+local nextBreakLimit = math.random(5, 12)
 
--- ជំនួយការបង្កើតល្បឿនចៃដន្យបែបធម្មជាតិ (Human Focus Simulator ជំនាន់ទី២ កាន់តែចៃដន្យ)
+-- Humanized delay generator
 local function getHumanizedDelay(baseMin, baseMax)
     local t = tick()
-    local wave = math.sin(t / (math.random(3, 7))) * 0.08 -- បន្ថែមភាពរលកមិនទៀងទាត់
+    local wave = math.sin(t / (math.random(3, 7))) * 0.08
     local randomOffset = math.random(-35, 35) / 1000
     return math.clamp(math.random(baseMin * 100, baseMax * 100) / 100 + wave + randomOffset, baseMin * 0.4, baseMax * 1.8)
 end
@@ -113,7 +104,7 @@ local function getRodAndRemotes()
         for _, item in ipairs(LocalPlayer.Backpack:GetChildren()) do
             if item:IsA("Tool") and (string.find(string.lower(item.Name), "rod") or item.Name == "Umbrella") then
                 item.Parent = character
-                task.wait(getHumanizedDelay(0.6, 1.2)) -- ពន្យារពេលបំពាក់ដងសន្ទូច
+                task.wait(getHumanizedDelay(0.6, 1.2))
                 tool = item
                 break
             end
@@ -128,19 +119,13 @@ local function getRodAndRemotes()
 end
 
 -- ========================================================
--- [ប្រព័ន្ធ Shake ការពារការចាប់បាន (No-Pattern Shake)]
+-- [Shake System]
 -- ========================================================
 local function forceClickShake(shakeButton)
     if not shakeButton or not shakeButton.Visible then return end
     
-    while shakeButton.Visible and _G.AutoFishingPerfectV16 do
+    while shakeButton.Visible and _G.AutoFishingPerfectV16 and not isSelling and not isEating do
         local connections = getconnections or get_signal_cons
-        
-        -- ក្លែងធ្វើការចុចលើទីតាំងចៃដន្យនៅលើអេក្រង់ (មិនមែនកូអរដោនេ 0, 0 ថេរទេ)
-        local screenWidth = workspace.CurrentCamera.ViewportSize.X
-        local screenHeight = workspace.CurrentCamera.ViewportSize.Y
-        local randomX = math.random(screenWidth * 0.4, screenWidth * 0.6)
-        local randomY = math.random(screenHeight * 0.4, screenHeight * 0.6)
         
         if connections then
             for _, clickedConnection in ipairs(connections(shakeButton.MouseButton1Click)) do 
@@ -155,24 +140,22 @@ local function forceClickShake(shakeButton)
         
         if ShakeSystem and ShakeSystem.isActive then
             pcall(function()
-                -- បន្ថែមល្បឿនចុចខុសៗគ្នា (ពេលខ្លះចុចលឿន ពេលខ្លះចុចយឺត)
                 if math.random(1, 10) > 3 then
                     ShakeSystem:HandleClick(nil)
                 end
             end)
         end
-        task.wait(getHumanizedDelay(0.12, 0.25)) -- កើនឡើងការយឺតយ៉ាវបន្តិចដើម្បីឱ្យដូចមនុស្សចុចពិតៗ
+        task.wait(getHumanizedDelay(0.12, 0.25))
     end
 end
 
--- ប្រព័ន្ធតាមដានប៊ូតុង Shake
 task.spawn(function()
     if fishingGui then
         local shakeButton = fishingGui:WaitForChild("ShakeButton", 5)
         if shakeButton then
             shakeButton:GetPropertyChangedSignal("Visible"):Connect(function()
-                if shakeButton.Visible and _G.AutoFishingPerfectV16 then 
-                    task.wait(getHumanizedDelay(0.35, 0.70)) -- រង់ចាំបន្តិចមុនពេលចាប់ផ្តើម Shake (កុំឱ្យលឿនពេក)
+                if shakeButton.Visible and _G.AutoFishingPerfectV16 and not isSelling and not isEating then 
+                    task.wait(getHumanizedDelay(0.35, 0.70))
                     forceClickShake(shakeButton) 
                 end
             end)
@@ -181,12 +164,12 @@ task.spawn(function()
 end)
 
 -- ========================================================
--- [ប្រព័ន្ធទាញត្រីបែបមនុស្ស (Organic / Semi-Auto Hooking)]
+-- [Hooking & Minigame System]
 -- ========================================================
 task.spawn(function()
     while true do
         task.wait(0.1)
-        if _G.AutoFishingPerfectV16 and MinigameSystem and MinigameSystem:IsActive() then
+        if _G.AutoFishingPerfectV16 and not isSelling and not isEating and MinigameSystem and MinigameSystem:IsActive() then
             
             pcall(function()
                 local debug_getupvalues = debug.getupvalues or getupvalues
@@ -197,8 +180,7 @@ task.spawn(function()
                         if type(upvalue) == "table" and upvalue.active ~= nil then
                             
                             task.spawn(function()
-                                while MinigameSystem:IsActive() and _G.AutoFishingPerfectV16 do
-                                    -- បង្កើនភាគរយលេងលក្ខណៈធម្មជាតិ (២៥% ធ្វើជាលែងខុស ឬលែងដៃតិចៗ)
+                                while MinigameSystem:IsActive() and _G.AutoFishingPerfectV16 and not isSelling and not isEating do
                                     if math.random(1, 100) <= 25 then
                                         upvalue.isAutoMode = false
                                         task.wait(getHumanizedDelay(0.15, 0.45))
@@ -219,7 +201,6 @@ task.spawn(function()
                 task.wait(0.1)
             end
             
-            -- កត់ត្រាចំនួនត្រីដែលស្ទូចបាន និងរៀបចំប្រព័ន្ធសម្រាក
             fishCaughtSession = fishCaughtSession + 1
             task.wait(getHumanizedDelay(1.5, 3.5))
         end
@@ -227,53 +208,48 @@ task.spawn(function()
 end)
 
 -- ========================================================
--- [ប្រព័ន្ធបង់សន្ទូចស្វ័យប្រវត្តិ - កែសម្រួលថ្មីបំផុត និង Safe បំផុត]
+-- [Auto-Cast System]
 -- ========================================================
 task.spawn(function()
     while true do
         task.wait(0.4)
         
-        if _G.AutoFishingPerfectV16 then
-            -- ប្រព័ន្ធសម្រាកស្វ័យប្រវត្ត (Auto Break System) ដើម្បីជៀសវាងការស្ទូចជាប់គ្នាមិនឈប់
+        if _G.AutoFishingPerfectV16 and not isSelling and not isEating then
             if fishCaughtSession >= nextBreakLimit then
-                local breakTime = math.random(5, 15) -- សម្រាកពី ៥ ទៅ ១៥ វិនាទី
-                warn("[Anti-Cheat Safety] ស្គ្រីបកំពុងធ្វើការសម្រាករយៈពេល " .. tostring(breakTime) .. " វិនាទី ដើម្បីការពារគណនីរបស់អ្នក...")
+                local breakTime = math.random(5, 15)
+                warn("[Safety Break] Pausing for " .. tostring(breakTime) .. " seconds...")
                 task.wait(breakTime)
                 fishCaughtSession = 0
-                nextBreakLimit = math.random(6, 14) -- កំណត់ចំនួនគោលដៅបន្ទាប់ជាលក្ខណៈចៃដន្យ
+                nextBreakLimit = math.random(6, 14)
             end
 
             local currentRod, _ = getRodAndRemotes()
             
-            if currentRod then
+            if currentRod and not isSelling and not isEating then
                 local fishingFrame = fishingGui and fishingGui:FindFirstChild("Fishing")
                 local shakeButton = fishingGui and fishingGui:FindFirstChild("ShakeButton")
                 
-                -- ពិនិត្យស្ថានភាពជាប់រវល់
                 local isBusy = false
                 if (shakeButton and shakeButton.Visible) or (fishingFrame and fishingFrame.Visible) then isBusy = true end
                 if (ShakeSystem and ShakeSystem.isActive) or (MinigameSystem and MinigameSystem:IsActive()) then isBusy = true end
                 if PowerBarSystem and PowerBarSystem:IsCharging() then isBusy = true end
                 
-                -- បើទំនេរ ទើបចាប់ផ្តើមបោះសន្ទូច
-                if not isBusy then
+                if not isBusy and not isSelling and not isEating then
                     pcall(function()
-                        
-                        -- ពិនិត្យមើលវិធីចុច (PC Mode ឬ Mobile Mode)
                         if _G.FishingDeviceMode == "PC" then
-                            -- [ សម្រាប់ PC ] ----------------------------------------------
                             local screenWidth = workspace.CurrentCamera.ViewportSize.X
                             local screenHeight = workspace.CurrentCamera.ViewportSize.Y
                             local randomX = math.random(screenWidth * 0.3, screenWidth * 0.7)
                             local randomY = math.random(screenHeight * 0.3, screenHeight * 0.7)
                             
                             task.wait(getHumanizedDelay(0.5, 1.2))
+                            if isSelling or isEating then return end
                             VirtualInputManager:SendMouseButtonEvent(randomX, randomY, 0, true, game, 1)
                             
                             local chargeTime = 0
                             local maxChargeLimit = math.random(65, 88) / 100
                             
-                            while chargeTime < maxChargeLimit and _G.AutoFishingPerfectV16 do
+                            while chargeTime < maxChargeLimit and _G.AutoFishingPerfectV16 and not isSelling and not isEating do
                                 task.wait(0.05)
                                 chargeTime = chargeTime + 0.05
                                 if PowerBarSystem and PowerBarSystem:GetCurrentPower() >= math.random(80, 96) then
@@ -283,7 +259,6 @@ task.spawn(function()
                             VirtualInputManager:SendMouseButtonEvent(randomX, randomY, 0, false, game, 1)
                             
                         elseif _G.FishingDeviceMode == "Mobile" and tapMobileButton and tapMobileButton.Visible then
-                            -- [ សម្រាប់ Mobile ] ------------------------------------------
                             local position = tapMobileButton.AbsolutePosition
                             local size = tapMobileButton.AbsoluteSize
                             local x = position.X + (size.X / 2)
@@ -294,8 +269,8 @@ task.spawn(function()
                             y = y + inset.Y
                             
                             task.wait(getHumanizedDelay(0.35, 0.65))
+                            if isSelling or isEating then return end
                             
-                            -- ចុចលើកទី១ (ចាប់ផ្តើមឡើងរបារកម្លាំង)
                             VirtualInputManager:SendTouchEvent(1, Enum.UserInputState.Begin, Vector2.new(x, y))
                             task.wait(0.02)
                             VirtualInputManager:SendTouchEvent(1, Enum.UserInputState.End, Vector2.new(x, y))
@@ -306,7 +281,7 @@ task.spawn(function()
                             local timeout = 0
                             local maxWaitTime = math.random(68, 82) / 100
                             
-                            while timeout < maxWaitTime and _G.AutoFishingPerfectV16 do
+                            while timeout < maxWaitTime and _G.AutoFishingPerfectV16 and not isSelling and not isEating do
                                 task.wait(0.01)
                                 timeout = timeout + 0.01
                                 if PowerBarSystem and PowerBarSystem:GetCurrentPower() >= targetPower then
@@ -314,15 +289,13 @@ task.spawn(function()
                                 end
                             end
                             
-                            -- ចុចលើកទី២ (លែងដងសន្ទូចចេញ)
                             VirtualInputManager:SendTouchEvent(1, Enum.UserInputState.Begin, Vector2.new(x, y))
                             task.wait(0.02)
                             VirtualInputManager:SendTouchEvent(1, Enum.UserInputState.End, Vector2.new(x, y))
                         end
                         
-                        -- បន្ថែម Micro-Rotation (បង្វិលខ្លួនតួអង្គបន្តិចៗរាល់ពេលបោះ ដើម្បីកុំឱ្យឈរធ្មឹងដដែលៗ)
                         local rootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                        if rootPart then
+                        if rootPart and not isSelling and not isEating then
                             pcall(function()
                                 local currentCFrame = rootPart.CFrame
                                 local randomAngle = math.rad(math.random(-4, 4))
@@ -331,7 +304,6 @@ task.spawn(function()
                         end
                     end)
                     
-                    -- ទុកពេលឱ្យកូនដុំសន្ទូចធ្លាក់ចូលទឹក
                     task.wait(getHumanizedDelay(3.0, 4.5))
                 end
             end
@@ -339,34 +311,23 @@ task.spawn(function()
     end
 end)
 
--- ========================================================
--- [ ការបង្កើតប៊ូតុង Toggle ចំនួន ២ សម្រាប់ PC និង Mobile ]
--- ========================================================
-
---delevery
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local player = Players.LocalPlayer
--- Configuration Setup
+-- Delivery System
 local spots = {
     "DeliverySpot", "DeliverySpot1", "DeliverySpot2", "DeliverySpot3", 
     "DeliverySpot4", "DeliverySpot5", "DeliverySpot6", "DeliverySpot7", 
     "DeliverySpot8", "DeliverySpot9"
 }
-local FOOD_ITEM_NAME = "Food" -- អាចប្តូរទៅ "FoodBox" ប្រសិនបើឈ្មោះក្នុងហ្គេមពិតប្រាកដគឺ FoodBox
+local FOOD_ITEM_NAME = "Food"
 local isScriptRunning = false 
 
--- Helper Functions
 local function humanWait(min, max)
     local randomTime = math.random(min * 100, max * 100) / 100
     task.wait(randomTime)
 end
 
--- មុខងារចុច ProximityPrompt
 local function interactWithPrompt(prompt)
     if prompt and prompt:IsA("ProximityPrompt") then
         prompt.RequiresLineOfSight = false
-        
         if fireproximityprompt then
             fireproximityprompt(prompt)
         else
@@ -379,14 +340,13 @@ local function interactWithPrompt(prompt)
     end
 end
 
--- មុខងារពិនិត្យមើល និងស្វែងរកម្ហូប
 local function getFoodTool()
-    local character = player.Character
+    local character = LocalPlayer.Character
     if character and character:FindFirstChild(FOOD_ITEM_NAME) then 
         return character:FindFirstChild(FOOD_ITEM_NAME) 
     end
-    if player.Backpack:FindFirstChild(FOOD_ITEM_NAME) then 
-        return player.Backpack:FindFirstChild(FOOD_ITEM_NAME) 
+    if LocalPlayer.Backpack:FindFirstChild(FOOD_ITEM_NAME) then 
+        return LocalPlayer.Backpack:FindFirstChild(FOOD_ITEM_NAME) 
     end
     
     if character then
@@ -396,7 +356,7 @@ local function getFoodTool()
             end
         end
     end
-    for _, child in ipairs(player.Backpack:GetChildren()) do
+    for _, child in ipairs(LocalPlayer.Backpack:GetChildren()) do
         if child:IsA("Tool") and string.find(string.lower(child.Name), "food") then 
             return child 
         end
@@ -421,9 +381,8 @@ local function findActiveDeliverySpot(deliveryLocation)
     return nil
 end
 
--- Anti-Ban Teleport Engine
 local function antiBanTeleport(targetPart)
-    local character = player.Character
+    local character = LocalPlayer.Character
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
     if not rootPart or not targetPart then return end
     
@@ -443,7 +402,6 @@ local function antiBanTeleport(targetPart)
     local targetPos = targetPart.Position + Vector3.new(offsetX, 2.0, offsetZ)
     
     rootPart.CFrame = CFrame.new(targetPos)
-    
     rootPart.Anchored = true
     task.wait(0.05)
     rootPart.Anchored = false
@@ -455,25 +413,19 @@ local function antiBanTeleport(targetPart)
     task.wait(0.15)
 end
 
--- Core Delivery Engine Run Routine
 local function runDeliveryRoutine()
     while isScriptRunning do
-        local character = player.Character or player.CharacterAdded:Wait()
+        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
         local rootPart = character:WaitForChild("HumanoidRootPart")
         local humanoid = character:WaitForChild("Humanoid")
         
         local targetPart = workspace.Building["Prop Building"].FoodPickup
         local deliveryLocation = workspace:FindFirstChild("DeliveryLocation")
-        
-        print("--- Start New Anti-Ban Sequence ---")
 
-        -- វគ្គទី ១: ទៅយកម្ហូប (Collect Food)
         if targetPart and rootPart and not hasFood() then
             local attempt = 0
             while not hasFood() and attempt < 8 and isScriptRunning do
                 attempt = attempt + 1
-                print("Teleporting to FoodPickup... Attempt: " .. attempt)
-                
                 antiBanTeleport(targetPart)
                 task.wait(0.2) 
                 
@@ -484,22 +436,18 @@ local function runDeliveryRoutine()
                 
                 if prompt then
                     interactWithPrompt(prompt)
-                else
-                    print("[Warning] ProximityPrompt not found!")
                 end
-                task.wait(0.4) -- រង់ចាំមើលថាតើទទួលបាន Food ហើយឬនៅ
+                task.wait(0.4)
             end
         end
 
         if not isScriptRunning then break end
         humanWait(0.2, 0.5)
 
-        -- វគ្គទី ២: យកទៅប្រគល់ (Deliver Food + ពិនិត្យរហូតដល់បាត់ពីដៃ)
         if deliveryLocation and rootPart and hasFood() then
             local activeSpot = nil
             local scanAttempt = 0
             
-            -- ស្វែងរកទីតាំងផ្ញើដែលសកម្ម
             while not activeSpot and scanAttempt < 10 and isScriptRunning do
                 scanAttempt = scanAttempt + 1
                 activeSpot = findActiveDeliverySpot(deliveryLocation)
@@ -507,53 +455,36 @@ local function runDeliveryRoutine()
             end
             
             if activeSpot and isScriptRunning then
-                print("🎯 Found Spot: " .. activeSpot.Name .. " | Starting Delivery Loop...")
-                
                 local deliveryAttempt = 0
-                -- Loop នេះនឹងរត់រហូតដល់ `hasFood()` ត្រឡប់មក false (ម្ហូបបាត់ពីដៃ/កាតាប) ឬគ្រប់ ៨ ដង
                 while hasFood() and deliveryAttempt < 8 and isScriptRunning do
                     deliveryAttempt = deliveryAttempt + 1
-                    print("🚀 Delivering... Attempt: " .. deliveryAttempt)
                     
-                    -- ធានាថាបានកាន់ម្ហូបជាប់នឹងដៃជានិច្ចពេលកំពុងប្រគល់
                     local foodTool = getFoodTool()
-                    if foodTool and foodTool.Parent == player.Backpack then
+                    if foodTool and foodTool.Parent == LocalPlayer.Backpack then
                         humanoid:EquipTool(foodTool)
                         task.wait(0.2)
                     end
                     
-                    -- Teleport ទៅកាន់ទីតាំងដាក់ម្ហូប
                     antiBanTeleport(activeSpot)
-                    task.wait(0.2) -- ទុកពេលឱ្យហ្គេមទិន្នន័យដើរទាន់
+                    task.wait(0.2)
                     
                     local deliveryPrompt = activeSpot:FindFirstChildOfClass("ProximityPrompt")
                     if deliveryPrompt then
                         interactWithPrompt(deliveryPrompt)
-                        print("បានចុចប្រគល់ (DeliveryPrompt)...")
-                    else
-                        print("[Warning] Delivery ProximityPrompt not found!")
                     end
                     
-                    task.wait(0.5) -- រង់ចាំកន្លះវិនាទីដើម្បីផ្ទៀងផ្ទាត់ថាម្ហូបបាត់ពីដៃហើយឬនៅ មុននឹងបន្ត Loop ទៅមុខទៀត
+                    task.wait(0.5)
                 end
                 
                 if not hasFood() then
-                    print("✅ Successfully Delivered! Food is gone from inventory.")
                     humanWait(1.5, 2.5)
-                else
-                    print("[Warning] Delivery loop finished but food is still in inventory!")
                 end
-            else
-                print("[Warning] No active delivery zone found!")
             end
         end
 
         if not isScriptRunning then break end
 
-        -- Safe Cooldown Cycle
         local cooldown = math.random(40, 63)
-        print("--- Cycle Finished. Anticheat Spoof Cooldown: " .. cooldown .. "s ---")
-        
         for i = 1, cooldown do
             if not isScriptRunning then break end
             task.wait(1)
@@ -561,82 +492,77 @@ local function runDeliveryRoutine()
     end
 end
 
--- Rayfield UI Toggle Linkage
-local Toggle = Tab:CreateToggle({
-   Name = '<font size="24"><b>ដឹកអីវ៉ាន​</b></font>Delivery',
+-- Rayfield Toggles
+local ToggleDelivery = Tab:CreateToggle({
+   Name = '<font size="24"><b>ដឹកអីវ៉ាន </b></font>Delivery',
    CurrentValue = false,
    Flag = "AutoDeliverFlag", 
    Callback = function(Value)
        isScriptRunning = Value
-       
        if Value then
            task.spawn(runDeliveryRoutine)
        else
-           print("🛑 Auto Deliver System Stopped.")
+           print(" Auto Deliver System Stopped.")
        end
    end,
 })
---delevery
---Sell
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local LocalPlayer = Players.LocalPlayer
 
--- បង្កើត Variable សម្រាប់បើក ឬបិទ Auto Sell (លំនាំដើមគឺ បិទ)
-_G.AutoSell = false
+-- Auto-Sell Logic
+local inventoryRemotes = ReplicatedStorage:WaitForChild("InventoryRemotes")
+local inventoryFullEvent = inventoryRemotes:WaitForChild("InventoryFull")
+local FishingShopRequest = FishingSystem:WaitForChild("FishingShopRequest")
 
--- ស្វែងរក Remote Event ដែល Server ប្រាប់ថាកាបូបពេញ
-local InventoryFull = ReplicatedStorage:WaitForChild("InventoryRemotes"):WaitForChild("InventoryFull")
+local targetCFrame = CFrame.new(1701.08264, 22.0194283, 17.8810387, 0.342042685, 0, 0.939684391, 0, 1, 0, -0.939684391, 0, 0.342042685)
+local targetPosition = targetCFrame.Position
 
--- មុខងារចុច Button លក់ត្រីទាំងអស់
-local function clickSellButton()
-    -- ពិនិត្យមើលថាតើ Toggle ត្រូវបានបើកដែរឬទេ
-    if not _G.AutoSell then return end
+local function walkAndSell()
+    if not _G.AutoSellOnFull or isSelling then return end
+    
+    isSelling = true
 
-    local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
-    if not playerGui then return end
+    local character = LocalPlayer.Character
+    local hrp = character and character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 
-    -- ស្វែងរក Button លក់ត្រីតាម Path ដែលអ្នកបានរកឃើញ
-    local sellBtn = playerGui:FindFirstChild("FishingShopGui")
-        and playerGui.FishingShopGui:FindFirstChild("Main")
-        and playerGui.FishingShopGui.Main:FindFirstChild("Content")
-        and playerGui.FishingShopGui.Main.Content:FindFirstChild("SellPanel")
-        and playerGui.FishingShopGui.Main.Content.SellPanel:FindFirstChild("BtnBar")
-        and playerGui.FishingShopGui.Main.Content.SellPanel.BtnBar:FindFirstChild("SellAllBtn")
-
-    if sellBtn then
-        -- ធ្វើការចុចលក់ភ្លាមៗតាមរយៈ getconnections
-        for _, connection in ipairs(getconnections(sellBtn.MouseButton1Click)) do
-            connection:Fire()
-        end
-        print("[Auto-Sell] កាបូបពេញ! បានចុចលក់ត្រីទាំងអស់ដោយស្វ័យប្រវត្តិរួចរាល់។")
-    else
-        warn("[Auto-Sell] រកមិនឃើញ SellAllBtn ឡើយ!")
+    if not hrp or not humanoid then 
+        isSelling = false 
+        return 
     end
+
+    local startCFrame = hrp.CFrame
+    
+    humanoid:MoveTo(targetPosition)
+    humanoid.MoveToFinished:Wait()
+
+    task.wait(0.3)
+
+    pcall(function()
+        local result = FishingShopRequest:InvokeServer("SellAll")
+        if result and result.Success then
+            print("[Auto-Sell] Sold all items successfully!")
+        end
+    end)
+
+    task.wait(0.5)
+
+    humanoid:MoveTo(startCFrame.Position)
+    humanoid.MoveToFinished:Wait()
+
+    isSelling = false
 end
 
--- ចាប់ផ្តើមរង់ចាំស្តាប់រាល់ពេលដែលកាបូបពេញ
-InventoryFull.OnClientEvent:Connect(function()
-    -- ប្រើ task.defer ដើម្បីកុំឱ្យរំខានដល់ UI Notifier ដើមរបស់ហ្គេម
-    task.defer(clickSellButton)
+inventoryFullEvent.OnClientEvent:Connect(function()
+    task.defer(walkAndSell)
 end)
---Sell
 
-
--- បង្កើត Toggle នៅក្នុង Rayfield UI
-local Toggle = Tab:CreateToggle({
-   Name = '<font size="24"><b>លក់ត្រីពេលអីវ៉ានពេញ</b></font>Sell All',
-   CurrentValue = false,
-   Flag = "AutoSellToggle", -- ប្រើ Flag ផ្សេងដើម្បីកុំឱ្យជាន់គ្នាជាមួយ Elements ផ្សេងទៀត
-   Callback = function(Value)
-       -- កំណត់តម្លៃ _G.AutoSell ទៅតាមការចុច Toggle (true = បើក, false = បិទ)
-       _G.AutoSell = Value
-       print("[Auto-Sell] ស្ថានភាពបច្ចុប្បន្ន៖ " .. (Value and "បើក" or "បិទ"))
-   end,
+local ToggleSell = Tab2:CreateToggle({
+    Name = '<font size="18"><b>Auto-Sell When Full (Walk)</b></font>',
+    CurrentValue = false,
+    Flag = "AutoSellOnFullToggle",
+    Callback = function(Value)
+        _G.AutoSellOnFull = Value
+    end,
 })
-
-print("[Auto-Sell] ប្រព័ន្ធត្រៀមខ្លួនជាស្រេច! រង់ចាំការបញ្ជាពី Toggle។")
-
 
 local TogglePC = Tab:CreateToggle({
    Name = '<font size="24"><b>ស្ទូចស្វ័យប្រវត្ត (PC)</b></font> Auto Fishing PC',
@@ -666,57 +592,108 @@ local ToggleMobile = Tab:CreateToggle({
    end,
 })
 
+-- Equip and Eat Helper
+local StoreBuyItem = ReplicatedStorage:WaitForChild("StoreBuyItem")
 
+local function unequipTools()
+    local character = LocalPlayer.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid:UnequipTools()
+    end
+end
 
+local function equipAndEat(itemName)
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local backpack = LocalPlayer:WaitForChild("Backpack")
+    
+    local tool = backpack:FindFirstChild(itemName) or (character and character:FindFirstChild(itemName))
+    
+    if tool and tool:IsA("Tool") then
+        tool.Parent = character
+        task.wait(0.5)
+        tool:Activate()
+        task.wait(1.5)
+    end
+end
 
-local Toggle = Tab:CreateToggle({
+-- Auto Buy & Eat Toggle (ប្រលែងសន្ទូច រួចរង់ចាំ 4 វិនាទី)
+local ToggleBuyEat = Tab2:CreateToggle({
+    Name = "Auto Buy & Eat (Burger/Water)",
+    CurrentValue = false,
+    Flag = "AutoBuyEatToggle", 
+    Callback = function(Value)
+        _G.AutoBuyAndEat = Value
+        
+        if _G.AutoBuyAndEat then
+            task.spawn(function()
+                while _G.AutoBuyAndEat do
+                    isEating = true
+                    print("[Auto Buy & Eat] Unequipping rod and pausing auto fishing...")
+
+                    -- ១. ដកសន្ទូចចេញពីដៃភ្លាមៗទៅដាក់ក្នុង Backpack
+                    unequipTools()
+
+                    -- ២. រង់ចាំ ៤ វិនាទីឱ្យស្ទូចត្រី និង minigame ឈប់ស្រួលបួល
+                    task.wait(4)
+
+                    if not _G.AutoBuyAndEat then 
+                        isEating = false 
+                        break 
+                    end
+
+                    print("[Auto Buy & Eat] Buying Burger & Water...")
+                    StoreBuyItem:FireServer("Cheeze burger")
+                    task.wait(0.5)
+                    StoreBuyItem:FireServer("water")
+                    
+                    task.wait(2)
+                    
+                    if _G.AutoBuyAndEat then equipAndEat("Cheeze burger") end
+                    if _G.AutoBuyAndEat then equipAndEat("water") end
+                    
+                    task.wait(1)
+                    
+                    -- ដក Burger/Water ចេញពីដៃវិញពេលញ៉ាំរួច
+                    unequipTools()
+                    
+                    isEating = false
+                    print("[Auto Buy & Eat] Finished! Resuming auto fishing...")
+                    
+                    local secondsWaiting = 0
+                    while _G.AutoBuyAndEat and secondsWaiting < 300 do
+                        task.wait(1)
+                        secondsWaiting = secondsWaiting + 1
+                    end
+                end
+                isEating = false
+            end)
+        else
+            isEating = false
+        end
+    end,
+})
+
+local ToggleAutoTapMobile = Tab:CreateToggle({
     Name = "Auto Tap Mobile (Adjusted)",
     CurrentValue = false,
-    Flag = "AutoTapToggle", 
+    Flag = "AutoTapMobileFlag",
     Callback = function(Value)
-        _G.AutoTap = Value
-        
-        if _G.AutoTap then
-            print("[Auto Tap] ចាប់ផ្តើមដំណើរការ (ចុចចុះក្រោមបន្តិច)...")
-            
+        _G.AutoTapMobile = Value
+        if Value then
             task.spawn(function()
-                local success, err = pcall(function()
-                    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
-                    if not PlayerGui then return end
-                    
-                    local FishingGui = PlayerGui:WaitForChild("FishingGui", 5)
-                    if not FishingGui then return end
-
-                    while _G.AutoTap do
-                        -- ស្វែងរកតាម Path: ...FishingGui.TapMobile.ImageLabel
-                        local TapMobile = FishingGui:FindFirstChild("TapMobile")
-                        if TapMobile then
-                            local ImageLabel = TapMobile:FindFirstChild("ImageLabel")
-                            
-                            -- ពិនិត្យមើលថាតើវាបង្ហាញលើអេក្រង់ (Visible) ទើបចុច
-                            if ImageLabel and ImageLabel.Visible then
-                                autoClickUIWithOffset(ImageLabel) -- ប្រើ Function ដែលមាន Offset
-                            end
-                        end
-                        
-                        -- ផ្លាស់ប្តូរពេលរង់ចាំចន្លោះពី 1.0 ដល់ 1.5 វិនាទី
-                        local randomDelay = math.random(10, 15) / 10
-                        task.wait(randomDelay) 
+                while _G.AutoTapMobile do
+                    if tapMobileButton and tapMobileButton.Visible then
+                        autoClickUIWithOffset(tapMobileButton)
                     end
-                end)
-                
-                if not success then
-                    warn("[Auto Tap Error]: " .. tostring(err))
+                    task.wait(0.9)
                 end
-                
-                print("[Auto Tap] បានបញ្ឈប់។")
             end)
         end
     end,
 })
 
-
-local Slider = Tab:CreateSlider({
+local Slider = Tab2:CreateSlider({
     Name = '<font size="24"><b>ចំនួនចង់ទិញ</b></font>Amoun',
     Range = {0, 100},
     Increment = 10,
@@ -728,78 +705,11 @@ local Slider = Tab:CreateSlider({
     end,
 })
 
-local Button = Tab:CreateButton({
+local Button = Tab2:CreateButton({
     Name = '<font size="24"><b>ចុចទិញ</b></font>ទាល់ទៅជិតNPC',
     Callback = function()
         -- Directly pulls the current number from the slider's setting
         local amount = Slider.CurrentValue
         game:GetService("ReplicatedStorage"):WaitForChild("BuyBaitEvent"):FireServer(amount)
-    end,
-})
-
-
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local StoreBuyItem = ReplicatedStorage:WaitForChild("StoreBuyItem")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-
--- បង្កើត អនុគមន៍សម្រាប់ឱ្យតួអង្គកាន់ និងញ៉ាំវត្ថុ
-local function equipAndEat(itemName)
-    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local backpack = LocalPlayer:WaitForChild("Backpack")
-    
-    -- ស្វែងរកវត្ថុនៅក្នុង Backpack
-    local tool = backpack:FindFirstChild(itemName)
-    
-    -- បើសិនជារកមិនឃើញនៅក្នុង Backpack ទេ ក្រឡេកមើលក្នុងដៃតួអង្គ
-    if not tool and character then
-        tool = character:FindFirstChild(itemName)
-    end
-    
-    if tool and tool:IsA("Tool") then
-        -- បំពាក់វត្ថុនោះទៅឱ្យតួអង្គកាន់នឹងដៃ
-        tool.Parent = character
-        task.wait(0.5) -- រង់ចាំឱ្យតួអង្គកាន់ជាប់ស្រួលបួល
-        
-        -- ធ្វើការចុចប្រើប្រាស់ (Eat)
-        tool:Activate()
-        task.wait(1.5) -- រង់ចាំឱ្យសកម្មភាពញ៉ាំចប់ជាស្ថាពរ
-    end
-end
-
--- បង្កើត Toggle នៅក្នុង Rayfield Tab របស់អ្នក
-local Toggle = Tab2:CreateToggle({
-    Name = "Auto Buy & Eat (Burger/Water)",
-    CurrentValue = false,
-    Flag = "AutoBuyEatToggle", 
-    Callback = function(Value)
-        -- កំណត់តម្លៃ _G variable ទៅតាមស្ថានភាព Toggle (true ឬ false)
-        _G.AutoBuyAndEat = Value
-        
-        -- ប្រសិនបើ Toggle ត្រូវបានបើក (true) នោះវានឹងដំណើរការ Loop ភ្លាមៗ
-        if _G.AutoBuyAndEat then
-            task.spawn(function()
-                while _G.AutoBuyAndEat do
-                    -- ១. ធ្វើការបញ្ជាទិញពី Server
-                    StoreBuyItem:FireServer("Cheeze burger")
-                    task.wait(0.5)
-                    StoreBuyItem:FireServer("water")
-                    
-                    task.wait(2) -- រង់ចាំ ២ វិនាទីឱ្យ Item ធ្លាក់ចូលក្នុងកាតាប (Backpack)
-                    
-                    -- ២. ធ្វើការកាន់នឹងដៃរួចញ៉ាំម្តងមួយៗ (ពិនិត្យលក្ខខណ្ឌម្ដងទៀតក្រឡេកលោអ្នកប្រើប្រាស់បិទ Toggle ភ្លាមៗ)
-                    if _G.AutoBuyAndEat then equipAndEat("Cheeze burger") end
-                    if _G.AutoBuyAndEat then equipAndEat("water") end
-                    
-                    -- ៣. រង់ចាំរយៈពេល ៥ នាទី (៣០០ វិនាទី) មុននឹងចាប់ផ្តើមជុំបន្ទាប់
-                    -- ប្រើប្រាស់ Loop តូចដើម្បីឱ្យងាយស្រួលបិទភ្លាមៗ (មិនបាច់រង់ចាំដល់គ្រប់ ៣០០ វិនាទីពេញ)
-                    local secondsWaiting = 0
-                    while _G.AutoBuyAndEat and secondsWaiting < 300 do
-                        task.wait(1)
-                        secondsWaiting = secondsWaiting + 1
-                    end
-                end
-            end)
-        end
     end,
 })
