@@ -93,7 +93,9 @@ local Whitelisted_Users = {
     "RileyRush2012",
     "karte_10386",
     "Ko_PreyCambodia",
-    "OsSan_zzz"
+    "OsSan_zzz",
+    "Chanleang1680",
+    "leang168008",
 }
 local Target_Key = "MY_EXCLUSIVE_KEY_2026" -- ⚠️ សូមប្តូរ Key នេះតាមចិត្តរបស់អ្នក
 
