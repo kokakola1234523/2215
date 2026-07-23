@@ -118,6 +118,7 @@ if not table.find(Whitelisted_Users, LocalPlayer.Name) then
 end
 
 
+
 local HENG = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local MainWindow = HENG:CreateWindow({
     Name = "Grow a Garden 2",
@@ -141,22 +142,31 @@ local MainWindow = HENG:CreateWindow({
 local MainTab = MainWindow:CreateTab("Main", "home")
 local Tab1 = MainWindow:CreateTab("Send Items") 
 
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
 -- Send Setup
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Networking = require(ReplicatedStorage.SharedModules.Networking)
 
 -- ដែនកំណត់អថេរ (Variables)
 local TargetUsername = "2B9K2"
+
 local SelectedSeed = "Bamboo"
 local SelectedGear = "Super Watering Can"
 local SelectedSprinkler = "Super Sprinkler"
+local selectedTrowel = "Trowel"
+
+
 local Amount = 1
 
+
+local TrowelsOptions = {"Trowel"}
 local SprinklerOptions = {"Super Sprinkler"}
 local GearOptions = {"Super Watering Can"}
 local SeedOptions = {"Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Apple", "Bamboo","Corn","Cactus", "Pineapple", "Baby Cactus", "Horned Melon",
 "Mushroom", "Green Bean", "Banana", "Grape", "Coconut", "Glow Mushroom", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", "Poison Ivy", "Venus Fly Trap", "Pomegranate",
-"Poison Apple", "Venom Spitter", "Ghost Pepper", "Moon Bloom", "Dragon's Breath", "Hypno Bloom", "Rocket Pop", "Fire Fern", "Rainbow", "Mega", "Gold" }
+"Poison Apple", "Venom Spitter", "Ghost Pepper", "Moon Bloom","Sun Bloom", "Dragon's Breath", "Hypno Bloom", "Rocket Pop", "Fire Fern", "Star Fruit", "Rainbow", "Mega", "Gold" }
 
 -- អនុគមន៍ស្វែងរក UserId
 local function getUserId(username)
@@ -495,6 +505,19 @@ Tab1:CreateDropdown({
    end,
 })
 
+Tab1:CreateDropdown({
+   Name = '<font size="24"><b>ជ្រើសរើសប្រដាប់ជីក​</b></font> Trowel',
+   Options = TrowelsOptions, 
+   CurrentOption = {selectedTrowel},
+   MultipleOptions = false,
+   Flag = "MailTrowelType",
+   Callback = function(Options)
+       selectedTrowel = Options[1]
+   end,
+})
+
+
+
 Tab1:CreateInput({
    Name = '<font size="24"><b>កំណត់បរិមាណផ្ញើរ​</b></font> Amount',
    PlaceholderText = "ដាក់តម្លៃ...",
@@ -592,3 +615,33 @@ Tab1:CreateButton({
        end
    end,
 })
+
+Tab1:CreateButton({
+   Name = '<font size="24"><b>ផ្ញើប្រដាប់ជីក​</b></font> Trowel',
+   Callback = function()
+       local targetId = getUserId(TargetUsername)
+       if targetId then
+           HENG:Notify({Title = "Mailbox", Content = "កំពុងរៀបចំផ្ញើទៅកាន់: " .. TargetUsername, Duration = 3, Image = 4483362458})
+           local itemsToSend = {
+               {
+                   Category = "Trowels",             
+                   ItemKey = selectedTrowel, 
+                   Count = Amount          
+               }
+           }
+           task.wait(0.5)
+           local success, err = pcall(function()
+               Networking.Mailbox.SendBatch:Fire(targetId, itemsToSend, "Auto Sent!")
+           end)
+           if success then
+               HENG:Notify({Title = "ជោគជ័យ", Content = "បានបញ្ជូនប្រព័ន្ធស្រោចទឹកទៅកាន់ប្រអប់សាររួចរាល់!", Duration = 5, Image = 4483362458})
+           else
+               HENG:Notify({Title = "កំហុសប្រព័ន្ធ", Content = "មានបញ្ហា: " .. tostring(err), Duration = 5, Image = 4483362458})
+           end
+       else
+           HENG:Notify({Title = "រកមិនឃើញ", Content = "រកមិនឃើញគណនីឈ្មោះ " .. TargetUsername .. " ឡើយ!", Duration = 5, Image = 4483362458})
+       end
+   end,
+})
+
+
