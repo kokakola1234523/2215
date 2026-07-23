@@ -100,7 +100,9 @@ local Whitelisted_Users = {
     "stinkyjosh24",
     "Vith_GamerZin12",
     "Denje369",
-    "ratsaras2016"
+    "ratsaras2016",
+    "Yxnvnn",
+    "dagaborblox"
 }
 local Target_Key = "MY_EXCLUSIVE_KEY_2026" -- ⚠️ សូមប្តូរ Key នេះតាមចិត្តរបស់អ្នក
 
