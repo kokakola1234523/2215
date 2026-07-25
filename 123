@@ -44,7 +44,7 @@ local Amount = 1
 
 
 local TrowelsOptions = {"Trowel"}
-local SprinklerOptions = {"Super Sprinkler"}
+local SprinklerOptions = {"Super Sprinkler", "Legendary Sprinkler", "Rare Sprinkler"}
 local GearOptions = {"Super Watering Can"}
 local SeedOptions = {"Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Apple", "Bamboo","Corn","Cactus", "Pineapple", "Baby Cactus", "Horned Melon",
 "Mushroom", "Green Bean", "Banana", "Grape", "Coconut", "Glow Mushroom", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", "Poison Ivy", "Venus Fly Trap", "Pomegranate",
