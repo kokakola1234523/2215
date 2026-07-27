@@ -1,6 +1,5 @@
 loadstring(game:HttpGet("https://pastebin.com/raw/9nNXtJRn"))()
 
-
 local HENG = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local MainWindow = HENG:CreateWindow({
     Name = "Grow a Garden 2",
@@ -20,28 +19,26 @@ local MainWindow = HENG:CreateWindow({
     }
 })
 
--- บង្កើត Tabs
+-- បង្កើត Tabs
 local MainTab = MainWindow:CreateTab("Main", "home")
 local Tab1 = MainWindow:CreateTab("Send Items") 
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-
--- Send Setup
+local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Networking = require(ReplicatedStorage.SharedModules.Networking)
+
+-- Send Setup Modules
+local Networking = require(ReplicatedStorage:WaitForChild("SharedModules"):WaitForChild("Networking"))
+local FruitValueCalc = require(ReplicatedStorage:WaitForChild("SharedModules"):WaitForChild("FruitValueCalc"))
 
 -- ដែនកំណត់អថេរ (Variables)
 local TargetUsername = "2B9K2"
-
 local SelectedSeed = "Bamboo"
 local SelectedGear = "Super Watering Can"
 local SelectedSprinkler = "Super Sprinkler"
 local selectedTrowel = "Trowel"
-
-
 local Amount = 1
-
 
 local TrowelsOptions = {"Trowel"}
 local SprinklerOptions = {"Super Sprinkler", "Legendary Sprinkler", "Rare Sprinkler"}
@@ -49,6 +46,10 @@ local GearOptions = {"Super Watering Can"}
 local SeedOptions = {"Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Apple", "Bamboo","Corn","Cactus", "Pineapple", "Baby Cactus", "Horned Melon",
 "Mushroom", "Green Bean", "Banana", "Grape", "Coconut", "Glow Mushroom", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", "Poison Ivy", "Venus Fly Trap", "Pomegranate",
 "Poison Apple", "Venom Spitter", "Ghost Pepper", "Moon Bloom","Sun Bloom", "Dragon's Breath", "Hypno Bloom", "Rocket Pop", "Fire Fern", "Star Fruit", "Rainbow", "Mega", "Gold" }
+
+-- Variables សម្រាប់ Main Feature
+local Plots = Workspace:WaitForChild("Gardens")
+local VisitedFruits = {}
 
 -- អនុគមន៍ស្វែងរក UserId
 local function getUserId(username)
@@ -58,16 +59,6 @@ local function getUserId(username)
     if success then return userId end
     return nil
 end
-
-local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
-
--- Variables សម្រាប់ Main Feature
-local Plots = Workspace.Gardens
-local VisitedFruits = {}
-
--- Modules
-local FruitValueCalc = require(ReplicatedStorage:WaitForChild("SharedModules"):WaitForChild("FruitValueCalc"))
 
 -- Functions សម្រាប់ Main Feature
 local GetHumanoid = function(Player)
@@ -84,10 +75,11 @@ end
 local GetPlot = function(Player)
     if not Player then return nil end
     for _, Plot in next, Plots:GetChildren() do
-        if (Plot:GetAttribute("OwnerUserId") == Player.UserId) then
+        if (Plot:GetAttribute("OwnerUserId") == Player.UserId or Plot:GetAttribute("Owner") == Player.Name) then
             return Plot
         end
     end
+    return nil
 end
 
 local CalculateValue = function(Fruit)
@@ -167,16 +159,66 @@ local Steal = function(Fruit)
         if (Root) then
             VisitedFruits[Fruit] = true
             Root.CFrame = HarvestPart.CFrame
-            task.wait(0.05) -- Adjusted from 0.03 for reliability
+            task.wait(0.05)
             Networking.Steal.BeginSteal:Fire(UserId, PlantId, FruitId or "")
             Networking.Steal.CompleteSteal:Fire()
-            task.wait(0.05) -- Adjusted from 0.02
+            task.wait(0.05)
         end
     end
 end
 
+-- ==========================================
+-- មុខងារបង្កើតវិក្កយបត្រ (Invoice Generator)
+-- ==========================================
+local function ShowReceipt(recipient, category, itemName, count)
+    HENG:Notify({
+        Title = "🧾 វិក្កយបត្រផ្ញើទំនិញ (RECEIPT)",
+        Content = string.format(
+            "---------------------------\n" ..
+            "👤 អ្នកទទួល: %s\n" ..
+            "📦 ប្រភេទ: %s\n" ..
+            "🌱 ទំនិញ: %s\n" ..
+            "🔢 ចំនួន: %d\n" ..
+            "ស្ថានភាព: ផ្ញើរួចរាល់ ✅\n" ..
+            "---------------------------",
+            recipient, category, itemName, count
+        ),
+        Duration = 30,
+        Image = 4483362458
+    })
+end
+
+local function SendItemWithReceipt(category, itemKey, categoryNameKhmer)
+    local targetId = getUserId(TargetUsername)
+    if not targetId then
+        HENG:Notify({Title = "រកមិនឃើញ", Content = "រកមិនឃើញគណនីឈ្មោះ " .. TargetUsername .. " ឡើយ!", Duration = 5, Image = 4483362458})
+        return
+    end
+
+    HENG:Notify({Title = "Mailbox", Content = "កំពុងដំណើរការផ្ញើ...", Duration = 2, Image = 4483362458})
+    
+    local itemsToSend = {
+        {
+            Category = category,             
+            ItemKey = itemKey, 
+            Count = Amount          
+        }
+    }
+    
+    task.wait(0.5)
+    local success, err = pcall(function()
+        return Networking.Mailbox.SendBatch:Fire(targetId, itemsToSend, "Auto Sent with Receipt!")
+    end)
+    
+    if success then
+        ShowReceipt(TargetUsername, categoryNameKhmer, itemKey, Amount)
+    else
+        HENG:Notify({Title = "កំហុសប្រព័ន្ធ", Content = "ការផ្ញើបរាជ័យ: " .. tostring(err), Duration = 5, Image = 4483362458})
+    end
+end
+
 --- -- << Rayfield UI Tab 1: Main >> ---
-local Toggle = MainTab:CreateToggle({
+MainTab:CreateToggle({
     Name = '<font size="24"><b>លួចដំណាំគេ​</b></font>Only at Night',
     CurrentValue = false,
     Flag = "StealToggle",
@@ -223,34 +265,15 @@ MainTab:CreateToggle({
         if _G.SellAll then
             task.spawn(function()
                 while _G.SellAll do
-                    local success, result = pcall(function()
-                        return Networking.NPCS.SellAll:Fire()
+                    pcall(function()
+                        Networking.NPCS.SellAll:Fire()
                     end)
-                    if success and result and result.Success then
-                        if result.SoldCount > 0 then
-                            print("Automatically sold " .. tostring(result.SoldCount) .. " fruits for " .. tostring(result.SellPrice) .. "¢!")
-                        end
-                    else
-                        warn("Auto-sell failed or inventory empty.")
-                    end
                     task.wait(1)
                 end
             end)
         end
     end,
 })
-
-local gardens = game.Workspace:WaitForChild("Gardens")
-local OwnerPlot
-while OwnerPlot == nil do
-    task.wait(0.1)
-    for _, plot in pairs(gardens:GetChildren()) do
-        if plot:GetAttribute("Owner") == game.Players.LocalPlayer.Name then
-            OwnerPlot = plot
-            break
-        end
-    end
-end
 
 local function isGrown(plant)
     local maxAge = plant:GetAttribute("MaxAge")
@@ -263,6 +286,7 @@ end
 
 local function getharvestableplants()
     local plants = {}
+    local OwnerPlot = GetPlot(LocalPlayer)
     if not OwnerPlot then return plants end
     
     local plantsFolder = OwnerPlot:FindFirstChild("Plants")
@@ -294,7 +318,7 @@ local function harvest(plant)
     end
 end
 
-_G.AutoHarvest = false -- Removed 'local' keyword to fix syntax error
+_G.AutoHarvest = false
 
 MainTab:CreateToggle({
    Name = '<font size="24"><b>ប្រមូលផល​</b></font>Harvest',
@@ -318,7 +342,7 @@ MainTab:CreateToggle({
 
 MainTab:CreateSlider({
     Name = '<font size="24"><b>ល្បឿនដើរ</b></font>Walk Speed',
-    Range = {16, 30},
+    Range = {16, 100},
     Increment = 1,
     Suffix = "WalkSpeed",
     CurrentValue = 16,
@@ -331,7 +355,7 @@ MainTab:CreateSlider({
 
 MainTab:CreateSlider({
     Name = '<font size="24"><b>ហោះ</b></font>Fly',
-    Range = {1, 100},
+    Range = {0, 100},
     Increment = 1,
     Suffix = "HipHeight",
     CurrentValue = 0,
@@ -366,7 +390,7 @@ Tab1:CreateDropdown({
 })
 
 Tab1:CreateDropdown({
-   Name = '<font size="24"><b>ជ្រើសរើសគាស់ទឹក​</b></font> Watering Cans',
+   Name = '<font size="24"><b>ជ្រើសរើសធុងស្រោចទឹក​</b></font> Watering Cans',
    Options = GearOptions, 
    CurrentOption = {SelectedGear},
    MultipleOptions = false,
@@ -398,8 +422,6 @@ Tab1:CreateDropdown({
    end,
 })
 
-
-
 Tab1:CreateInput({
    Name = '<font size="24"><b>កំណត់បរិមាណផ្ញើរ​</b></font> Amount',
    PlaceholderText = "ដាក់តម្លៃ...",
@@ -417,113 +439,27 @@ Tab1:CreateInput({
 Tab1:CreateButton({
    Name = '<font size="24"><b>ផ្ញើគ្រាប់ពូជ​</b></font> Send Seeds',
    Callback = function()
-       local targetId = getUserId(TargetUsername)
-       if targetId then
-           HENG:Notify({Title = "Mailbox", Content = "កំពុងរៀបចំផ្ញើទៅកាន់: " .. TargetUsername, Duration = 3, Image = 4483362458})
-           local itemsToSend = {
-               {
-                   Category = "Seeds",             
-                   ItemKey = SelectedSeed, 
-                   Count = Amount          
-               }
-           }
-           task.wait(0.5)
-           local success, err = pcall(function()
-               Networking.Mailbox.SendBatch:Fire(targetId, itemsToSend, "Auto Sent!")
-           end)
-           if success then
-               HENG:Notify({Title = "ជោគជ័យ", Content = "បានបញ្ជូនគ្រាប់ពូជទៅកាន់ប្រអប់សាររួចរាល់!", Duration = 5, Image = 4483362458})
-           else
-               HENG:Notify({Title = "កំហុសប្រព័ន្ធ", Content = "មានបញ្ហា: " .. tostring(err), Duration = 5, Image = 4483362458})
-           end
-       else
-           HENG:Notify({Title = "រកមិនឃើញ", Content = "រកមិនឃើញគណនីឈ្មោះ " .. TargetUsername .. " ឡើយ!", Duration = 5, Image = 4483362458})
-       end
+       SendItemWithReceipt("Seeds", SelectedSeed, "គ្រាប់ពូជ")
    end,
 })
 
 Tab1:CreateButton({
    Name = '<font size="24"><b>ផ្ញើធុងស្រោចទឹក​</b></font> Super Watering',
    Callback = function()
-       local targetId = getUserId(TargetUsername)
-       if targetId then
-           HENG:Notify({Title = "Mailbox", Content = "កំពុងរៀបចំផ្ញើទៅកាន់: " .. TargetUsername, Duration = 3, Image = 4483362458})
-           local itemsToSend = {
-               {
-                   Category = "WateringCans",             
-                   ItemKey = SelectedGear, 
-                   Count = Amount          
-               }
-           }
-           task.wait(0.5)
-           local success, err = pcall(function()
-               Networking.Mailbox.SendBatch:Fire(targetId, itemsToSend, "Auto Sent!")
-           end)
-           if success then
-               HENG:Notify({Title = "ជោគជ័យ", Content = "បានបញ្ជូនធុងស្រោចទឹកទៅកាន់ប្រអប់សាររួចរាល់!", Duration = 5, Image = 4483362458})
-           else
-               HENG:Notify({Title = "កំហុសប្រព័ន្ធ", Content = "មានបញ្ហា: " .. tostring(err), Duration = 5, Image = 4483362458})
-           end
-       else
-           HENG:Notify({Title = "រកមិនឃើញ", Content = "រកមិនឃើញគណនីឈ្មោះ " .. TargetUsername .. " ឡើយ!", Duration = 5, Image = 4483362458})
-       end
+       SendItemWithReceipt("WateringCans", SelectedGear, "ធុងស្រោចទឹក")
    end,
 })
 
 Tab1:CreateButton({
    Name = '<font size="24"><b>ផ្ញើប្រព័ន្ធស្រោចទឹក​</b></font> Send Sprinklers',
    Callback = function()
-       local targetId = getUserId(TargetUsername)
-       if targetId then
-           HENG:Notify({Title = "Mailbox", Content = "កំពុងរៀបចំផ្ញើទៅកាន់: " .. TargetUsername, Duration = 3, Image = 4483362458})
-           local itemsToSend = {
-               {
-                   Category = "Sprinklers",             
-                   ItemKey = SelectedSprinkler, 
-                   Count = Amount          
-               }
-           }
-           task.wait(0.5)
-           local success, err = pcall(function()
-               Networking.Mailbox.SendBatch:Fire(targetId, itemsToSend, "Auto Sent!")
-           end)
-           if success then
-               HENG:Notify({Title = "ជោគជ័យ", Content = "បានបញ្ជូនប្រព័ន្ធស្រោចទឹកទៅកាន់ប្រអប់សាររួចរាល់!", Duration = 5, Image = 4483362458})
-           else
-               HENG:Notify({Title = "កំហុសប្រព័ន្ធ", Content = "មានបញ្ហា: " .. tostring(err), Duration = 5, Image = 4483362458})
-           end
-       else
-           HENG:Notify({Title = "រកមិនឃើញ", Content = "រកមិនឃើញគណនីឈ្មោះ " .. TargetUsername .. " ឡើយ!", Duration = 5, Image = 4483362458})
-       end
+       SendItemWithReceipt("Sprinklers", SelectedSprinkler, "ប្រព័ន្ធស្រោចទឹក")
    end,
 })
 
 Tab1:CreateButton({
    Name = '<font size="24"><b>ផ្ញើប្រដាប់ជីក​</b></font> Trowel',
    Callback = function()
-       local targetId = getUserId(TargetUsername)
-       if targetId then
-           HENG:Notify({Title = "Mailbox", Content = "កំពុងរៀបចំផ្ញើទៅកាន់: " .. TargetUsername, Duration = 3, Image = 4483362458})
-           local itemsToSend = {
-               {
-                   Category = "Trowels",             
-                   ItemKey = selectedTrowel, 
-                   Count = Amount          
-               }
-           }
-           task.wait(0.5)
-           local success, err = pcall(function()
-               Networking.Mailbox.SendBatch:Fire(targetId, itemsToSend, "Auto Sent!")
-           end)
-           if success then
-               HENG:Notify({Title = "ជោគជ័យ", Content = "បានបញ្ជូនប្រព័ន្ធស្រោចទឹកទៅកាន់ប្រអប់សាររួចរាល់!", Duration = 5, Image = 4483362458})
-           else
-               HENG:Notify({Title = "កំហុសប្រព័ន្ធ", Content = "មានបញ្ហា: " .. tostring(err), Duration = 5, Image = 4483362458})
-           end
-       else
-           HENG:Notify({Title = "រកមិនឃើញ", Content = "រកមិនឃើញគណនីឈ្មោះ " .. TargetUsername .. " ឡើយ!", Duration = 5, Image = 4483362458})
-       end
+       SendItemWithReceipt("Trowels", selectedTrowel, "ប្រដាប់ជីក")
    end,
 })
-
-
