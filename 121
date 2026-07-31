@@ -512,7 +512,7 @@ local inventoryRemotes = ReplicatedStorage:WaitForChild("InventoryRemotes")
 local inventoryFullEvent = inventoryRemotes:WaitForChild("InventoryFull")
 local FishingShopRequest = FishingSystem:WaitForChild("FishingShopRequest")
 
-local targetCFrame = CFrame.new(1701.08264, 22.0194283, 17.8810387, 0.342042685, 0, 0.939684391, 0, 1, 0, -0.939684391, 0, 0.342042685)
+local targetCFrame = CFrame.new(1721.73669, 21.4959965, -76.5768204, 1, 0, 0, 0, 1, 0, 0, 0, 1)
 local targetPosition = targetCFrame.Position
 
 local function walkAndSell()
