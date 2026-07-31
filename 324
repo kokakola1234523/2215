@@ -1,5 +1,3 @@
-
-
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
@@ -33,11 +31,84 @@ RobloxGui.ChildAdded:Connect(function(child)
 end)
 
 local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local hrp = character:WaitForChild("HumanoidRootPart")
 local RunService = game:GetService("RunService")
 
+-- Variables សម្រាប់ Lock Speed & Jump
+local customSpeed = 16
+local customJump = 50
+local speedEnabled = false
+local jumpEnabled = false
+
+-- Loop សម្រាប់ Lock ល្បឿនមិនឱ្យ Reset ពេល Respawn ឬដូររឿងផ្សេងៗ
+RunService.Stepped:Connect(function()
+    local char = player.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            if speedEnabled then
+                hum.WalkSpeed = customSpeed
+            end
+            if jumpEnabled then
+                hum.UseJumpPower = true
+                hum.JumpPower = customJump
+            end
+        end
+    end
+end)
+
 -- ==================== TAB: MAIN =====================
+TabMain:CreateSection("Player Utilities")
+
+-- WalkSpeed Slider & Toggle
+TabMain:CreateToggle({
+    Name = " Enable Custom Speed",
+    CurrentValue = false,
+    Flag = "SpeedToggle",
+    Callback = function(state)
+        speedEnabled = state
+        if not state and player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+            player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 16
+        end
+    end,
+})
+
+TabMain:CreateSlider({
+    Name = "Walk Speed",
+    Range = {16, 300},
+    Increment = 1,
+    Suffix = "Speed",
+    CurrentValue = 16,
+    Flag = "WalkSpeedSlider",
+    Callback = function(Value)
+        customSpeed = Value
+    end,
+})
+
+-- JumpPower Slider & Toggle
+TabMain:CreateToggle({
+    Name = " Enable High Jump",
+    CurrentValue = false,
+    Flag = "JumpToggle",
+    Callback = function(state)
+        jumpEnabled = state
+        if not state and player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+            player.Character:FindFirstChildOfClass("Humanoid").JumpPower = 50
+        end
+    end,
+})
+
+TabMain:CreateSlider({
+    Name = "High Jump",
+    Range = {50, 400},
+    Increment = 5,
+    Suffix = "Power",
+    CurrentValue = 50,
+    Flag = "JumpPowerSlider",
+    Callback = function(Value)
+        customJump = Value
+    end,
+})
+
 TabMain:CreateSection("Days")
 
 local flying = false
@@ -47,7 +118,7 @@ local speed = 1
 local angle = 0
 
 TabMain:CreateToggle({
-    Name = '<font size="24"><b>រត់គេចនៅពេលយប់</b></font>​Auto Day',
+    Name = '<font size="24"><b>រត់គេចនៅពេលយប់</b></font> Auto Day',
     CurrentValue = false,
     Flag = "AutoDaysToggle",
     Callback = function(state)
@@ -56,7 +127,8 @@ TabMain:CreateToggle({
 })
 
 RunService.RenderStepped:Connect(function(dt)
-    if flying and hrp then
+    if flying and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = player.Character.HumanoidRootPart
         angle = angle + speed * dt
         local x = math.cos(angle) * radius
         local z = math.sin(angle) * radius
@@ -96,7 +168,7 @@ local function getFogBounds()
 end
 
 TabMain:CreateToggle({
-    Name = '<font size="24"><b>កាប់ដើមឈើរ</b></font>Auto Chop Tree',
+    Name = '<font size="24"><b>កាប់ដើមឈើរ</b></font> Auto Chop Tree',
     CurrentValue = false,
     Flag = "AutoChopToggle",
     Callback = function(Value)
@@ -153,7 +225,8 @@ local function findBunny()
 end
 
 RunService.RenderStepped:Connect(function(dt)
-    if autoKill then
+    if autoKill and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = player.Character.HumanoidRootPart
         lastBunnyCheck = lastBunnyCheck + dt
         if lastBunnyCheck >= 10 then
             findBunny()
@@ -169,17 +242,17 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 TabMain:CreateToggle({
-    Name = '<font size="24"><b>សម្លាប់ទន្សាយ</b></font>Kill Bunny',
+    Name = '<font size="24"><b>សម្លាប់ទន្សាយ</b></font> Kill Bunny',
     CurrentValue = false,
     Flag = "AutoKillBunny",
     Callback = function(state)
         autoKill = state
-        if autoKill then
-            savedPosition = hrp.CFrame
+        if autoKill and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            savedPosition = player.Character.HumanoidRootPart.CFrame
             findBunny()
         else
-            if savedPosition then
-                hrp.CFrame = savedPosition
+            if savedPosition and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                player.Character.HumanoidRootPart.CFrame = savedPosition
             end
         end
     end,
@@ -187,15 +260,30 @@ TabMain:CreateToggle({
 
 TabMain:CreateSection("Child")
 
-TabMain:CreateButton({
-    Name = "Open All chest",
-    Callback = function()
-        local chestFolder = workspace.Items
-        local remote = game:GetService("ReplicatedStorage").RemoteEvents:WaitForChild("RequestOpenItemChest")
-        for _, v in ipairs(chestFolder:GetChildren()) do
-            if table.find({"Item Chest", "Item Chest2", "Item Chest3", "Item Chest4", "Item Chest5", "Item Chest6", "Alien Chest"}, v.Name) then
-                remote:FireServer(v)
-            end
+local autoOpenChest = false
+
+TabMain:CreateToggle({
+    Name = '<font size="24"><b>បើកហិបទាំងអស់ស្វ័យប្រវត្តិ</b></font> Auto Open All Chest',
+    CurrentValue = false,
+    Flag = "AutoOpenChestToggle",
+    Callback = function(State)
+        autoOpenChest = State
+        if autoOpenChest then
+            task.spawn(function()
+                local chestFolder = workspace.Items
+                local remote = game:GetService("ReplicatedStorage").RemoteEvents:WaitForChild("RequestOpenItemChest")
+                local chestNames = {"Item Chest", "Item Chest2", "Item Chest3", "Item Chest4", "Item Chest5", "Item Chest6", "Alien Chest", "StoneChest1","StoneChest2", "StoneChest3"}
+                
+                while autoOpenChest do
+                    for _, v in ipairs(chestFolder:GetChildren()) do
+                        if not autoOpenChest then break end
+                        if table.find(chestNames, v.Name) then
+                            remote:FireServer(v)
+                        end
+                    end
+                    task.wait(1)
+                end
+            end)
         end
     end,
 })
@@ -240,7 +328,7 @@ TabMain:CreateButton({Name = "រកក្មេងទី៤", Callback = functi
 TabMain:CreateSection("Cook & Eat")
 
 TabMain:CreateButton({
-    Name = '<font size="24"><b>ញុាំ</b></font>Eat',
+    Name = '<font size="24"><b>ញុាំ</b></font> Eat',
     Callback = function()
         local ReplicatedStorage = game:GetService("ReplicatedStorage")
         local requestConsume = ReplicatedStorage.RemoteEvents:WaitForChild("RequestConsumeItem")
@@ -264,7 +352,7 @@ TabMain:CreateButton({
 })
 
 TabMain:CreateButton({
-    Name = '<font size="24"><b>ចម្អិនម្ហូប</b></font>Cook food',
+    Name = '<font size="24"><b>ចម្អិនម្ហូប</b></font> Cook food',
     Callback = function()
         local hrpLocal = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
         if not hrpLocal then return end
@@ -289,109 +377,103 @@ local stopDrag = rs.RemoteEvents.StopDraggingItem
 TabBrings:CreateSection("Fuel")
 _G.BringFuel = false
 
-TabBrings:CreateButton({
-    Name = '<font size="24"><b>ទាញយកអីវ៉ានដុតបាន</b></font>Bring Fuel',
-    Callback = function()
-        if _G.BringFuel then return end
-        _G.BringFuel = true
-        local savedPositionFuel = hrp.CFrame
-        task.spawn(function()
-            local targetFuel = {["Log"]=true, ["Coal"]=true, ["Oil Barrel"]=true, ["Fuel Canister"]=true, ["Cultist"]=true, ["Bear Corpse"]=true, ["Alpha Wolf Corppse"]=true, ["Wolf Corppse"]=true, ["Crossbow Cultist"]=true}
-            while _G.BringFuel do
-                for _, item in ipairs(workspace.Items:GetChildren()) do
-                    if not _G.BringFuel then break end
-                    if item:IsA("Model") and item.PrimaryPart and targetFuel[item.Name] then
-                        requestDrag:FireServer(item)
-                        task.wait(0.1)
-                        item:PivotTo(savedPositionFuel * CFrame.new(0,3,0))
-                        task.wait(0.1)
-                        stopDrag:FireServer(item)
-                        task.wait(0.2)
+TabBrings:CreateToggle({
+    Name = '<font size="24"><b>ទាញយកអីវ៉ាន់ដុតបាន</b></font> Bring Fuel',
+    CurrentValue = false,
+    Flag = "BringFuelToggle",
+    Callback = function(State)
+        _G.BringFuel = State
+        if _G.BringFuel and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local savedPositionFuel = player.Character.HumanoidRootPart.CFrame
+            task.spawn(function()
+                local targetFuel = {["Log"]=true, ["Coal"]=true, ["Oil Barrel"]=true, ["Fuel Canister"]=true, ["Cultist"]=true, ["Bear Corpse"]=true, ["Alpha Wolf Corppse"]=true, ["Wolf Corppse"]=true, ["Crossbow Cultist"]=true, ["Strong Axe"]=true, ["Sheet Metal"]=true, ["Rifle Ammo"]=true, ["Rifle"]=true, ["Revolver"]=true, ["Revolver Ammo"]=true,["Giant Sack"]=true, ["Leather Body"]=true, ["Crystal Skull Key"]=true, ["Defense Blueprint"]=true, ["Coin Stack"]=true, ["Dino Kid's Lunchbox"]=true, ["Dino Kid's Yoyo"]=true}
+                while _G.BringFuel do
+                    for _, item in ipairs(workspace.Items:GetChildren()) do
+                        if not _G.BringFuel then break end
+                        if item:IsA("Model") and item.PrimaryPart and targetFuel[item.Name] then
+                            requestDrag:FireServer(item)
+                            task.wait(0.1)
+                            item:PivotTo(savedPositionFuel * CFrame.new(0,3,0))
+                            task.wait(0.1)
+                            stopDrag:FireServer(item)
+                            task.wait(0.2)
+                        end
                     end
+                    task.wait(1)
                 end
-                task.wait(1)
-            end
-        end)
+            end)
+        end
     end,
-})
-
-TabBrings:CreateButton({
-    Name = '<font size="24"><b>បញ្ឈប់</b></font>Stop Bring',
-    Callback = function() _G.BringFuel = false end,
 })
 
 TabBrings:CreateSection("Metal")
 _G.BringMetal = false
 
-TabBrings:CreateButton({
-    Name = '<font size="24"><b>ទាញដែក</b></font>Bring Metal',
-    Callback = function()
-        if _G.BringMetal then return end
-        _G.BringMetal = true
-        local savedPositionMetal = hrp.CFrame
-        task.spawn(function()
-            local targetMetal = {["Bolt"]=true, ["Sheet Metal"]=true, ["UFO Junk"]=true, ["UFO Component"]=true, ["Broken Fan"]=true, ["Broken Radio"]=true, ["Broken Microwave"]=true, ["Tyre"]=true, ["Metal Chair"]=true, ["Old Car Engine"]=true, ["Cultist Experiment"]=true, ["Washing Machine"]=true, ["Cultist Prototype"]=true, ["UFO Scrap"]=true}
-            while _G.BringMetal do
-                for _, item in ipairs(workspace.Items:GetChildren()) do
-                    if not _G.BringMetal then break end
-                    if item:IsA("Model") and item.PrimaryPart and targetMetal[item.Name] then
-                        requestDrag:FireServer(item)
-                        task.wait(0.1)
-                        item:PivotTo(savedPositionMetal * CFrame.new(0,3,0))
-                        task.wait(0.1)
-                        stopDrag:FireServer(item)
-                        task.wait(0.2)
+TabBrings:CreateToggle({
+    Name = '<font size="24"><b>ទាញដែក</b></font> Bring Metal',
+    CurrentValue = false,
+    Flag = "BringMetalToggle",
+    Callback = function(State)
+        _G.BringMetal = State
+        if _G.BringMetal and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local savedPositionMetal = player.Character.HumanoidRootPart.CFrame
+            task.spawn(function()
+                local targetMetal = {["Bolt"]=true, ["Sheet Metal"]=true, ["UFO Junk"]=true, ["UFO Component"]=true, ["Broken Fan"]=true, ["Broken Radio"]=true, ["Broken Microwave"]=true, ["Tyre"]=true, ["Metal Chair"]=true, ["Old Car Engine"]=true, ["Cultist Experiment"]=true, ["Washing Machine"]=true, ["Cultist Prototype"]=true, ["UFO Scrap"]=true}
+                while _G.BringMetal do
+                    for _, item in ipairs(workspace.Items:GetChildren()) do
+                        if not _G.BringMetal then break end
+                        if item:IsA("Model") and item.PrimaryPart and targetMetal[item.Name] then
+                            requestDrag:FireServer(item)
+                            task.wait(0.1)
+                            item:PivotTo(savedPositionMetal * CFrame.new(0,3,0))
+                            task.wait(0.1)
+                            stopDrag:FireServer(item)
+                            task.wait(0.2)
+                        end
                     end
+                    task.wait(1)
                 end
-                task.wait(1)
-            end
-        end)
+            end)
+        end
     end,
-})
-
-TabBrings:CreateButton({
-    Name = '<font size="24"><b>បញ្ឈប់</b></font>Stop Bring',
-    Callback = function() _G.BringMetal = false end,
 })
 
 TabBrings:CreateSection("Food")
 _G.BringFood = false
 
-TabBrings:CreateButton({
-    Name = '<font size="24"><b>ទាញអាហារ</b></font>Bring Food',
-    Callback = function()
-        if _G.BringFood then return end
-        _G.BringFood = true
-        local savedPositionFood = hrp.CFrame
-        task.spawn(function()
-            local targetFood = {["Steak"]=true, ["BBQ Ribs"]=true, ["Candy Apple"]=true, ["Carrot"]=true, ["Berry"]=true, ["Cotton Candy"]=true, ["Chili"]=true, ["Lava Eel"]=true, ["Candy Corn"]=true, ["Morsel"]=true, ["Stew"]=true, ["Corn"]=true, ["Pumpkin"]=true, ["Casserole"]=true, ["Apple"]=true, ["Berry Juice"]=true, ["Ribs"]=true, ["Cake"]=true, ["Hearty Stew"]=true, ["Shark"]=true, ["Swordfish"]=true, ["Eel"]=true, ["Char"]=true, ["Mackerel"]=true, ["Salmon"]=true, ["Clownfish"]=true}
-            while _G.BringFood do
-                for _, item in ipairs(workspace.Items:GetChildren()) do
-                    if not _G.BringFood then break end
-                    if item:IsA("Model") and item.PrimaryPart and targetFood[item.Name] then
-                        requestDrag:FireServer(item)
-                        task.wait(0.1)
-                        item:PivotTo(savedPositionFood * CFrame.new(0,3,0))
-                        task.wait(0.1)
-                        stopDrag:FireServer(item)
-                        task.wait(0.2)
+TabBrings:CreateToggle({
+    Name = '<font size="24"><b>ទាញអាហារ</b></font> Bring Food',
+    CurrentValue = false,
+    Flag = "BringFoodToggle",
+    Callback = function(State)
+        _G.BringFood = State
+        if _G.BringFood and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local savedPositionFood = player.Character.HumanoidRootPart.CFrame
+            task.spawn(function()
+                local targetFood = {["Steak"]=true, ["BBQ Ribs"]=true, ["Candy Apple"]=true, ["Carrot"]=true, ["Berry"]=true, ["Cotton Candy"]=true, ["Chili"]=true, ["Lava Eel"]=true, ["Candy Corn"]=true, ["Morsel"]=true, ["Stew"]=true, ["Corn"]=true, ["Pumpkin"]=true, ["Casserole"]=true, ["Apple"]=true, ["Berry Juice"]=true, ["Ribs"]=true, ["Cake"]=true, ["Hearty Stew"]=true, ["Shark"]=true, ["Swordfish"]=true, ["Eel"]=true, ["Char"]=true, ["Mackerel"]=true, ["Salmon"]=true, ["Clownfish"]=true, ["MedKit"]=true}
+                while _G.BringFood do
+                    for _, item in ipairs(workspace.Items:GetChildren()) do
+                        if not _G.BringFood then break end
+                        if item:IsA("Model") and item.PrimaryPart and targetFood[item.Name] then
+                            requestDrag:FireServer(item)
+                            task.wait(0.1)
+                            item:PivotTo(savedPositionFood * CFrame.new(0,3,0))
+                            task.wait(0.1)
+                            stopDrag:FireServer(item)
+                            task.wait(0.2)
+                        end
                     end
+                    task.wait(1)
                 end
-                task.wait(1)
-            end
-        end)
+            end)
+        end
     end,
 })
 
-TabBrings:CreateButton({
-    Name = '<font size="24"><b>បញ្ឈប់</b></font>Stop Bring',
-    Callback = function() _G.BringFood = false end,
-})
-
-TabBrings:CreateSection("Others & Individual Bring")
+TabBrings:CreateSection("Others")
 
 TabBrings:CreateButton({
-    Name = '<font size="24"><b>បញ្ជាប់ទាំងអស់</b></font>Stop All',
+    Name = '<font size="24"><b>បិទទាំងអស់</b></font> Stop All',
     Callback = function()
         _G.BringFood = false
         _G.BringMetal = false
