@@ -644,15 +644,15 @@ local ToggleBuyEat = Tab2:CreateToggle({
 
                     print("[Auto Buy & Eat] Buying Burger & Water...")
                     StoreBuyItem:FireServer("Cheeze burger")
-                    task.wait(0.5)
+                    task.wait(1)
                     StoreBuyItem:FireServer("water")
                     
-                    task.wait(2)
+                    task.wait(5)
                     
                     if _G.AutoBuyAndEat then equipAndEat("Cheeze burger") end
                     if _G.AutoBuyAndEat then equipAndEat("water") end
                     
-                    task.wait(1)
+                    task.wait(5)
                     
                     -- ដក Burger/Water ចេញពីដៃវិញពេលញ៉ាំរួច
                     unequipTools()
@@ -661,9 +661,9 @@ local ToggleBuyEat = Tab2:CreateToggle({
                     print("[Auto Buy & Eat] Finished! Resuming auto fishing...")
                     
                     local secondsWaiting = 0
-                    while _G.AutoBuyAndEat and secondsWaiting < 300 do
+                    while _G.AutoBuyAndEat and secondsWaiting < 600 do
                         task.wait(1)
-                        secondsWaiting = secondsWaiting + 1
+                        secondsWaiting = secondsWaiting + 3
                     end
                 end
                 isEating = false
@@ -683,7 +683,8 @@ local ToggleAutoTapMobile = Tab:CreateToggle({
         if Value then
             task.spawn(function()
                 while _G.AutoTapMobile do
-                    if tapMobileButton and tapMobileButton.Visible then
+                    -- បន្ថែម not isSelling និង not isEating ទីនេះ ដើម្បីឱ្យវាឈប់ Tap ពេលកំពុងលក់ឬញ៉ាំ
+                    if tapMobileButton and tapMobileButton.Visible and not isSelling and not isEating then
                         autoClickUIWithOffset(tapMobileButton)
                     end
                     task.wait(0.9)
