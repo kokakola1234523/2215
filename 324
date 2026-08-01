@@ -12,7 +12,7 @@ local Window = Rayfield:CreateWindow({
     KeySystem = false,
 })
 
--- Tạo các Tabs (Chỉ giữ lại Main và Brings)
+
 local TabMain = Window:CreateTab("Main", "bird")
 local TabBrings = Window:CreateTab("Brings", "box")
 
