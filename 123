@@ -137,11 +137,13 @@ local selectedTrowel = "Trowel"
 local Amount = 1
 
 local TrowelsOptions = {"Trowel"}
-local SprinklerOptions = {"Super Sprinkler", "Legendary Sprinkler", "Rare Sprinkler"}
-local GearOptions = {"Super Watering Can"}
+local SprinklerOptions = {"Super Sprinkler", "Legendary Sprinkler", "Rare Sprinkler", "Syrup Sprinkler", "Super Syrup Sprinkler"}
+local GearOptions = {"Super Watering Can", "Common Waering Can", "Syrup Watering Can", "Super Syrup Watering Can"}
 local SeedOptions = {"Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Apple", "Bamboo","Corn","Cactus", "Pineapple", "Baby Cactus", "Horned Melon",
 "Mushroom", "Green Bean", "Banana", "Grape", "Coconut", "Glow Mushroom", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", "Poison Ivy", "Venus Fly Trap", "Pomegranate",
-"Poison Apple", "Venom Spitter", "Ghost Pepper", "Moon Bloom","Sun Bloom", "Dragon's Breath", "Hypno Bloom", "Rocket Pop", "Fire Fern", "Star Fruit", "Rainbow", "Mega", "Gold" }
+"Poison Apple", "Venom Spitter", "Ghost Pepper", "Moon Bloom","Sun Bloom", "Dragon's Breath", "Hypno Bloom", "Rocket Pop", "Fire Fern", "Star Fruit", "Rainbow", "Mega", "Gold", "---New Seed---",
+"Maple Carrot", "Maple Strawberry", "Maple Blueberry",  "Maple Tulip", "Maple Tomato", "Maple Apple","Maple Bamboo", "Maple Corn", "Maple Cactus", "Maple Pineapple", "Maple Mashroom", "Maple Green Bean", "Maple Grape", "Maple Coconut", "Maple Mango", "Maple Dragon Fruit", "Maple Acorn", "Maple Cherry", "Maple Sunflower", "Atlantic Giant Pumpkin", "Maple Venus Fly Trap", "Maple Pomegranate", "Maple Poison Apple", "Maple Venom Spitter", "Conifer Cone", "Amber Cranberry" }
+
 
 local Plots = Workspace:WaitForChild("Gardens")
 local VisitedFruits = {}
@@ -270,7 +272,7 @@ local function ShowReceipt(recipient, category, itemName, count)
             "🌱 ទំនិញ: %s\n" ..
             "🔢 ចំនួន: %d\n" ..
             "ស្ថានភាព: ផ្ញើរួចរាល់ ✅\n" ..
-            "---------------------------",
+            "-----------By @2BK2 ----------------",
             recipient, category, itemName, count
         ),
         Duration = 30,
@@ -568,7 +570,8 @@ MainTab3:CreateToggle({
 
 MainTab3:CreateDropdown({
    Name = "🌱 Seed Shop Items",
-   Options = {"None", "Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Apple", "Bamboo", "Corn", "Cactus", "Pineapple", "Mushroom", "Green Bean", "Banana", "Grape", "Coconut", "Mango", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", "Fire Fern", "Venus Fly Trap", "Pomegranate", "Poison Apple", "Venom Spitter", "Moon Bloom", "Sun Bloom", "Hypno Bloom", "Dragon's Breath", "Star Fruit"},
+   Options = {"None", "Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Apple", "Bamboo", "Corn", "Cactus", "Pineapple", "Mushroom", "Green Bean", "Banana", "Grape", "Coconut", "Mango", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", "Fire Fern", "Venus Fly Trap", "Pomegranate", "Poison Apple", "Venom Spitter", "Moon Bloom", "Sun Bloom", "Hypno Bloom", "Dragon's Breath", "Star Fruit",
+   "---New Seed---", "Maple Carrot", "Maple Strawberry", "Maple Blueberry",  "Maple Tulip", "Maple Tomato", "Maple Apple","Maple Bamboo", "Maple Corn", "Maple Cactus", "Maple Pineapple", "Maple Mashroom", "Maple Green Bean", "Maple Grape", "Maple Coconut", "Maple Mango", "Maple Dragon Fruit", "Maple Acorn", "Maple Cherry", "Maple Sunflower", "Atlantic Giant Pumpkin", "Maple Venus Fly Trap", "Maple Pomegranate", "Maple Poison Apple", "Maple Venom Spitter", "Conifer Cone", "Amber Cranberry"},
    CurrentOption = {"None"},
    MultipleOptions = true,
    Flag = "SeedDropdown",
@@ -579,7 +582,8 @@ MainTab3:CreateDropdown({
 
 MainTab3:CreateDropdown({
    Name = "⚙️ Gear Shop Items",
-   Options = {"None", "Common Watering Can", "Super Watering Can", "Common Sprinkler", "Uncommon Sprinkler", "Rare Sprinkler", "Legendary Sprinkler", "Super Sprinkler", "Trowel", "Jump Mushroom", "Speed Mushroom", "Shrink Mushroom", "Supersize Mushroom", "Invisibility Mushroom", "Gnome", "Basic Pot", "Flashbang", "Sign", "Megaphone", "Wheelbarrow", "Player Magnet", "Strawberry Sniper"},
+   Options = {"None", "Common Watering Can", "Super Watering Can", "Common Sprinkler", "Uncommon Sprinkler", "Rare Sprinkler", "Legendary Sprinkler", "Super Sprinkler", "Trowel", "Jump Mushroom", "Speed Mushroom", "Shrink Mushroom", "Supersize Mushroom", "Invisibility Mushroom", "Gnome", "Basic Pot", "Flashbang", "Sign", "Megaphone", "Wheelbarrow", "Player Magnet", "Strawberry Sniper", "---NewGear---", 
+   "Syrup Watering Can", "Syrup Sprinkler", "Harp", "Rare Magic Mail", "Bull Horn", "Wind Staff", "Legendary Magic Mail", "Super Syrup Watering Can", "Super Magic Mail"},
    CurrentOption = {"None"},
    MultipleOptions = true,
    Flag = "GearDropdown",
@@ -590,7 +594,8 @@ MainTab3:CreateDropdown({
 
 MainTab3:CreateDropdown({
    Name = "📦 Crate Shop Items",
-   Options = {"None", "Ladder Crate", "Bench Crate", "Light Crate", "Sign Crate", "Arch Crate", "Roleplay Crate", "Picture Frame Crate", "Bridge Crate", "Spring Crate", "Seesaw Crate", "Conveyor Crate", "Owner Door Crate", "Boombox Crate", "Bear Trap Crate", "Fence Crate", "Teleporter Pad Crate"},
+   Options = {"None", "Ladder Crate", "Bench Crate", "Light Crate", "Sign Crate", "Arch Crate", "Roleplay Crate", "Picture Frame Crate", "Bridge Crate", "Spring Crate", "Seesaw Crate", "Conveyor Crate", "Owner Door Crate", "Boombox Crate", "Bear Trap Crate", "Fence Crate", "Teleporter Pad Crate", "---NewCrate---",
+   "Lantern Crate", "Fall Cosmetic Crate", "Cobblestone Crate", "Fall Structure Crate", "Rake Crate"},
    CurrentOption = {"None"},
    MultipleOptions = true,
    Flag = "CrateDropdown",
@@ -602,7 +607,7 @@ MainTab3:CreateDropdown({
 -- Notification
 HENG:Notify({
    Title = "Script Loaded!",
-   Content = "ដំណើរការជោគជ័យ..",
+   Content = "ដំណើរការជោគជ័យ.......By 2BK2",
    Duration = 4,
    Image = 4483362458,
 })
