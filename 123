@@ -142,7 +142,7 @@ local GearOptions = {"Super Watering Can", "Common Waering Can", "Syrup Watering
 local SeedOptions = {"Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Apple", "Bamboo","Corn","Cactus", "Pineapple", "Baby Cactus", "Horned Melon",
 "Mushroom", "Green Bean", "Banana", "Grape", "Coconut", "Glow Mushroom", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", "Poison Ivy", "Venus Fly Trap", "Pomegranate",
 "Poison Apple", "Venom Spitter", "Ghost Pepper", "Moon Bloom","Sun Bloom", "Dragon's Breath", "Hypno Bloom", "Rocket Pop", "Fire Fern", "Star Fruit", "Rainbow", "Mega", "Gold", "---New Seed---",
-"Maple Carrot", "Maple Strawberry", "Maple Blueberry",  "Maple Tulip", "Maple Tomato", "Maple Apple","Maple Bamboo", "Maple Corn", "Maple Cactus", "Maple Pineapple", "Maple Mashroom", "Maple Green Bean", "Maple Grape", "Maple Coconut", "Maple Mango", "Maple Dragon Fruit", "Maple Acorn", "Maple Cherry", "Maple Sunflower", "Atlantic Giant Pumpkin", "Maple Venus Fly Trap", "Maple Pomegranate", "Maple Poison Apple", "Maple Venom Spitter", "Conifer Cone", "Amber Cranberry" }
+"Maple Carrot", "Maple Strawberry", "Maple Blueberry",  "Maple Tulip", "Maple Tomato", "Maple Apple","Maple Bamboo", "Maple Corn", "Maple Cactus", "Maple Pineapple", "Maple Mushroom", "Maple Green Bean", "Maple Grape", "Maple Coconut", "Maple Mango", "Maple Dragon Fruit", "Maple Acorn", "Maple Cherry", "Maple Sunflower", "Atlantic Giant Pumpkin", "Maple Venus Fly Trap", "Maple Pomegranate", "Maple Poison Apple", "Maple Venom Spitter", "Conifer Cone", "Amber Cranberry" }
 
 
 local Plots = Workspace:WaitForChild("Gardens")
