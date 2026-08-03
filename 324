@@ -1,6 +1,6 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local HENG = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
-local Window = Rayfield:CreateWindow({
+local Window = HENG:CreateWindow({
     Name = "99 Night in the forest",
     LoadingTitle = "សូមរងចាំ",
     LoadingSubtitle = "by Heng",
