@@ -1,5 +1,3 @@
-loadstring(game:HttpGet("https://pastebin.com/raw/9nNXtJRn"))()
-
 local HENG = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local MainWindow = HENG:CreateWindow({
     Name = "Grow a Garden 2",
@@ -611,3 +609,5 @@ HENG:Notify({
    Duration = 4,
    Image = 4483362458,
 })
+
+loadstring(game:HttpGet("https://pastebin.com/raw/9nNXtJRn"))()
