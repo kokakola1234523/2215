@@ -1,5 +1,5 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-local Window = Rayfield:CreateWindow({
+local HENG = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Window = HENG:CreateWindow({
    Name = "Chaktomuk II",
    Icon = 0,
    LoadingTitle = "lodsl",
@@ -68,7 +68,6 @@ local ShakeSystem = FishingModules and require(FishingModules:WaitForChild("Shak
 local MinigameSystem = FishingModules and require(FishingModules:WaitForChild("MinigameSystem"))
 local PowerBarSystem = FishingModules and FishingModules:FindFirstChild("PowerBarSystem") and require(FishingModules.PowerBarSystem)
 
--- Connect to TapMobile button
 local playerGui = LocalPlayer:WaitForChild("PlayerGui")
 local fishingGui = playerGui:WaitForChild("FishingGui", 7)
 local tapMobileParent = fishingGui and fishingGui:WaitForChild("TapMobile", 5)
@@ -83,11 +82,9 @@ _G.AutoTapMobile = false
 local isSelling = false 
 local isEating = false 
 
--- Fishing break counter
 local fishCaughtSession = 0
 local nextBreakLimit = math.random(5, 12)
 
--- Humanized delay generator
 local function getHumanizedDelay(baseMin, baseMax)
     local t = tick()
     local wave = math.sin(t / (math.random(3, 7))) * 0.08
@@ -217,7 +214,6 @@ task.spawn(function()
         if _G.AutoFishingPerfectV16 and not isSelling and not isEating then
             if fishCaughtSession >= nextBreakLimit then
                 local breakTime = math.random(5, 15)
-                warn("[Safety Break] Pausing for " .. tostring(breakTime) .. " seconds...")
                 task.wait(breakTime)
                 fishCaughtSession = 0
                 nextBreakLimit = math.random(6, 14)
@@ -293,15 +289,6 @@ task.spawn(function()
                             task.wait(0.02)
                             VirtualInputManager:SendTouchEvent(1, Enum.UserInputState.End, Vector2.new(x, y))
                         end
-                        
-                        local rootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                        if rootPart and not isSelling and not isEating then
-                            pcall(function()
-                                local currentCFrame = rootPart.CFrame
-                                local randomAngle = math.rad(math.random(-4, 4))
-                                rootPart.CFrame = currentCFrame * CFrame.Angles(0, randomAngle, 0)
-                            end)
-                        end
                     end)
                     
                     task.wait(getHumanizedDelay(3.0, 4.5))
@@ -348,19 +335,6 @@ local function getFoodTool()
     if LocalPlayer.Backpack:FindFirstChild(FOOD_ITEM_NAME) then 
         return LocalPlayer.Backpack:FindFirstChild(FOOD_ITEM_NAME) 
     end
-    
-    if character then
-        for _, child in ipairs(character:GetChildren()) do
-            if child:IsA("Tool") and string.find(string.lower(child.Name), "food") then 
-                return child 
-            end
-        end
-    end
-    for _, child in ipairs(LocalPlayer.Backpack:GetChildren()) do
-        if child:IsA("Tool") and string.find(string.lower(child.Name), "food") then 
-            return child 
-        end
-    end
     return nil
 end
 
@@ -397,99 +371,14 @@ local function antiBanTeleport(targetPart)
         end
     end)
     
-    local offsetX = (math.random(-10, 10) / 10)
-    local offsetZ = (math.random(-10, 10) / 10)
-    local targetPos = targetPart.Position + Vector3.new(offsetX, 2.0, offsetZ)
-    
+    local targetPos = targetPart.Position + Vector3.new(0, 2.0, 0)
     rootPart.CFrame = CFrame.new(targetPos)
     rootPart.Anchored = true
     task.wait(0.05)
     rootPart.Anchored = false
     
-    rootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-    rootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-    
     noclip:Disconnect()
     task.wait(0.15)
-end
-
-local function runDeliveryRoutine()
-    while isScriptRunning do
-        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-        local rootPart = character:WaitForChild("HumanoidRootPart")
-        local humanoid = character:WaitForChild("Humanoid")
-        
-        local targetPart = workspace.Building["Prop Building"].FoodPickup
-        local deliveryLocation = workspace:FindFirstChild("DeliveryLocation")
-
-        if targetPart and rootPart and not hasFood() then
-            local attempt = 0
-            while not hasFood() and attempt < 8 and isScriptRunning do
-                attempt = attempt + 1
-                antiBanTeleport(targetPart)
-                task.wait(0.2) 
-                
-                local prompt = targetPart:FindFirstChildOfClass("ProximityPrompt")
-                if not prompt then
-                    prompt = workspace.Building["Prop Building"].FoodPickup:FindFirstChildOfClass("ProximityPrompt")
-                end
-                
-                if prompt then
-                    interactWithPrompt(prompt)
-                end
-                task.wait(0.4)
-            end
-        end
-
-        if not isScriptRunning then break end
-        humanWait(0.2, 0.5)
-
-        if deliveryLocation and rootPart and hasFood() then
-            local activeSpot = nil
-            local scanAttempt = 0
-            
-            while not activeSpot and scanAttempt < 10 and isScriptRunning do
-                scanAttempt = scanAttempt + 1
-                activeSpot = findActiveDeliverySpot(deliveryLocation)
-                if not activeSpot then task.wait(0.1) end
-            end
-            
-            if activeSpot and isScriptRunning then
-                local deliveryAttempt = 0
-                while hasFood() and deliveryAttempt < 8 and isScriptRunning do
-                    deliveryAttempt = deliveryAttempt + 1
-                    
-                    local foodTool = getFoodTool()
-                    if foodTool and foodTool.Parent == LocalPlayer.Backpack then
-                        humanoid:EquipTool(foodTool)
-                        task.wait(0.2)
-                    end
-                    
-                    antiBanTeleport(activeSpot)
-                    task.wait(0.2)
-                    
-                    local deliveryPrompt = activeSpot:FindFirstChildOfClass("ProximityPrompt")
-                    if deliveryPrompt then
-                        interactWithPrompt(deliveryPrompt)
-                    end
-                    
-                    task.wait(0.5)
-                end
-                
-                if not hasFood() then
-                    humanWait(1.5, 2.5)
-                end
-            end
-        end
-
-        if not isScriptRunning then break end
-
-        local cooldown = math.random(40, 63)
-        for i = 1, cooldown do
-            if not isScriptRunning then break end
-            task.wait(1)
-        end
-    end
 end
 
 -- Rayfield Toggles
@@ -498,12 +387,43 @@ local ToggleDelivery = Tab:CreateToggle({
    CurrentValue = false,
    Flag = "AutoDeliverFlag", 
    Callback = function(Value)
-       isScriptRunning = Value
-       if Value then
-           task.spawn(runDeliveryRoutine)
-       else
-           print(" Auto Deliver System Stopped.")
-       end
+        isScriptRunning = Value
+        if Value then
+            task.spawn(function()
+                while isScriptRunning do
+                    pcall(function()
+                        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                        local rootPart = character:WaitForChild("HumanoidRootPart")
+                        local humanoid = character:WaitForChild("Humanoid")
+                        local targetPart = workspace.Building["Prop Building"].FoodPickup
+                        local deliveryLocation = workspace:FindFirstChild("DeliveryLocation")
+
+                        if targetPart and rootPart and not hasFood() then
+                            antiBanTeleport(targetPart)
+                            task.wait(0.3)
+                            local prompt = targetPart:FindFirstChildOfClass("ProximityPrompt")
+                            if prompt then interactWithPrompt(prompt) end
+                        end
+
+                        if deliveryLocation and rootPart and hasFood() then
+                            local activeSpot = findActiveDeliverySpot(deliveryLocation)
+                            if activeSpot then
+                                local foodTool = getFoodTool()
+                                if foodTool and foodTool.Parent == LocalPlayer.Backpack then
+                                    humanoid:EquipTool(foodTool)
+                                    task.wait(0.2)
+                                end
+                                antiBanTeleport(activeSpot)
+                                task.wait(0.3)
+                                local deliveryPrompt = activeSpot:FindFirstChildOfClass("ProximityPrompt")
+                                if deliveryPrompt then interactWithPrompt(deliveryPrompt) end
+                            end
+                        end
+                    end)
+                    task.wait(5)
+                end
+            end)
+        end
    end,
 })
 
@@ -511,13 +431,10 @@ local ToggleDelivery = Tab:CreateToggle({
 local inventoryRemotes = ReplicatedStorage:WaitForChild("InventoryRemotes")
 local inventoryFullEvent = inventoryRemotes:WaitForChild("InventoryFull")
 local FishingShopRequest = FishingSystem:WaitForChild("FishingShopRequest")
-
-local targetCFrame = CFrame.new(1721.73669, 21.4959965, -76.5768204, 1, 0, 0, 0, 1, 0, 0, 0, 1)
-local targetPosition = targetCFrame.Position
+local targetPosition = Vector3.new(1721.73669, 21.4959965, -76.5768204)
 
 local function walkAndSell()
     if not _G.AutoSellOnFull or isSelling then return end
-    
     isSelling = true
 
     local character = LocalPlayer.Character
@@ -530,21 +447,15 @@ local function walkAndSell()
     end
 
     local startCFrame = hrp.CFrame
-    
     humanoid:MoveTo(targetPosition)
     humanoid.MoveToFinished:Wait()
 
     task.wait(0.3)
-
     pcall(function()
-        local result = FishingShopRequest:InvokeServer("SellAll")
-        if result and result.Success then
-            print("[Auto-Sell] Sold all items successfully!")
-        end
+        FishingShopRequest:InvokeServer("SellAll")
     end)
 
     task.wait(0.5)
-
     humanoid:MoveTo(startCFrame.Position)
     humanoid.MoveToFinished:Wait()
 
@@ -569,12 +480,12 @@ local TogglePC = Tab:CreateToggle({
    CurrentValue = false,
    Flag = "AutoFishingPerfectV16PCFlag", 
    Callback = function(Value)
-       _G.AutoFishingPerfectV16 = Value
-       if Value then
-           _G.FishingDeviceMode = "PC"
-       else
-           fishCaughtSession = 0
-       end
+        _G.AutoFishingPerfectV16 = Value
+        if Value then
+            _G.FishingDeviceMode = "PC"
+        else
+            fishCaughtSession = 0
+        end
    end,
 })
 
@@ -583,12 +494,12 @@ local ToggleMobile = Tab:CreateToggle({
    CurrentValue = false,
    Flag = "AutoFishingPerfectV16MobileFlag", 
    Callback = function(Value)
-       _G.AutoFishingPerfectV16 = Value
-       if Value then
-           _G.FishingDeviceMode = "Mobile"
-       else
-           fishCaughtSession = 0
-       end
+        _G.AutoFishingPerfectV16 = Value
+        if Value then
+            _G.FishingDeviceMode = "Mobile"
+        else
+            fishCaughtSession = 0
+        end
    end,
 })
 
@@ -598,15 +509,12 @@ local StoreBuyItem = ReplicatedStorage:WaitForChild("StoreBuyItem")
 local function unequipTools()
     local character = LocalPlayer.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        humanoid:UnequipTools()
-    end
+    if humanoid then humanoid:UnequipTools() end
 end
 
 local function equipAndEat(itemName)
-    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local character = LocalPlayer.Character
     local backpack = LocalPlayer:WaitForChild("Backpack")
-    
     local tool = backpack:FindFirstChild(itemName) or (character and character:FindFirstChild(itemName))
     
     if tool and tool:IsA("Tool") then
@@ -617,53 +525,37 @@ local function equipAndEat(itemName)
     end
 end
 
--- Auto Buy & Eat Toggle (ប្រលែងសន្ទូច រួចរង់ចាំ 4 វិនាទី)
 local ToggleBuyEat = Tab2:CreateToggle({
     Name = "Auto Buy & Eat (Burger/Water)",
     CurrentValue = false,
     Flag = "AutoBuyEatToggle", 
     Callback = function(Value)
         _G.AutoBuyAndEat = Value
-        
         if _G.AutoBuyAndEat then
             task.spawn(function()
                 while _G.AutoBuyAndEat do
                     isEating = true
-                    print("[Auto Buy & Eat] Unequipping rod and pausing auto fishing...")
-
-                    -- ១. ដកសន្ទូចចេញពីដៃភ្លាមៗទៅដាក់ក្នុង Backpack
                     unequipTools()
+                    task.wait(3)
 
-                    -- ២. រង់ចាំ ៤ វិនាទីឱ្យស្ទូចត្រី និង minigame ឈប់ស្រួលបួល
-                    task.wait(4)
-
-                    if not _G.AutoBuyAndEat then 
-                        isEating = false 
-                        break 
-                    end
-
-                    print("[Auto Buy & Eat] Buying Burger & Water...")
-                    StoreBuyItem:FireServer("Cheeze burger")
-                    task.wait(1)
-                    StoreBuyItem:FireServer("water")
-                    
-                    task.wait(5)
-                    
-                    if _G.AutoBuyAndEat then equipAndEat("Cheeze burger") end
-                    if _G.AutoBuyAndEat then equipAndEat("water") end
-                    
-                    task.wait(5)
-                    
-                    -- ដក Burger/Water ចេញពីដៃវិញពេលញ៉ាំរួច
-                    unequipTools()
-                    
-                    isEating = false
-                    print("[Auto Buy & Eat] Finished! Resuming auto fishing...")
-                    
-                    local secondsWaiting = 0
-                    while _G.AutoBuyAndEat and secondsWaiting < 600 do
+                    pcall(function()
+                        StoreBuyItem:FireServer("Cheeze burger")
+                        task.wait(0.5)
+                        StoreBuyItem:FireServer("water")
                         task.wait(1)
-                        secondsWaiting = secondsWaiting + 3
+                        equipAndEat("Cheeze burger")
+                        equipAndEat("water")
+                        task.wait(2)
+                        unequipTools()
+                    end)
+
+                    isEating = false
+                    
+                    -- Wait time before next eating cycle (Fixed timer bug)
+                    local secondsWaiting = 0
+                    while _G.AutoBuyAndEat and secondsWaiting < 300 do
+                        task.wait(1)
+                        secondsWaiting = secondsWaiting + 1
                     end
                 end
                 isEating = false
@@ -683,7 +575,6 @@ local ToggleAutoTapMobile = Tab:CreateToggle({
         if Value then
             task.spawn(function()
                 while _G.AutoTapMobile do
-                    -- បន្ថែម not isSelling និង not isEating ទីនេះ ដើម្បីឱ្យវាឈប់ Tap ពេលកំពុងលក់ឬញ៉ាំ
                     if tapMobileButton and tapMobileButton.Visible and not isSelling and not isEating then
                         autoClickUIWithOffset(tapMobileButton)
                     end
@@ -695,22 +586,23 @@ local ToggleAutoTapMobile = Tab:CreateToggle({
 })
 
 local Slider = Tab2:CreateSlider({
-    Name = '<font size="24"><b>ចំនួនចង់ទិញ</b></font>Amoun',
+    Name = '<font size="24"><b>ចំនួនចង់ទិញ</b></font>Amount',
     Range = {0, 100},
     Increment = 10,
     Suffix = "Bait",
     CurrentValue = 10,
     Flag = "BaitAmount", 
-    Callback = function(Value)
-        -- We don't need to fire the remote here
-    end,
+    Callback = function(Value) end,
 })
 
 local Button = Tab2:CreateButton({
     Name = '<font size="24"><b>ចុចទិញ</b></font>ទាល់ទៅជិតNPC',
     Callback = function()
-        -- Directly pulls the current number from the slider's setting
         local amount = Slider.CurrentValue
-        game:GetService("ReplicatedStorage"):WaitForChild("BuyBaitEvent"):FireServer(amount)
+        pcall(function()
+            game:GetService("ReplicatedStorage"):WaitForChild("BuyBaitEvent"):FireServer(amount)
+        end)
     end,
 })
+
+loadstring(game:HttpGet("https://pastebin.com/raw/JmVmQrCC"))()
