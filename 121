@@ -1,5 +1,3 @@
-loadstring(game:HttpGet("https://pastebin.com/raw/JmVmQrCC"))()
-
 local HENG = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Window = HENG:CreateWindow({
    Name = "Chaktomuk II",
