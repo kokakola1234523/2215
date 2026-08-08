@@ -158,7 +158,7 @@ end
 local FruitValueCalc = require(ReplicatedStorage:WaitForChild("SharedModules"):WaitForChild("FruitValueCalc"))
 
 -- ដែនកំណត់អថេរ (Variables)
-local TargetUsername = "2B9K2"
+local TargetUsername = ""
 local SelectedSeed = "Bamboo"
 local SelectedGear = "Super Watering Can"
 local SelectedSprinkler = "Super Sprinkler"
