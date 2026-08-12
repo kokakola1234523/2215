@@ -1,20 +1,14 @@
-local HENG = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-local MainWindow = HENG:CreateWindow({
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
+
+local MainWindow = Rayfield:CreateWindow({
     Name = "Grow a Garden 2",
-    LoadingTitle = "Welcome ",
-    LoadingSubtitle = "@2BK2",
-    ConfigurationSaving = {Enabled = true, FolderName = nil, FileName = "BK Hub" },
-    Discord = {Enabled = false, Invite = "https://t.me/TWOBKTWO", RememberJoins = true },
-    KeySystem = false,
-    KeySettings = {
-        Title = "BK Hub",
-        Subtitle = "Key System",
-        Note = "ដើម្បីអាចលេងបាន​បង់​២០០0រៀល Telegram @TWOBKTWOSELLER",
-        FileName = "SiriusKey",
-        SaveKey = true,
-        GrabKeyFromSite = false,
-        Key = "BK_87542N335"
-    }
+    Subtitle = "ToaToa Hub    -     By 2BK2",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "BK_Hub_Config",
+        FileName = "BK Hub"
+    },
+    KeySystem = false
 })
 
 -- Services & Setup
@@ -70,7 +64,7 @@ local function canAfford(itemName)
     return true
 end
 
--- Auto Buy Loop Function (ទំនិញណាគ្រប់លុយទិញ ទំនិញណាអត់គ្រប់លុយគឺ Skip)
+-- Auto Buy Loop Function
 local lastBuyAttempt = {}
 
 task.spawn(function()
@@ -97,11 +91,10 @@ task.spawn(function()
                             local now = tick()
                             if not lastBuyAttempt[item.Name] or (now - lastBuyAttempt[item.Name]) > 10 then
                                 lastBuyAttempt[item.Name] = now
-                                HENG:Notify({
+                                Rayfield:Notify({
                                     Title = "⚠️ លុយមិនគ្រប់",
                                     Content = "មិនគ្រប់ Sheckles សម្រាប់ទិញ: " .. item.Name,
-                                    Duration = 2,
-                                    Image = 4483362458
+                                    Duration = 2
                                 })
                             end
                         end
@@ -112,10 +105,10 @@ task.spawn(function()
     end
 end)
 
--- បង្កើត Tabs
-local MainTab = MainWindow:CreateTab("Main", "home")
-local Tab1 = MainWindow:CreateTab("Send Items") 
-local MainTab3 = MainWindow:CreateTab("Auto Buy")
+-- បង្កើត Tabs (Rayfield Gen2 format)
+local MainTab = MainWindow:CreateTab({ Name = "Main", Icon = 93364949241311 })
+local Tab1 = MainWindow:CreateTab({ Name = "Send Items" }) 
+local MainTab3 = MainWindow:CreateTab({ Name = "Auto Buy" })
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -157,7 +150,7 @@ end
 -- Send Setup Modules
 local FruitValueCalc = require(ReplicatedStorage:WaitForChild("SharedModules"):WaitForChild("FruitValueCalc"))
 
--- ដែនកំណត់អថេរ (Variables)
+-- Variables
 local TargetUsername = ""
 local SelectedSeed = "Bamboo"
 local SelectedGear = "Super Watering Can"
@@ -291,7 +284,7 @@ local Steal = function(Fruit)
 end
 
 local function ShowReceipt(recipient, category, itemName, count)
-    HENG:Notify({
+    Rayfield:Notify({
         Title = "🧾 វិក្កយបត្រផ្ញើទំនិញ (RECEIPT)",
         Content = string.format(
             "---------------------------\n" ..
@@ -303,19 +296,18 @@ local function ShowReceipt(recipient, category, itemName, count)
             "-----------By @2BK2 ----------------",
             recipient, category, itemName, count
         ),
-        Duration = 30,
-        Image = 4483362458
+        Duration = 30
     })
 end
 
 local function SendItemWithReceipt(category, itemKey, categoryNameKhmer)
     local targetId = getUserId(TargetUsername)
     if not targetId then
-        HENG:Notify({Title = "រកមិនឃើញ", Content = "រកមិនឃើញគណនីឈ្មោះ " .. TargetUsername .. " ឡើយ!", Duration = 5, Image = 4483362458})
+        Rayfield:Notify({Title = "រកមិនឃើញ", Content = "រកមិនឃើញគណនីឈ្មោះ " .. TargetUsername .. " ឡើយ!", Duration = 5})
         return
     end
 
-    HENG:Notify({Title = "Mailbox", Content = "កំពុងដំណើរការផ្ញើ...", Duration = 2, Image = 4483362458})
+    Rayfield:Notify({Title = "Mailbox", Content = "កំពុងដំណើរការផ្ញើ...", Duration = 2})
     
     local itemsToSend = {
         {
@@ -333,13 +325,13 @@ local function SendItemWithReceipt(category, itemKey, categoryNameKhmer)
     if success then
         ShowReceipt(TargetUsername, categoryNameKhmer, itemKey, Amount)
     else
-        HENG:Notify({Title = "កំហុសប្រព័ន្ធ", Content = "ការផ្ញើបរាជ័យ: " .. tostring(err), Duration = 5, Image = 4483362458})
+        Rayfield:Notify({Title = "កំហុសប្រព័ន្ធ", Content = "ការផ្ញើបរាជ័យ: " .. tostring(err), Duration = 5})
     end
 end
 
 --- Rayfield UI Tab 1: Main ---
 MainTab:CreateToggle({
-    Name = '<font size="24"><b>លួចដំណាំគេ </b></font>Only at Night',
+    Name = "លួចដំណាំគេ (Only at Night)",
     CurrentValue = false,
     Flag = "StealToggle",
     Callback = function(Value)
@@ -377,7 +369,7 @@ MainTab:CreateToggle({
 
 _G.SellAll = false
 MainTab:CreateToggle({
-    Name = '<font size="24"><b>លក់ទាំងអស់ </b></font>Auto sell',
+    Name = "លក់ទាំងអស់ (Auto sell)",
     CurrentValue = false,
     Flag = "Toggle_AlwaysSell",
     Callback = function(Value)
@@ -441,7 +433,7 @@ end
 _G.AutoHarvest = false
 
 MainTab:CreateToggle({
-   Name = '<font size="24"><b>ប្រមូលផល </b></font>Harvest',
+   Name = "ប្រមូលផល (Harvest)",
    CurrentValue = false,
    Flag = "AutoHarvestFlag", 
    Callback = function(Value)
@@ -460,9 +452,8 @@ MainTab:CreateToggle({
    end,
 })
 
--- Toggle សម្រាប់ Auto Collect Items នៅក្នុង MainTab
 MainTab:CreateToggle({
-    Name = '<font size="24"><b>ប្រមូលទំនិញដែលគេទំម្លាក់ </b></font>Auto Collect Items',
+    Name = "ប្រមូលទំនិញដែលគេទំម្លាក់ (Auto Collect Items)",
     CurrentValue = false,
     Flag = "AutoCollectToggle",
     Callback = function(Value)
@@ -482,7 +473,7 @@ MainTab:CreateToggle({
 })
 
 MainTab:CreateSlider({
-    Name = '<font size="24"><b>ល្បឿនដើរ</b></font>Walk Speed',
+    Name = "ល្បឿនដើរ (Walk Speed)",
     Range = {16, 100},
     Increment = 1,
     Suffix = "WalkSpeed",
@@ -495,7 +486,7 @@ MainTab:CreateSlider({
 })
 
 MainTab:CreateSlider({
-    Name = '<font size="24"><b>ហោះ</b></font>Fly',
+    Name = "ហោះ (Fly)",
     Range = {0, 100},
     Increment = 1,
     Suffix = "HipHeight",
@@ -509,7 +500,7 @@ MainTab:CreateSlider({
 
 --- Rayfield UI Tab 2: Send Items ---
 Tab1:CreateInput({
-   Name = '<font size="24"><b>ឈ្មោះដើមអ្នកទទួល </b></font> User',
+   Name = "ឈ្មោះដើមអ្នកទទួល (User)",
    CurrentValue = TargetUsername, 
    PlaceholderText = "Enter username...",
    RemoveTextAfterFocusLost = false,
@@ -520,7 +511,7 @@ Tab1:CreateInput({
 })
 
 Tab1:CreateDropdown({
-   Name = '<font size="24"><b>ជ្រើសរើសគ្រាប់ពូជ </b></font> Seeds',
+   Name = "ជ្រើសរើសគ្រាប់ពូជ (Seeds)",
    Options = SeedOptions, 
    CurrentOption = {SelectedSeed},
    MultipleOptions = false,
@@ -531,7 +522,7 @@ Tab1:CreateDropdown({
 })
 
 Tab1:CreateDropdown({
-   Name = '<font size="24"><b>ជ្រើសរើសធុងស្រោចទឹក </b></font> Watering Cans',
+   Name = "ជ្រើសរើសធុងស្រោចទឹក (Watering Cans)",
    Options = GearOptions, 
    CurrentOption = {SelectedGear},
    MultipleOptions = false,
@@ -542,7 +533,7 @@ Tab1:CreateDropdown({
 })
 
 Tab1:CreateDropdown({
-   Name = '<font size="24"><b>ជ្រើសរើសប្រព័ន្ធស្រោចទឹក </b></font> Sprinklers',
+   Name = "ជ្រើសរើសប្រព័ន្ធស្រោចទឹក (Sprinklers)",
    Options = SprinklerOptions, 
    CurrentOption = {SelectedSprinkler},
    MultipleOptions = false,
@@ -553,7 +544,7 @@ Tab1:CreateDropdown({
 })
 
 Tab1:CreateDropdown({
-   Name = '<font size="24"><b>ជ្រើសរើសប្រដាប់ជីក </b></font> Trowel',
+   Name = "ជ្រើសរើសប្រដាប់ជីក (Trowel)",
    Options = TrowelsOptions, 
    CurrentOption = {selectedTrowel},
    MultipleOptions = false,
@@ -564,7 +555,7 @@ Tab1:CreateDropdown({
 })
 
 Tab1:CreateInput({
-   Name = '<font size="24"><b>កំណត់បរិមាណផ្ញើរ </b></font> Amount',
+   Name = "កំណត់បរិមាណផ្ញើរ (Amount)",
    PlaceholderText = "ដាក់តម្លៃ...",
    CurrentValue = tostring(Amount), 
    RemoveTextAfterFocusLost = false,
@@ -578,36 +569,34 @@ Tab1:CreateInput({
 })
 
 Tab1:CreateButton({
-   Name = '<font size="24"><b>ផ្ញើគ្រាប់ពូជ </b></font> Send Seeds',
+   Name = "ផ្ញើគ្រាប់ពូជ (Send Seeds)",
    Callback = function()
        SendItemWithReceipt("Seeds", SelectedSeed, "គ្រាប់ពូជ")
    end,
 })
 
 Tab1:CreateButton({
-   Name = '<font size="24"><b>ផ្ញើធុងស្រោចទឹក </b></font> Super Watering',
+   Name = "ផ្ញើធុងស្រោចទឹក (Super Watering)",
    Callback = function()
        SendItemWithReceipt("WateringCans", SelectedGear, "ធុងស្រោចទឹក")
    end,
 })
 
 Tab1:CreateButton({
-   Name = '<font size="24"><b>ផ្ញើប្រព័ន្ធស្រោចទឹក </b></font> Send Sprinklers',
+   Name = "ផ្ញើប្រព័ន្ធស្រោចទឹក (Send Sprinklers)",
    Callback = function()
        SendItemWithReceipt("Sprinklers", SelectedSprinkler, "ប្រព័ន្ធស្រោចទឹក")
    end,
 })
 
 Tab1:CreateButton({
-   Name = '<font size="24"><b>ផ្ញើប្រដាប់ជីក </b></font> Trowel',
+   Name = "ផ្ញើប្រដាប់ជីក (Trowel)",
    Callback = function()
        SendItemWithReceipt("Trowels", selectedTrowel, "ប្រដាប់ជីក")
    end,
 })
 
 --- Rayfield UI Tab 3: Auto Buy ---
-MainTab3:CreateSection("Shop Items Selection")
-
 MainTab3:CreateToggle({
    Name = "Enable Auto Buy",
    CurrentValue = false,
@@ -654,13 +643,12 @@ MainTab3:CreateDropdown({
 })
 
 -- Notification
-HENG:Notify({
+Rayfield:Notify({
    Title = "Script Loaded!",
    Content = ".......ដំណើរការជោគជ័យ........\nបើសិនផ្ញើរMailBoxមិនបានសូមដូរឈ្មោះវាអាចនឺងគ្រប់ក្នុងការផ្ញើរក្នុងមួយថ្ងៃ\nច្បាប់Gameអាចផ្ញើរបាន\n-ផ្ញើរបាន5ដងក្នុង 1 Username\n-ផ្ញើរបាន50ដងក្នុងមួយថ្ងៃ",
-   Duration = 20,
-   Image = 4483362458,
+   Duration = 20
 })
 
-task.wait(6)
+task.wait(8)
 
 loadstring(game:HttpGet("https://pastebin.com/raw/9nNXtJRn"))()
