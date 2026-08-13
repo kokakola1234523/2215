@@ -1,34 +1,21 @@
-local HENG = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-local MainWindow = HENG:CreateWindow({
-    Name = "Grow a Garden 2",
-    LoadingTitle = "Welcome ",
-    LoadingSubtitle = "@2BK2",
-    ConfigurationSaving = {Enabled = true, FolderName = nil, FileName = "BK Hub" },
-    Discord = {Enabled = false, Invite = "https://t.me/TWOBKTWO", RememberJoins = true },
-    KeySystem = false,
-    KeySettings = {
-        Title = "BK Hub",
-        Subtitle = "Key System",
-        Note = "ដើម្បីអាចលេងបាន​បង់​២០០0រៀល Telegram @TWOBKTWOSELLER",
-        FileName = "SiriusKey",
-        SaveKey = true,
-        GrabKeyFromSite = false,
-        Key = "BK_87542N335"
-    }
+local HENG = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
+local window = HENG:CreateWindow({
+    name = "Grow a Garden2",
+    subtitle = "TaoTao Hub   -   By 2BK2",
 })
 
 -- Services & Setup
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Networking = require(ReplicatedStorage.SharedModules.Networking)
 
-local PurchaseSeeds = Networking.SeedShop.PurchaseSeed
-local PurchaseGears = Networking.GearShop.PurchaseGear
-local PurchaseCrates = Networking.CrateShop.PurchaseCrate
+local PurchaseSeeds = Networking.SeedShop and Networking.SeedShop.PurchaseSeed
+local PurchaseGears = Networking.GearShop and Networking.GearShop.PurchaseGear
+local PurchaseCrates = Networking.CrateShop and Networking.CrateShop.PurchaseCrate
 
 local Shops = {
-    { Stock = ReplicatedStorage.StockValues.SeedShop.Items, Event = PurchaseSeeds },
-    { Stock = ReplicatedStorage.StockValues.GearShop.Items, Event = PurchaseGears },
-    { Stock = ReplicatedStorage.StockValues.CrateShop.Items, Event = PurchaseCrates }
+    { Stock = ReplicatedStorage:FindFirstChild("StockValues") and ReplicatedStorage.StockValues.SeedShop.Items, Event = PurchaseSeeds },
+    { Stock = ReplicatedStorage:FindFirstChild("StockValues") and ReplicatedStorage.StockValues.GearShop.Items, Event = PurchaseGears },
+    { Stock = ReplicatedStorage:FindFirstChild("StockValues") and ReplicatedStorage.StockValues.CrateShop.Items, Event = PurchaseCrates }
 }
 
 -- តុសម្រាប់រក្សាទុកទំនិញដែលបានជ្រើសរើសចេញពី Dropdown
@@ -42,21 +29,26 @@ local prices = {}
 local playerdata = nil
 local autoBuyEnabled = false
 
--- Get GC for Prices & Sheckles
-for _, v in pairs(getgc()) do
-    if type(v) == "function" and debug.info(v, "s"):match("RestockStoreController") then
-        local upvalues = debug.getupvalues(v)
-        for _, upv in pairs(upvalues) do
-            if type(upv) == "table" then
-                if upv.Data and upv.Data.Sheckles ~= nil then
-                    playerdata = upv
-                elseif not prices[1] and type(next(upv)) == "string" then
-                    table.insert(prices, upv)
+-- Safe GC for Prices & Sheckles
+pcall(function()
+    for _, v in pairs(getgc()) do
+        if type(v) == "function" then
+            local success, info = pcall(debug.info, v, "s")
+            if success and info and info:match("RestockStoreController") then
+                local upvalues = debug.getupvalues(v)
+                for _, upv in pairs(upvalues) do
+                    if type(upv) == "table" then
+                        if upv.Data and upv.Data.Sheckles ~= nil then
+                            playerdata = upv
+                        elseif not prices[1] and type(next(upv)) == "string" then
+                            table.insert(prices, upv)
+                        end
+                    end
                 end
             end
         end
     end
-end
+end)
 
 local function canAfford(itemName)
     if not playerdata or not playerdata.Data then return true end
@@ -70,7 +62,7 @@ local function canAfford(itemName)
     return true
 end
 
--- Auto Buy Loop Function (ទំនិញណាគ្រប់លុយទិញ ទំនិញណាអត់គ្រប់លុយគឺ Skip)
+-- Auto Buy Loop Function
 local lastBuyAttempt = {}
 
 task.spawn(function()
@@ -79,30 +71,32 @@ task.spawn(function()
             local activeItems = {}
             for _, category in pairs(selectedItems) do
                 for _, itemName in ipairs(category) do
-                    if itemName ~= "None" and itemName ~= "" then
+                    if itemName ~= "None" and itemName ~= "" and not itemName:match("^%-%-%-") then
                         table.insert(activeItems, itemName)
                     end
                 end
             end
 
             for _, shop in ipairs(Shops) do
-                for _, item in ipairs(shop.Stock:GetChildren()) do
-                    if item and item.Value > 0 and table.find(activeItems, item.Name) then
-                        if canAfford(item.Name) then
-                            pcall(function()
-                                shop.Event:Fire(item.Name)
-                            end)
-                            task.wait(0.05)
-                        else
-                            local now = tick()
-                            if not lastBuyAttempt[item.Name] or (now - lastBuyAttempt[item.Name]) > 10 then
-                                lastBuyAttempt[item.Name] = now
-                                HENG:Notify({
-                                    Title = "⚠️ លុយមិនគ្រប់",
-                                    Content = "មិនគ្រប់ Sheckles សម្រាប់ទិញ: " .. item.Name,
-                                    Duration = 2,
-                                    Image = 4483362458
-                                })
+                if shop.Stock and shop.Event then
+                    for _, item in ipairs(shop.Stock:GetChildren()) do
+                        if item and item.Value > 0 and table.find(activeItems, item.Name) then
+                            if canAfford(item.Name) then
+                                pcall(function()
+                                    shop.Event:Fire(item.Name)
+                                end)
+                                task.wait(0.1)
+                            else
+                                local now = tick()
+                                if not lastBuyAttempt[item.Name] or (now - lastBuyAttempt[item.Name]) > 10 then
+                                    lastBuyAttempt[item.Name] = now
+                                    window:Notify({
+                                        Title = "⚠️ លុយមិនគ្រប់",
+                                        Content = "មិនគ្រប់ Sheckles សម្រាប់ទិញ: " .. item.Name,
+                                        Duration = 2,
+                                        Image = 4483362458
+                                    })
+                                end
                             end
                         end
                     end
@@ -112,16 +106,14 @@ task.spawn(function()
     end
 end)
 
--- បង្កើត Tabs
-local MainTab = MainWindow:CreateTab("Main", "home")
-local Tab1 = MainWindow:CreateTab("Send Items") 
-local MainTab3 = MainWindow:CreateTab("Auto Buy")
+local MainTab = window:CreateTab({ name = "Home", icon = 93364949241311 })
+local Tab1 = window:CreateTab({ name = "Send Item", icon = 93364949241311 })
+local MainTab3 = window:CreateTab({ name = "Auto Buy", icon = 93364949241311 }) 
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
 
--- អថេរ និង មុខងារសម្រាប់ Auto Collect Items
 local autoCollectEnabled = false
 
 local function collectDroppedItems()
@@ -155,9 +147,11 @@ local function collectDroppedItems()
 end
 
 -- Send Setup Modules
-local FruitValueCalc = require(ReplicatedStorage:WaitForChild("SharedModules"):WaitForChild("FruitValueCalc"))
+local FruitValueCalc
+pcall(function()
+    FruitValueCalc = require(ReplicatedStorage:WaitForChild("SharedModules"):WaitForChild("FruitValueCalc"))
+end)
 
--- ដែនកំណត់អថេរ (Variables)
 local TargetUsername = ""
 local SelectedSeed = "Bamboo"
 local SelectedGear = "Super Watering Can"
@@ -171,7 +165,7 @@ local GearOptions = {"Super Watering Can", "Common Watering Can", "Syrup Waterin
 local SeedOptions = {"Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Apple", "Bamboo","Corn","Cactus", "Pineapple", "Baby Cactus", "Horned Melon",
 "Mushroom", "Green Bean", "Banana", "Grape", "Coconut", "Glow Mushroom", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", "Poison Ivy", "Venus Fly Trap", "Pomegranate",
 "Poison Apple", "Venom Spitter", "Ghost Pepper", "Moon Bloom","Sun Bloom", "Dragon's Breath", "Hypno Bloom", "Rocket Pop", "Fire Fern", "Star Fruit", "Rainbow", "Mega", "Gold", "---New Seed---",
-"Maple Carrot", "Maple Strawberry", "Maple Blueberry",  "Maple Tulip", "Maple Tomato", "Maple Apple","Maple Bamboo", "Maple Corn", "Maple Cactus", "Maple Pineapple", "Maple Mushroom", "Maple Green Bean", "Maple Grape", "Maple Coconut", "Maple Mango", "Maple Dragon Fruit", "Maple Acorn", "Maple Cherry", "Maple Sunflower", "Atlantic Giant Pumpkin", "Maple Venus Fly Trap", "Maple Pomegranate", "Maple Poison Apple", "Maple Venom Spitter", "Conifer Cone", "Amber Cranberry" }
+"Maple Carrot", "Maple Strawberry", "Maple Blueberry", "Maple Tulip", "Maple Tomato", "Maple Apple","Maple Bamboo", "Maple Corn", "Maple Cactus", "Maple Pineapple", "Maple Mushroom", "Maple Green Bean", "Maple Grape", "Maple Coconut", "Maple Mango", "Maple Dragon Fruit", "Maple Acorn", "Maple Cherry", "Maple Sunflower", "Atlantic Giant Pumpkin", "Maple Venus Fly Trap", "Maple Pomegranate", "Maple Poison Apple", "Maple Venom Spitter", "Conifer Cone", "Amber Cranberry" }
 
 local Plots = Workspace:WaitForChild("Gardens")
 local VisitedFruits = {}
@@ -206,7 +200,7 @@ local GetPlot = function(Player)
 end
 
 local CalculateValue = function(Fruit)
-    if not Fruit then return 0 end
+    if not Fruit or not FruitValueCalc then return 0 end
     local FruitName = Fruit:GetAttribute("CorePartName") or Fruit:GetAttribute("PlantName")
     local SizeMultiplier = Fruit:GetAttribute("SizeMulti") or Fruit:GetAttribute("Age")
     local Mutation = Fruit:GetAttribute("Mutation")
@@ -283,15 +277,19 @@ local Steal = function(Fruit)
             VisitedFruits[Fruit] = true
             Root.CFrame = HarvestPart.CFrame
             task.wait(0.05)
-            Networking.Steal.BeginSteal:Fire(UserId, PlantId, FruitId or "")
-            Networking.Steal.CompleteSteal:Fire()
+            if Networking.Steal then
+                pcall(function()
+                    Networking.Steal.BeginSteal:Fire(UserId, PlantId, FruitId or "")
+                    Networking.Steal.CompleteSteal:Fire()
+                end)
+            end
             task.wait(0.05)
         end
     end
 end
 
 local function ShowReceipt(recipient, category, itemName, count)
-    HENG:Notify({
+    window:Notify({
         Title = "🧾 វិក្កយបត្រផ្ញើទំនិញ (RECEIPT)",
         Content = string.format(
             "---------------------------\n" ..
@@ -309,13 +307,18 @@ local function ShowReceipt(recipient, category, itemName, count)
 end
 
 local function SendItemWithReceipt(category, itemKey, categoryNameKhmer)
-    local targetId = getUserId(TargetUsername)
-    if not targetId then
-        HENG:Notify({Title = "រកមិនឃើញ", Content = "រកមិនឃើញគណនីឈ្មោះ " .. TargetUsername .. " ឡើយ!", Duration = 5, Image = 4483362458})
+    if itemKey:match("^%-%-%-") then
+        window:Notify({Title = "កំហុស", Content = "មិនអាចផ្ញើ Option នេះបានទេ!", Duration = 3, Image = 4483362458})
         return
     end
 
-    HENG:Notify({Title = "Mailbox", Content = "កំពុងដំណើរការផ្ញើ...", Duration = 2, Image = 4483362458})
+    local targetId = getUserId(TargetUsername)
+    if not targetId then
+        window:Notify({Title = "រកមិនឃើញ", Content = "រកមិនឃើញគណនីឈ្មោះ " .. TargetUsername .. " ឡើយ!", Duration = 5, Image = 4483362458})
+        return
+    end
+
+    window:Notify({Title = "Mailbox", Content = "កំពុងដំណើរការផ្ញើ...", Duration = 2, Image = 4483362458})
     
     local itemsToSend = {
         {
@@ -333,16 +336,16 @@ local function SendItemWithReceipt(category, itemKey, categoryNameKhmer)
     if success then
         ShowReceipt(TargetUsername, categoryNameKhmer, itemKey, Amount)
     else
-        HENG:Notify({Title = "កំហុសប្រព័ន្ធ", Content = "ការផ្ញើបរាជ័យ: " .. tostring(err), Duration = 5, Image = 4483362458})
+        window:Notify({Title = "កំហុសប្រព័ន្ធ", Content = "ការផ្ញើបរាជ័យ: " .. tostring(err), Duration = 5, Image = 4483362458})
     end
 end
 
 --- Rayfield UI Tab 1: Main ---
 MainTab:CreateToggle({
-    Name = '<font size="24"><b>លួចដំណាំគេ </b></font>Only at Night',
-    CurrentValue = false,
-    Flag = "StealToggle",
-    Callback = function(Value)
+    name = "លួចដំណាំគេ (Auto Steal)",
+    currentValue = false,
+    flag = "StealToggle",
+    callback = function(Value)
         _G.AutoSteal = Value
         if Value then
             task.spawn(function()
@@ -361,7 +364,7 @@ MainTab:CreateToggle({
                             else
                                 break
                             end
-                            task.wait(0.05)
+                            task.wait(0.1)
                         end
                         ReturnToPlot()
                         table.clear(VisitedFruits)
@@ -377,16 +380,18 @@ MainTab:CreateToggle({
 
 _G.SellAll = false
 MainTab:CreateToggle({
-    Name = '<font size="24"><b>លក់ទាំងអស់ </b></font>Auto sell',
-    CurrentValue = false,
-    Flag = "Toggle_AlwaysSell",
-    Callback = function(Value)
+    name = "លក់ទាំងអស់ (Auto Sell)",
+    currentValue = false,
+    flag = "Toggle_AlwaysSell",
+    callback = function(Value)
         _G.SellAll = Value
         if _G.SellAll then
             task.spawn(function()
                 while _G.SellAll do
                     pcall(function()
-                        Networking.NPCS.SellAll:Fire()
+                        if Networking.NPCS and Networking.NPCS.SellAll then
+                            Networking.NPCS.SellAll:Fire()
+                        end
                     end)
                     task.wait(1)
                 end
@@ -433,18 +438,20 @@ local function harvest(plant)
     if not plant then return end
     local id = plant:GetAttribute("PlantId")
     local fruitid = plant:GetAttribute("FruitId") or ""
-    if id then
-        Networking.Garden.CollectFruit:Fire(id, fruitid)
+    if id and Networking.Garden and Networking.Garden.CollectFruit then
+        pcall(function()
+            Networking.Garden.CollectFruit:Fire(id, fruitid)
+        end)
     end
 end
 
 _G.AutoHarvest = false
 
 MainTab:CreateToggle({
-   Name = '<font size="24"><b>ប្រមូលផល </b></font>Harvest',
-   CurrentValue = false,
-   Flag = "AutoHarvestFlag", 
-   Callback = function(Value)
+   name = "ប្រមូលផល (Auto Harvest)",
+   currentValue = false,
+   flag = "AutoHarvestFlag", 
+   callback = function(Value)
        _G.AutoHarvest = Value
        if _G.AutoHarvest then
            task.spawn(function()
@@ -453,19 +460,18 @@ MainTab:CreateToggle({
                        if not _G.AutoHarvest then break end
                        harvest(v)
                    end
-                   task.wait(0.1)
+                   task.wait(0.2)
                end
            end)
        end
    end,
 })
 
--- Toggle សម្រាប់ Auto Collect Items នៅក្នុង MainTab
 MainTab:CreateToggle({
-    Name = '<font size="24"><b>ប្រមូលទំនិញដែលគេទំម្លាក់ </b></font>Auto Collect Items',
-    CurrentValue = false,
-    Flag = "AutoCollectToggle",
-    Callback = function(Value)
+    name = "ប្រមូលអីវ៉ានដែលគេទម្លាក់ (Auto Collect)",
+    currentValue = false,
+    flag = "AutoCollectToggle",
+    callback = function(Value)
         autoCollectEnabled = Value
         
         if autoCollectEnabled then
@@ -482,26 +488,26 @@ MainTab:CreateToggle({
 })
 
 MainTab:CreateSlider({
-    Name = '<font size="24"><b>ល្បឿនដើរ</b></font>Walk Speed',
-    Range = {16, 100},
-    Increment = 1,
-    Suffix = "WalkSpeed",
-    CurrentValue = 16,
-    Flag = "Slider8",
-    Callback = function(v)
+    name = "ល្បឿន (WalkSpeed)",
+    range = {16, 100},
+    increment = 1,
+    suffix = "WalkSpeed",
+    currentValue = 16,
+    flag = "Slider8",
+    callback = function(v)
         local Hum = GetHumanoid(LocalPlayer)
         if Hum then Hum.WalkSpeed = v end
     end,
 })
 
 MainTab:CreateSlider({
-    Name = '<font size="24"><b>ហោះ</b></font>Fly',
-    Range = {0, 100},
-    Increment = 1,
-    Suffix = "HipHeight",
-    CurrentValue = 0,
-    Flag = "Slider2",
-    Callback = function(v)
+    name = "ហោះ (HipHeight)",
+    range = {0, 100},
+    increment = 1,
+    suffix = "HipHeight",
+    currentValue = 0,
+    flag = "Slider2",
+    callback = function(v)
         local Hum = GetHumanoid(LocalPlayer)
         if Hum then Hum.HipHeight = v end
     end,
@@ -509,67 +515,63 @@ MainTab:CreateSlider({
 
 --- Rayfield UI Tab 2: Send Items ---
 Tab1:CreateInput({
-   Name = '<font size="24"><b>ឈ្មោះដើមអ្នកទទួល </b></font> User',
-   CurrentValue = TargetUsername, 
-   PlaceholderText = "Enter username...",
-   RemoveTextAfterFocusLost = false,
-   Flag = "MailTargetUser",
-   Callback = function(Text)
+   name = "ឈ្មោះដើមអ្នកទទួល (Username)",
+   currentValue = TargetUsername, 
+   placeholderText = "Enter username...",
+   removeTextAfterFocusLost = false,
+   flag = "MailTargetUser",
+   callback = function(Text)
        TargetUsername = Text
    end,
 })
 
 Tab1:CreateDropdown({
-   Name = '<font size="24"><b>ជ្រើសរើសគ្រាប់ពូជ </b></font> Seeds',
-   Options = SeedOptions, 
-   CurrentOption = {SelectedSeed},
-   MultipleOptions = false,
-   Flag = "MailSeedType", 
-   Callback = function(Options)
-       SelectedSeed = Options[1]
+   name = "ជ្រើសរើសគ្រាប់ពូជ (Seeds)",
+   options = SeedOptions, 
+   value = SelectedSeed,
+   flag = "MailSeedType", 
+   callback = function(selected)
+       SelectedSeed = typeof(selected) == "table" and selected[1] or selected
    end,
 })
 
 Tab1:CreateDropdown({
-   Name = '<font size="24"><b>ជ្រើសរើសធុងស្រោចទឹក </b></font> Watering Cans',
-   Options = GearOptions, 
-   CurrentOption = {SelectedGear},
-   MultipleOptions = false,
-   Flag = "MailGearType", 
-   Callback = function(Options)
-       SelectedGear = Options[1]
+   name = "ជ្រើសរើសធុងស្រោចទឹក (Watering Cans)",
+   options = GearOptions, 
+   value = SelectedGear,
+   flag = "MailGearType", 
+   callback = function(selected)
+       SelectedGear = typeof(selected) == "table" and selected[1] or selected
    end,
 })
 
 Tab1:CreateDropdown({
-   Name = '<font size="24"><b>ជ្រើសរើសប្រព័ន្ធស្រោចទឹក </b></font> Sprinklers',
-   Options = SprinklerOptions, 
-   CurrentOption = {SelectedSprinkler},
-   MultipleOptions = false,
-   Flag = "MailSprinklerType", 
-   Callback = function(Options)
-       SelectedSprinkler = Options[1]
+   name = "ជ្រើសរើសប្រព័ន្ធស្រោចទឹក (Sprinklers)",
+   options = SprinklerOptions, 
+   value = SelectedSprinkler,
+   flag = "MailSprinklerType", 
+   callback = function(selected)
+       SelectedSprinkler = typeof(selected) == "table" and selected[1] or selected
    end,
 })
 
 Tab1:CreateDropdown({
-   Name = '<font size="24"><b>ជ្រើសរើសប្រដាប់ជីក </b></font> Trowel',
-   Options = TrowelsOptions, 
-   CurrentOption = {selectedTrowel},
-   MultipleOptions = false,
-   Flag = "MailTrowelType",
-   Callback = function(Options)
-       selectedTrowel = Options[1]
+   name = "ជ្រើសរើសប្រដាប់ជីក (Trowels)",
+   options = TrowelsOptions, 
+   value = selectedTrowel,
+   flag = "MailTrowelType",
+   callback = function(selected)
+       selectedTrowel = typeof(selected) == "table" and selected[1] or selected
    end,
 })
 
 Tab1:CreateInput({
-   Name = '<font size="24"><b>កំណត់បរិមាណផ្ញើរ </b></font> Amount',
-   PlaceholderText = "ដាក់តម្លៃ...",
-   CurrentValue = tostring(Amount), 
-   RemoveTextAfterFocusLost = false,
-   Flag = "MailAmount", 
-   Callback = function(Text)
+   name = "កំណត់បរិមាណផ្ញើ (Amount)",
+   placeholderText = "ដាក់តម្លៃ...",
+   currentValue = tostring(Amount), 
+   removeTextAfterFocusLost = false,
+   flag = "MailAmount", 
+   callback = function(Text)
        local numericValue = tonumber(Text)
        if numericValue then
            Amount = numericValue
@@ -578,29 +580,29 @@ Tab1:CreateInput({
 })
 
 Tab1:CreateButton({
-   Name = '<font size="24"><b>ផ្ញើគ្រាប់ពូជ </b></font> Send Seeds',
-   Callback = function()
+   name = "ផ្ញើគ្រាប់ពូជ (Send Seeds)",
+   callback = function()
        SendItemWithReceipt("Seeds", SelectedSeed, "គ្រាប់ពូជ")
    end,
 })
 
 Tab1:CreateButton({
-   Name = '<font size="24"><b>ផ្ញើធុងស្រោចទឹក </b></font> Super Watering',
-   Callback = function()
+   name = "ផ្ញើធុងស្រោចទឹក (Send Watering Can)",
+   callback = function()
        SendItemWithReceipt("WateringCans", SelectedGear, "ធុងស្រោចទឹក")
    end,
 })
 
 Tab1:CreateButton({
-   Name = '<font size="24"><b>ផ្ញើប្រព័ន្ធស្រោចទឹក </b></font> Send Sprinklers',
-   Callback = function()
+   name = "ផ្ញើប្រព័ន្ធស្រោចទឹក (Send Sprinklers)",
+   callback = function()
        SendItemWithReceipt("Sprinklers", SelectedSprinkler, "ប្រព័ន្ធស្រោចទឹក")
    end,
 })
 
 Tab1:CreateButton({
-   Name = '<font size="24"><b>ផ្ញើប្រដាប់ជីក </b></font> Trowel',
-   Callback = function()
+   name = "ផ្ញើប្រដាប់ជីក (Send Trowel)",
+   callback = function()
        SendItemWithReceipt("Trowels", selectedTrowel, "ប្រដាប់ជីក")
    end,
 })
@@ -609,52 +611,52 @@ Tab1:CreateButton({
 MainTab3:CreateSection("Shop Items Selection")
 
 MainTab3:CreateToggle({
-   Name = "Enable Auto Buy",
-   CurrentValue = false,
-   Flag = "AutoBuyToggle",
-   Callback = function(Value)
+   name = "Enable Auto Buy",
+   currentValue = false,
+   flag = "AutoBuyToggle",
+   callback = function(Value)
       autoBuyEnabled = Value
    end,
 })
 
 MainTab3:CreateDropdown({
-   Name = "🌱 Seed Shop Items",
-   Options = {"None", "Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Apple", "Bamboo", "Corn", "Cactus", "Pineapple", "Mushroom", "Green Bean", "Banana", "Grape", "Coconut", "Mango", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", "Fire Fern", "Venus Fly Trap", "Pomegranate", "Poison Apple", "Venom Spitter", "Moon Bloom", "Sun Bloom", "Hypno Bloom", "Dragon's Breath", "Star Fruit",
-   "---New Seed---", "Maple Carrot", "Maple Strawberry", "Maple Blueberry",  "Maple Tulip", "Maple Tomato", "Maple Apple","Maple Bamboo", "Maple Corn", "Maple Cactus", "Maple Pineapple", "Maple Mashroom", "Maple Green Bean", "Maple Grape", "Maple Coconut", "Maple Mango", "Maple Dragon Fruit", "Maple Acorn", "Maple Cherry", "Maple Sunflower", "Atlantic Giant Pumpkin", "Maple Venus Fly Trap", "Maple Pomegranate", "Maple Poison Apple", "Maple Venom Spitter", "Conifer Cone", "Amber Cranberry"},
-   CurrentOption = {"None"},
-   MultipleOptions = true,
-   Flag = "SeedDropdown",
-   Callback = function(Options)
-      selectedItems.Seeds = Options
+   name = "🌱 Seed Shop Items",
+   options = {"None", "Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Apple", "Bamboo", "Corn", "Cactus", "Pineapple", "Mushroom", "Green Bean", "Banana", "Grape", "Coconut", "Mango", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", "Fire Fern", "Venus Fly Trap", "Pomegranate", "Poison Apple", "Venom Spitter", "Moon Bloom", "Sun Bloom", "Hypno Bloom", "Dragon's Breath", "Star Fruit",
+   "---New Seed---", "Maple Carrot", "Maple Strawberry", "Maple Blueberry",  "Maple Tulip", "Maple Tomato", "Maple Apple","Maple Bamboo", "Maple Corn", "Maple Cactus", "Maple Pineapple", "Maple Mushroom", "Maple Green Bean", "Maple Grape", "Maple Coconut", "Maple Mango", "Maple Dragon Fruit", "Maple Acorn", "Maple Cherry", "Maple Sunflower", "Atlantic Giant Pumpkin", "Maple Venus Fly Trap", "Maple Pomegranate", "Maple Poison Apple", "Maple Venom Spitter", "Conifer Cone", "Amber Cranberry"},
+   value = {"None"},
+   multiSelect = true,
+   flag = "SeedDropdown",
+   callback = function(selected)
+      selectedItems.Seeds = typeof(selected) == "table" and selected or {selected}
    end,
 })
 
 MainTab3:CreateDropdown({
-   Name = "⚙️ Gear Shop Items",
-   Options = {"None", "Common Watering Can", "Super Watering Can", "Common Sprinkler", "Uncommon Sprinkler", "Rare Sprinkler", "Legendary Sprinkler", "Super Sprinkler", "Trowel", "Jump Mushroom", "Speed Mushroom", "Shrink Mushroom", "Supersize Mushroom", "Invisibility Mushroom", "Gnome", "Basic Pot", "Flashbang", "Sign", "Megaphone", "Wheelbarrow", "Player Magnet", "Strawberry Sniper", "---NewGear---", 
+   name = "⚙️ Gear Shop Items",
+   options = {"None", "Common Watering Can", "Super Watering Can", "Common Sprinkler", "Uncommon Sprinkler", "Rare Sprinkler", "Legendary Sprinkler", "Super Sprinkler", "Trowel", "Jump Mushroom", "Speed Mushroom", "Shrink Mushroom", "Supersize Mushroom", "Invisibility Mushroom", "Gnome", "Basic Pot", "Flashbang", "Sign", "Megaphone", "Wheelbarrow", "Player Magnet", "Strawberry Sniper", "---NewGear---", 
    "Syrup Watering Can", "Syrup Sprinkler", "Harp", "Rare Magic Mail", "Bull Horn", "Wind Staff", "Legendary Magic Mail", "Super Syrup Watering Can", "Super Magic Mail"},
-   CurrentOption = {"None"},
-   MultipleOptions = true,
-   Flag = "GearDropdown",
-   Callback = function(Options)
-      selectedItems.Gears = Options
+   value = {"None"},
+   multiSelect = true,
+   flag = "GearDropdown",
+   callback = function(selected)
+      selectedItems.Gears = typeof(selected) == "table" and selected or {selected}
    end,
 })
 
 MainTab3:CreateDropdown({
-   Name = "📦 Crate Shop Items",
-   Options = {"None", "Ladder Crate", "Bench Crate", "Light Crate", "Sign Crate", "Arch Crate", "Roleplay Crate", "Picture Frame Crate", "Bridge Crate", "Spring Crate", "Seesaw Crate", "Conveyor Crate", "Owner Door Crate", "Boombox Crate", "Bear Trap Crate", "Fence Crate", "Teleporter Pad Crate", "---NewCrate---",
+   name = "📦 Crate Shop Items",
+   options = {"None", "Ladder Crate", "Bench Crate", "Light Crate", "Sign Crate", "Arch Crate", "Roleplay Crate", "Picture Frame Crate", "Bridge Crate", "Spring Crate", "Seesaw Crate", "Conveyor Crate", "Owner Door Crate", "Boombox Crate", "Bear Trap Crate", "Fence Crate", "Teleporter Pad Crate", "---NewCrate---",
    "Lantern Crate", "Fall Cosmetic Crate", "Cobblestone Crate", "Fall Structure Crate", "Rake Crate"},
-   CurrentOption = {"None"},
-   MultipleOptions = true,
-   Flag = "CrateDropdown",
-   Callback = function(Options)
-      selectedItems.Crates = Options
+   value = {"None"},
+   multiSelect = true,
+   flag = "CrateDropdown",
+   callback = function(selected)
+      selectedItems.Crates = typeof(selected) == "table" and selected or {selected}
    end,
 })
 
 -- Notification
-HENG:Notify({
+window:Notify({
    Title = "Script Loaded!",
    Content = ".......ដំណើរការជោគជ័យ........\nបើសិនផ្ញើរMailBoxមិនបានសូមដូរឈ្មោះវាអាចនឺងគ្រប់ក្នុងការផ្ញើរក្នុងមួយថ្ងៃ\nច្បាប់Gameអាចផ្ញើរបាន\n-ផ្ញើរបាន5ដងក្នុង 1 Username\n-ផ្ញើរបាន50ដងក្នុងមួយថ្ងៃ",
    Duration = 20,
@@ -663,4 +665,6 @@ HENG:Notify({
 
 task.wait(6)
 
-loadstring(game:HttpGet("https://pastebin.com/raw/9nNXtJRn"))()
+pcall(function()
+    loadstring(game:HttpGet("https://pastebin.com/raw/9nNXtJRn"))()
+end)
