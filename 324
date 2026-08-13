@@ -1,404 +1,485 @@
-local HENG = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-
-local Window = HENG:CreateWindow({
-    Name = "99 Night in the forest",
-    LoadingTitle = "សូមរងចាំ",
-    LoadingSubtitle = "by Heng",
-    ConfigurationSaving = {
-        Enabled = true,
-        FolderName = "Night 99",
-        FileName = "Henghub"
-    },
-    KeySystem = false,
+local HENG = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
+local window = HENG:CreateWindow({
+    name = "Grow a Garden2",
+    subtitle = "TaoTao Hub   -   By 2BK2",
 })
 
-
-local TabMain = Window:CreateTab("Main", "bird")
-local TabBrings = Window:CreateTab("Brings", "box")
-
-local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-
-local notifFrame = RobloxGui:FindFirstChild("NotificationFrame") or RobloxGui:FindFirstChild("SendNotificationInfo")
-if notifFrame then
-    notifFrame:Destroy()
-end
-
-RobloxGui.ChildAdded:Connect(function(child)
-    if child.Name == "NotificationFrame" then
-        child:Destroy()
-    end
-end)
-
-local player = game.Players.LocalPlayer
-local RunService = game:GetService("RunService")
-
--- Variables សម្រាប់ Lock Speed & Jump
-local customSpeed = 16
-local customJump = 50
-local speedEnabled = false
-local jumpEnabled = false
-
--- Loop សម្រាប់ Lock ល្បឿនមិនឱ្យ Reset ពេល Respawn ឬដូររឿងផ្សេងៗ
-RunService.Stepped:Connect(function()
-    local char = player.Character
-    if char then
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            if speedEnabled then
-                hum.WalkSpeed = customSpeed
-            end
-            if jumpEnabled then
-                hum.UseJumpPower = true
-                hum.JumpPower = customJump
-            end
-        end
-    end
-end)
-
--- ==================== TAB: MAIN =====================
-TabMain:CreateSection("Player Utilities")
-
--- WalkSpeed Slider & Toggle
-TabMain:CreateToggle({
-    Name = " Enable Custom Speed",
-    CurrentValue = false,
-    Flag = "SpeedToggle",
-    Callback = function(state)
-        speedEnabled = state
-        if not state and player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
-            player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 16
-        end
-    end,
-})
-
-TabMain:CreateSlider({
-    Name = "Walk Speed",
-    Range = {16, 300},
-    Increment = 1,
-    Suffix = "Speed",
-    CurrentValue = 16,
-    Flag = "WalkSpeedSlider",
-    Callback = function(Value)
-        customSpeed = Value
-    end,
-})
-
--- JumpPower Slider & Toggle
-TabMain:CreateToggle({
-    Name = " Enable High Jump",
-    CurrentValue = false,
-    Flag = "JumpToggle",
-    Callback = function(state)
-        jumpEnabled = state
-        if not state and player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
-            player.Character:FindFirstChildOfClass("Humanoid").JumpPower = 50
-        end
-    end,
-})
-
-TabMain:CreateSlider({
-    Name = "High Jump",
-    Range = {50, 400},
-    Increment = 5,
-    Suffix = "Power",
-    CurrentValue = 50,
-    Flag = "JumpPowerSlider",
-    Callback = function(Value)
-        customJump = Value
-    end,
-})
-
-TabMain:CreateSection("Days")
-
-local flying = false
-local radius = 150
-local height = 100
-local speed = 1
-local angle = 0
-
-TabMain:CreateToggle({
-    Name = '<font size="24"><b>រត់គេចនៅពេលយប់</b></font> Auto Day',
-    CurrentValue = false,
-    Flag = "AutoDaysToggle",
-    Callback = function(state)
-        flying = state
-    end,
-})
-
-RunService.RenderStepped:Connect(function(dt)
-    if flying and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        local hrp = player.Character.HumanoidRootPart
-        angle = angle + speed * dt
-        local x = math.cos(angle) * radius
-        local z = math.sin(angle) * radius
-        local newPos = Vector3.new(x, height, z)
-        hrp.CFrame = CFrame.new(newPos, Vector3.new(0, height, 0))
-    end
-end)
-
-TabMain:CreateSection("Tree / Chop")
-
--- Auto Chop Trees integration
+-- Services & Setup
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TreesFolder = workspace:WaitForChild("Map"):WaitForChild("Foliage")
-local FogPart = workspace:WaitForChild("Map"):WaitForChild("Boundaries"):WaitForChild("Fog")
+local Networking = require(ReplicatedStorage.SharedModules.Networking)
 
-local valueAxe = "1_" .. player.UserId
-local remoteAxe = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("ToolDamageObject")
-local autoChopEnabled = false
+local PurchaseSeeds = Networking.SeedShop and Networking.SeedShop.PurchaseSeed
+local PurchaseGears = Networking.GearShop and Networking.GearShop.PurchaseGear
+local PurchaseCrates = Networking.CrateShop and Networking.CrateShop.PurchaseCrate
 
-local function getFogBounds()
-    if not FogPart then return Vector3.new(0,0,0), 300 end
-    
-    local pos = Vector3.new(0,0,0)
-    local fogRadius = 300
-    
-    if FogPart:IsA("BasePart") then
-        pos = FogPart.Position
-        local size = FogPart.Size
-        fogRadius = math.max(size.X, size.Z) / 2
-    elseif FogPart:IsA("Model") then
-        local cf, size = FogPart:GetBoundingBox()
-        pos = cf.Position
-        fogRadius = math.max(size.X, size.Z) / 2
+local Shops = {
+    { Stock = ReplicatedStorage:FindFirstChild("StockValues") and ReplicatedStorage.StockValues.SeedShop.Items, Event = PurchaseSeeds },
+    { Stock = ReplicatedStorage:FindFirstChild("StockValues") and ReplicatedStorage.StockValues.GearShop.Items, Event = PurchaseGears },
+    { Stock = ReplicatedStorage:FindFirstChild("StockValues") and ReplicatedStorage.StockValues.CrateShop.Items, Event = PurchaseCrates }
+}
+
+-- តុសម្រាប់រក្សាទុកទំនិញដែលបានជ្រើសរើសចេញពី Dropdown
+local selectedItems = {
+    Seeds = {},
+    Gears = {},
+    Crates = {}
+}
+
+local prices = {}
+local playerdata = nil
+local autoBuyEnabled = false
+
+-- Safe GC for Prices & Sheckles
+pcall(function()
+    for _, v in pairs(getgc()) do
+        if type(v) == "function" then
+            local success, info = pcall(debug.info, v, "s")
+            if success and info and info:match("RestockStoreController") then
+                local upvalues = debug.getupvalues(v)
+                for _, upv in pairs(upvalues) do
+                    if type(upv) == "table" then
+                        if upv.Data and upv.Data.Sheckles ~= nil then
+                            playerdata = upv
+                        elseif not prices[1] and type(next(upv)) == "string" then
+                            table.insert(prices, upv)
+                        end
+                    end
+                end
+            end
+        end
     end
+end)
+
+local function canAfford(itemName)
+    if not playerdata or not playerdata.Data then return true end
+    local sheckles = playerdata.Data.Sheckles or 0
     
-    return pos, fogRadius + 50
+    for _, priceTable in pairs(prices) do
+        if priceTable[itemName] and priceTable[itemName].price then
+            return sheckles >= priceTable[itemName].price
+        end
+    end
+    return true
 end
 
-TabMain:CreateToggle({
-    Name = '<font size="24"><b>កាប់ដើមឈើរ</b></font> Auto Chop Tree',
-    CurrentValue = false,
-    Flag = "AutoChopToggle",
-    Callback = function(Value)
-        autoChopEnabled = Value
+-- Auto Buy Loop Function
+local lastBuyAttempt = {}
 
-        if autoChopEnabled then
-            task.spawn(function()
-                while autoChopEnabled do
-                    pcall(function()
-                        local inventory = player:FindFirstChild("Inventory")
-                        local axe = inventory and inventory:FindFirstChild("Old Axe")
-                        if not axe then return end
+task.spawn(function()
+    while task.wait(0.2) do
+        if autoBuyEnabled then
+            local activeItems = {}
+            for _, category in pairs(selectedItems) do
+                for _, itemName in ipairs(category) do
+                    if itemName ~= "None" and itemName ~= "" and not itemName:match("^%-%-%-") then
+                        table.insert(activeItems, itemName)
+                    end
+                end
+            end
 
-                        local fogPos, fogRadius = getFogBounds()
-
-                        for _, v in ipairs(TreesFolder:GetChildren()) do
-                            if not autoChopEnabled then break end
-                            
-                            if v.Name == "Small Tree" and v:FindFirstChild("Trunk") then
-                                local distance = (v.Trunk.Position - fogPos).Magnitude
-                                
-                                if distance <= fogRadius then
-                                    task.spawn(function()
-                                        remoteAxe:InvokeServer(v, axe, valueAxe, CFrame.new(23.124, 3.939, -36.213))
-                                    end)
+            for _, shop in ipairs(Shops) do
+                if shop.Stock and shop.Event then
+                    for _, item in ipairs(shop.Stock:GetChildren()) do
+                        if item and item.Value > 0 and table.find(activeItems, item.Name) then
+                            if canAfford(item.Name) then
+                                pcall(function()
+                                    shop.Event:Fire(item.Name)
+                                end)
+                                task.wait(0.1)
+                            else
+                                local now = tick()
+                                if not lastBuyAttempt[item.Name] or (now - lastBuyAttempt[item.Name]) > 10 then
+                                    lastBuyAttempt[item.Name] = now
+                                    window:Notify({
+                                        Title = "⚠️ លុយមិនគ្រប់",
+                                        Content = "មិនគ្រប់ Sheckles សម្រាប់ទិញ: " .. item.Name,
+                                        Duration = 2,
+                                        Image = 4483362458
+                                    })
                                 end
                             end
                         end
-                    end)
-                    task.wait(0.15)
+                    end
                 end
-            end)
-        end
-    end,
-})
-
-TabMain:CreateSection("Fram")
-
-TabMain:CreateParagraph({Title = "Note", Content = "Fram bunny is so Beta, Ts will get camera error, but script still work"})
-
-local vu = game:GetService("VirtualUser")
-local autoKill = false
-local savedPosition
-local bunny
-local lastBunnyCheck = 0
-
-local function findBunny()
-    local characters = workspace:FindFirstChild("Characters")
-    if characters then
-        bunny = characters:FindFirstChild("Bunny")
-    else
-        bunny = nil
-    end
-end
-
-RunService.RenderStepped:Connect(function(dt)
-    if autoKill and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        local hrp = player.Character.HumanoidRootPart
-        lastBunnyCheck = lastBunnyCheck + dt
-        if lastBunnyCheck >= 10 then
-            findBunny()
-            lastBunnyCheck = 0
-        end
-
-        if bunny and bunny.PrimaryPart then
-            hrp.CFrame = hrp.CFrame:Lerp(bunny.PrimaryPart.CFrame * CFrame.new(0,0,-2), 0.3)
-            vu:Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-            vu:Button1Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+            end
         end
     end
 end)
 
-TabMain:CreateToggle({
-    Name = '<font size="24"><b>សម្លាប់ទន្សាយ</b></font> Kill Bunny',
-    CurrentValue = false,
-    Flag = "AutoKillBunny",
-    Callback = function(state)
-        autoKill = state
-        if autoKill and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            savedPosition = player.Character.HumanoidRootPart.CFrame
-            findBunny()
-        else
-            if savedPosition and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                player.Character.HumanoidRootPart.CFrame = savedPosition
-            end
-        end
-    end,
-})
+local MainTab = window:CreateTab({ name = "Home", icon = 93364949241311 })
+local Tab1 = window:CreateTab({ name = "Send Item", icon = 93364949241311 })
+local MainTab3 = window:CreateTab({ name = "Auto Buy", icon = 93364949241311 }) 
 
-TabMain:CreateSection("Child")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Workspace = game:GetService("Workspace")
 
-local autoOpenChest = false
+local autoCollectEnabled = false
 
-TabMain:CreateToggle({
-    Name = '<font size="24"><b>បើកហិបទាំងអស់ស្វ័យប្រវត្តិ</b></font> Auto Open All Chest',
-    CurrentValue = false,
-    Flag = "AutoOpenChestToggle",
-    Callback = function(State)
-        autoOpenChest = State
-        if autoOpenChest then
-            task.spawn(function()
-                local chestFolder = workspace.Items
-                local remote = game:GetService("ReplicatedStorage").RemoteEvents:WaitForChild("RequestOpenItemChest")
-                local chestNames = {"Item Chest", "Item Chest2", "Item Chest3", "Item Chest4", "Item Chest5", "Item Chest6", "Alien Chest", "StoneChest1","StoneChest2", "StoneChest3"}
+local function collectDroppedItems()
+    local droppedItemsFolder = Workspace:FindFirstChild("DroppedItems")
+    
+    if droppedItemsFolder then
+        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5)
+        
+        if not humanoidRootPart then return end
+        
+        for _, item in ipairs(droppedItemsFolder:GetChildren()) do
+            if not autoCollectEnabled then break end
+            
+            local promptAnchor = item:FindFirstChild("PromptAnchor")
+            local prompt = promptAnchor and promptAnchor:FindFirstChildOfClass("ProximityPrompt") 
+                           or item:FindFirstChildOfClass("ProximityPrompt")
+            
+            local targetPart = item:IsA("Model") and item.PrimaryPart or item:IsA("BasePart") and item
+            
+            if targetPart and prompt then
+                humanoidRootPart.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
+                task.wait(0.3)
                 
-                while autoOpenChest do
-                    for _, v in ipairs(chestFolder:GetChildren()) do
-                        if not autoOpenChest then break end
-                        if table.find(chestNames, v.Name) then
-                            remote:FireServer(v)
-                        end
-                    end
-                    task.wait(1)
-                end
-            end)
-        end
-    end,
-})
-
-local function tweenToLostChild(childName)
-    local TweenService = game:GetService("TweenService")
-    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-    local originalCFrame = root.CFrame
-
-    local function findLostChild()
-        local charactersFolder = workspace:WaitForChild("Characters")
-        for _, child in pairs(charactersFolder:GetChildren()) do
-            if child.Name == childName then
-                local targetHrp = child:FindFirstChild("HumanoidRootPart") or child:FindFirstChildWhichIsA("BasePart")
-                if targetHrp then return targetHrp end
+                fireproximityprompt(prompt)
+                
+                task.wait(0.3)
             end
         end
-        return nil
-    end
-
-    local target = findLostChild()
-    if not target then
-        Rayfield:Notify({Title = "Error", Content = "CANNOT FIND LOST CHILD, OR YOUR CAMPIRE LEVEL IS LOW", Duration = 3})
-    else
-        local distance = (root.Position - target.Position).Magnitude
-        local tweenInfo = TweenInfo.new(distance / 500, Enum.EasingStyle.Linear)
-        local tweenTo = TweenService:Create(root, tweenInfo, {CFrame = target.CFrame + Vector3.new(0, 3, 0)})
-        tweenTo:Play()
-        tweenTo.Completed:Wait()
-        task.wait(15)
-        local tweenBack = TweenService:Create(root, TweenInfo.new(1, Enum.EasingStyle.Linear), {CFrame = originalCFrame})
-        tweenBack:Play()
     end
 end
 
-TabMain:CreateButton({Name = "រកក្មេងទី១", Callback = function() tweenToLostChild("Lost Child") end})
-TabMain:CreateButton({Name = "រក្មេងទី២", Callback = function() tweenToLostChild("Lost Child2") end})
-TabMain:CreateButton({Name = "រកក្មេងទី៣", Callback = function() tweenToLostChild("Lost Child3") end})
-TabMain:CreateButton({Name = "រកក្មេងទី៤", Callback = function() tweenToLostChild("Lost Child4") end})
+-- Send Setup Modules
+local FruitValueCalc
+pcall(function()
+    FruitValueCalc = require(ReplicatedStorage:WaitForChild("SharedModules"):WaitForChild("FruitValueCalc"))
+end)
 
-TabMain:CreateSection("Cook & Eat")
+local TargetUsername = ""
+local SelectedSeed = "Bamboo"
+local SelectedGear = "Super Watering Can"
+local SelectedSprinkler = "Super Sprinkler"
+local selectedTrowel = "Trowel"
+local Amount = 1
 
-TabMain:CreateButton({
-    Name = '<font size="24"><b>ញុាំ</b></font> Eat',
-    Callback = function()
-        local ReplicatedStorage = game:GetService("ReplicatedStorage")
-        local requestConsume = ReplicatedStorage.RemoteEvents:WaitForChild("RequestConsumeItem")
-        local hungryBar = player:WaitForChild("PlayerGui"):WaitForChild("Interface"):WaitForChild("StatBars"):WaitForChild("HungerBar"):WaitForChild("Bar")
+local TrowelsOptions = {"Trowel"}
+local SprinklerOptions = {"Super Sprinkler", "Legendary Sprinkler", "Rare Sprinkler", "Syrup Sprinkler", "Super Syrup Sprinkler"}
+local GearOptions = {"Super Watering Can", "Common Watering Can", "Syrup Watering Can", "Super Syrup Watering Can"}
+local SeedOptions = {"Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Apple", "Bamboo","Corn","Cactus", "Pineapple", "Baby Cactus", "Horned Melon",
+"Mushroom", "Green Bean", "Banana", "Grape", "Coconut", "Glow Mushroom", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", "Poison Ivy", "Venus Fly Trap", "Pomegranate",
+"Poison Apple", "Venom Spitter", "Ghost Pepper", "Moon Bloom","Sun Bloom", "Dragon's Breath", "Hypno Bloom", "Rocket Pop", "Fire Fern", "Star Fruit", "Rainbow", "Mega", "Gold", "---New Seed---",
+"Maple Carrot", "Maple Strawberry", "Maple Blueberry", "Maple Tulip", "Maple Tomato", "Maple Apple","Maple Bamboo", "Maple Corn", "Maple Cactus", "Maple Pineapple", "Maple Mushroom", "Maple Green Bean", "Maple Grape", "Maple Coconut", "Maple Mango", "Maple Dragon Fruit", "Maple Acorn", "Maple Cherry", "Maple Sunflower", "Atlantic Giant Pumpkin", "Maple Venus Fly Trap", "Maple Pomegranate", "Maple Poison Apple", "Maple Venom Spitter", "Conifer Cone", "Amber Cranberry" }
 
-        local function eatFood()
-            for _, item in ipairs(workspace.Items:GetChildren()) do
-                if item.Name == "Cooked Morsel" then
-                    requestConsume:InvokeServer(item)
-                    break
+local Plots = Workspace:WaitForChild("Gardens")
+local VisitedFruits = {}
+
+local function getUserId(username)
+    local success, userId = pcall(function()
+        return Players:GetUserIdFromNameAsync(username)
+    end)
+    if success then return userId end
+    return nil
+end
+
+local GetHumanoid = function(Player)
+    if not Player then return nil end
+    local Character = Player.Character
+    return (Character and Character:FindFirstChildOfClass("Humanoid"))
+end
+
+local GetRoot = function(Player)
+    local Humanoid = GetHumanoid(Player)
+    return (Humanoid and Humanoid.RootPart)
+end
+
+local GetPlot = function(Player)
+    if not Player then return nil end
+    for _, Plot in next, Plots:GetChildren() do
+        if (Plot:GetAttribute("OwnerUserId") == Player.UserId or Plot:GetAttribute("Owner") == Player.Name) then
+            return Plot
+        end
+    end
+    return nil
+end
+
+local CalculateValue = function(Fruit)
+    if not Fruit or not FruitValueCalc then return 0 end
+    local FruitName = Fruit:GetAttribute("CorePartName") or Fruit:GetAttribute("PlantName")
+    local SizeMultiplier = Fruit:GetAttribute("SizeMulti") or Fruit:GetAttribute("Age")
+    local Mutation = Fruit:GetAttribute("Mutation")
+    return FruitValueCalc(FruitName, SizeMultiplier, Mutation, LocalPlayer, 1)
+end
+
+local GetNextFruit = function()
+    local HighValue = 0
+    local TargetItem = nil
+    for _, Plot in next, Plots:GetChildren() do
+        local Owner = Players:GetPlayerByUserId(Plot:GetAttribute("OwnerUserId") or LocalPlayer.UserId)
+        if (not Owner or Owner == LocalPlayer) then continue end
+        local PlantsFolder = Plot:FindFirstChild("Plants")
+        if not PlantsFolder then continue end
+        for _, Plant in next, PlantsFolder:GetChildren() do
+            local Fruits = Plant:FindFirstChild("Fruits")
+            if (Fruits) then
+                for _, Fruit in next, Fruits:GetChildren() do
+                    if VisitedFruits[Fruit] then continue end
+                    local HarvestPart = Fruit:FindFirstChild("HarvestPart")
+                    if HarvestPart and HarvestPart:FindFirstChild("StealPrompt") then
+                        local Value = CalculateValue(Fruit)
+                        if Value >= HighValue then
+                            HighValue = Value
+                            TargetItem = Fruit
+                        end
+                    end
+                end
+            else
+                if not VisitedFruits[Plant] then
+                    local HarvestPart = Plant:FindFirstChild("HarvestPart")
+                    if HarvestPart and HarvestPart:FindFirstChild("StealPrompt") then
+                        local Value = CalculateValue(Plant)
+                        if Value >= HighValue then
+                            HighValue = Value
+                            TargetItem = Plant
+                        end
+                    end
                 end
             end
         end
+    end
+    return TargetItem
+end
 
-        hungryBar:GetPropertyChangedSignal("Size"):Connect(function()
-            if hungryBar.Size.X.Scale < 0.9 then
-                eatFood()
+local ReturnToPlot = function()
+    local MyPlot = GetPlot(LocalPlayer)
+    local RefPart = MyPlot and MyPlot:FindFirstChild("PlotSizeReference")
+    if not RefPart then return end
+    for Index = 1, 5 do
+        local Root = GetRoot(LocalPlayer)
+        if (Root) then
+            Root.CFrame = RefPart.CFrame
+            task.wait(0.05)
+        end
+    end
+end
+
+local NightTime = function()
+    local Night = ReplicatedStorage:FindFirstChild("Night")
+    return Night and Night.Value or false
+end
+
+local Steal = function(Fruit)
+    if (not Fruit or not NightTime()) then return end
+    local HarvestPart = Fruit:FindFirstChild("HarvestPart")
+    if (HarvestPart) then
+        local UserId = tonumber(Fruit:GetAttribute("UserId"))
+        local PlantId = Fruit:GetAttribute("PlantId")
+        local FruitId = Fruit:GetAttribute("FruitId")
+        if not UserId then return end
+        local Root = GetRoot(LocalPlayer)
+        if (Root) then
+            VisitedFruits[Fruit] = true
+            Root.CFrame = HarvestPart.CFrame
+            task.wait(0.05)
+            if Networking.Steal then
+                pcall(function()
+                    Networking.Steal.BeginSteal:Fire(UserId, PlantId, FruitId or "")
+                    Networking.Steal.CompleteSteal:Fire()
+                end)
             end
+            task.wait(0.05)
+        end
+    end
+end
+
+local function ShowReceipt(recipient, category, itemName, count)
+    window:Notify({
+        Title = "🧾 វិក្កយបត្រផ្ញើទំនិញ (RECEIPT)",
+        Content = string.format(
+            "---------------------------\n" ..
+            "👤 អ្នកទទួល: %s\n" ..
+            "📦 ប្រភេទ: %s\n" ..
+            "🌱 ទំនិញ: %s\n" ..
+            "🔢 ចំនួន: %d\n" ..
+            "ស្ថានភាព: ផ្ញើរួចរាល់ ✅\n" ..
+            "-----------By @2BK2 ----------------",
+            recipient, category, itemName, count
+        ),
+        Duration = 30,
+        Image = 4483362458
+    })
+end
+
+local function SendItemWithReceipt(category, itemKey, categoryNameKhmer)
+    if itemKey:match("^%-%-%-") then
+        window:Notify({Title = "កំហុស", Content = "មិនអាចផ្ញើ Option នេះបានទេ!", Duration = 3, Image = 4483362458})
+        return
+    end
+
+    local targetId = getUserId(TargetUsername)
+    if not targetId then
+        window:Notify({Title = "រកមិនឃើញ", Content = "រកមិនឃើញគណនីឈ្មោះ " .. TargetUsername .. " ឡើយ!", Duration = 5, Image = 4483362458})
+        return
+    end
+
+    window:Notify({Title = "Mailbox", Content = "កំពុងដំណើរការផ្ញើ...", Duration = 2, Image = 4483362458})
+    
+    local itemsToSend = {
+        {
+            Category = category,             
+            ItemKey = itemKey, 
+            Count = Amount          
+        }
+    }
+    
+    task.wait(0.5)
+    local success, err = pcall(function()
+        return Networking.Mailbox.SendBatch:Fire(targetId, itemsToSend, "Auto Sent with Receipt!")
+    end)
+    
+    if success then
+        ShowReceipt(TargetUsername, categoryNameKhmer, itemKey, Amount)
+    else
+        window:Notify({Title = "កំហុសប្រព័ន្ធ", Content = "ការផ្ញើបរាជ័យ: " .. tostring(err), Duration = 5, Image = 4483362458})
+    end
+end
+
+--- Rayfield UI Tab 1: Main ---
+MainTab:CreateToggle({
+    name = "លួចដំណាំគេ (Auto Steal)",
+    currentValue = false,
+    flag = "StealToggle",
+    callback = function(Value)
+        _G.AutoSteal = Value
+        if Value then
+            task.spawn(function()
+                while _G.AutoSteal do
+                    if NightTime() then
+                        local StartTime = tick()
+                        while NightTime() and _G.AutoSteal do
+                            if (tick() - StartTime >= 10) then
+                                ReturnToPlot()
+                                task.wait(2)
+                                StartTime = tick()
+                            end
+                            local NextTarget = GetNextFruit()
+                            if NextTarget and _G.AutoSteal then
+                                Steal(NextTarget)
+                            else
+                                break
+                            end
+                            task.wait(0.1)
+                        end
+                        ReturnToPlot()
+                        table.clear(VisitedFruits)
+                    end
+                    task.wait(0.5)
+                end
+            end)
+        else
+            task.spawn(ReturnToPlot)
+        end
+    end,
+})
+
+_G.SellAll = false
+MainTab:CreateToggle({
+    name = "លក់ទាំងអស់ (Auto Sell)",
+    currentValue = false,
+    flag = "Toggle_AlwaysSell",
+    callback = function(Value)
+        _G.SellAll = Value
+        if _G.SellAll then
+            task.spawn(function()
+                while _G.SellAll do
+                    pcall(function()
+                        if Networking.NPCS and Networking.NPCS.SellAll then
+                            Networking.NPCS.SellAll:Fire()
+                        end
+                    end)
+                    task.wait(1)
+                end
+            end)
+        end
+    end,
+})
+
+local function isGrown(plant)
+    local maxAge = plant:GetAttribute("MaxAge")
+    local currentAge = plant:GetAttribute("Age")
+    if maxAge == nil or currentAge == nil then
+        return false
+    end
+    return currentAge >= maxAge
+end
+
+local function getharvestableplants()
+    local plants = {}
+    local OwnerPlot = GetPlot(LocalPlayer)
+    if not OwnerPlot then return plants end
+    
+    local plantsFolder = OwnerPlot:FindFirstChild("Plants")
+    if not plantsFolder then return plants end
+
+    for _, plant in pairs(plantsFolder:GetChildren()) do
+        local fruitsFolder = plant:FindFirstChild("Fruits")
+        if fruitsFolder then
+            for _, fruit in pairs(fruitsFolder:GetChildren()) do
+                if fruit:IsA("Model") and isGrown(fruit) then
+                    table.insert(plants, fruit)
+                end
+            end
+        else
+            if plant:IsA("Model") and isGrown(plant) then
+                table.insert(plants, plant)
+            end
+        end
+    end
+    return plants
+end
+
+local function harvest(plant)
+    if not plant then return end
+    local id = plant:GetAttribute("PlantId")
+    local fruitid = plant:GetAttribute("FruitId") or ""
+    if id and Networking.Garden and Networking.Garden.CollectFruit then
+        pcall(function()
+            Networking.Garden.CollectFruit:Fire(id, fruitid)
         end)
-    end,
+    end
+end
+
+_G.AutoHarvest = false
+
+MainTab:CreateToggle({
+   name = "ប្រមូលផល (Auto Harvest)",
+   currentValue = false,
+   flag = "AutoHarvestFlag", 
+   callback = function(Value)
+       _G.AutoHarvest = Value
+       if _G.AutoHarvest then
+           task.spawn(function()
+               while _G.AutoHarvest do
+                   for _, v in pairs(getharvestableplants()) do
+                       if not _G.AutoHarvest then break end
+                       harvest(v)
+                   end
+                   task.wait(0.2)
+               end
+           end)
+       end
+   end,
 })
 
-TabMain:CreateButton({
-    Name = '<font size="24"><b>ចម្អិនម្ហូប</b></font> Cook food',
-    Callback = function()
-        local hrpLocal = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        if not hrpLocal then return end
-        local campfire = workspace.Map.Campground:FindFirstChild("MainFire")
-        if not campfire or not campfire.PrimaryPart then return end
-
-        for _, item in ipairs(workspace.Items:GetChildren()) do
-            if item:IsA("Model") and item.PrimaryPart and (string.find(item.Name, "Morsel") or string.find(item.Name, "Steak")) then
-                game.ReplicatedStorage.RemoteEvents.RequestStartDraggingItem:FireServer(item)
-                item:PivotTo(campfire.PrimaryPart.CFrame * CFrame.new(0, 8, 0))
-                game.ReplicatedStorage.RemoteEvents.StopDraggingItem:FireServer(item)
-            end
-        end
-    end,
-})
-
--- ==================== TAB: BRINGS =====================
-local rs = game:GetService("ReplicatedStorage")
-local requestDrag = rs.RemoteEvents.RequestStartDraggingItem
-local stopDrag = rs.RemoteEvents.StopDraggingItem
-
-TabBrings:CreateSection("Fuel")
-_G.BringFuel = false
-
-TabBrings:CreateToggle({
-    Name = '<font size="24"><b>ទាញយកអីវ៉ាន់ដុតបាន</b></font> Bring Fuel',
-    CurrentValue = false,
-    Flag = "BringFuelToggle",
-    Callback = function(State)
-        _G.BringFuel = State
-        if _G.BringFuel and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local savedPositionFuel = player.Character.HumanoidRootPart.CFrame
+MainTab:CreateToggle({
+    name = "ប្រមូលអីវ៉ានដែលគេទម្លាក់ (Auto Collect)",
+    currentValue = false,
+    flag = "AutoCollectToggle",
+    callback = function(Value)
+        autoCollectEnabled = Value
+        
+        if autoCollectEnabled then
             task.spawn(function()
-                local targetFuel = {["Log"]=true, ["Coal"]=true, ["Oil Barrel"]=true, ["Fuel Canister"]=true, ["Cultist"]=true, ["Bear Corpse"]=true, ["Alpha Wolf Corppse"]=true, ["Wolf Corppse"]=true, ["Crossbow Cultist"]=true, ["Strong Axe"]=true, ["Sheet Metal"]=true, ["Rifle Ammo"]=true, ["Rifle"]=true, ["Revolver"]=true, ["Revolver Ammo"]=true,["Giant Sack"]=true, ["Leather Body"]=true, ["Crystal Skull Key"]=true, ["Defense Blueprint"]=true, ["Coin Stack"]=true, ["Dino Kid's Lunchbox"]=true, ["Dino Kid's Yoyo"]=true}
-                while _G.BringFuel do
-                    for _, item in ipairs(workspace.Items:GetChildren()) do
-                        if not _G.BringFuel then break end
-                        if item:IsA("Model") and item.PrimaryPart and targetFuel[item.Name] then
-                            requestDrag:FireServer(item)
-                            task.wait(0.1)
-                            item:PivotTo(savedPositionFuel * CFrame.new(0,3,0))
-                            task.wait(0.1)
-                            stopDrag:FireServer(item)
-                            task.wait(0.2)
-                        end
-                    end
+                while autoCollectEnabled do
+                    pcall(function()
+                        collectDroppedItems()
+                    end)
                     task.wait(1)
                 end
             end)
@@ -406,79 +487,184 @@ TabBrings:CreateToggle({
     end,
 })
 
-TabBrings:CreateSection("Metal")
-_G.BringMetal = false
-
-TabBrings:CreateToggle({
-    Name = '<font size="24"><b>ទាញដែក</b></font> Bring Metal',
-    CurrentValue = false,
-    Flag = "BringMetalToggle",
-    Callback = function(State)
-        _G.BringMetal = State
-        if _G.BringMetal and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local savedPositionMetal = player.Character.HumanoidRootPart.CFrame
-            task.spawn(function()
-                local targetMetal = {["Bolt"]=true, ["Sheet Metal"]=true, ["UFO Junk"]=true, ["UFO Component"]=true, ["Broken Fan"]=true, ["Broken Radio"]=true, ["Broken Microwave"]=true, ["Tyre"]=true, ["Metal Chair"]=true, ["Old Car Engine"]=true, ["Cultist Experiment"]=true, ["Washing Machine"]=true, ["Cultist Prototype"]=true, ["UFO Scrap"]=true}
-                while _G.BringMetal do
-                    for _, item in ipairs(workspace.Items:GetChildren()) do
-                        if not _G.BringMetal then break end
-                        if item:IsA("Model") and item.PrimaryPart and targetMetal[item.Name] then
-                            requestDrag:FireServer(item)
-                            task.wait(0.1)
-                            item:PivotTo(savedPositionMetal * CFrame.new(0,3,0))
-                            task.wait(0.1)
-                            stopDrag:FireServer(item)
-                            task.wait(0.2)
-                        end
-                    end
-                    task.wait(1)
-                end
-            end)
-        end
+MainTab:CreateSlider({
+    name = "ល្បឿន (WalkSpeed)",
+    range = {16, 100},
+    increment = 1,
+    suffix = "WalkSpeed",
+    currentValue = 16,
+    flag = "Slider8",
+    callback = function(v)
+        local Hum = GetHumanoid(LocalPlayer)
+        if Hum then Hum.WalkSpeed = v end
     end,
 })
 
-TabBrings:CreateSection("Food")
-_G.BringFood = false
-
-TabBrings:CreateToggle({
-    Name = '<font size="24"><b>ទាញអាហារ</b></font> Bring Food',
-    CurrentValue = false,
-    Flag = "BringFoodToggle",
-    Callback = function(State)
-        _G.BringFood = State
-        if _G.BringFood and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local savedPositionFood = player.Character.HumanoidRootPart.CFrame
-            task.spawn(function()
-                local targetFood = {["Steak"]=true, ["BBQ Ribs"]=true, ["Candy Apple"]=true, ["Carrot"]=true, ["Berry"]=true, ["Cotton Candy"]=true, ["Chili"]=true, ["Lava Eel"]=true, ["Candy Corn"]=true, ["Morsel"]=true, ["Stew"]=true, ["Corn"]=true, ["Pumpkin"]=true, ["Casserole"]=true, ["Apple"]=true, ["Berry Juice"]=true, ["Ribs"]=true, ["Cake"]=true, ["Hearty Stew"]=true, ["Shark"]=true, ["Swordfish"]=true, ["Eel"]=true, ["Char"]=true, ["Mackerel"]=true, ["Salmon"]=true, ["Clownfish"]=true, ["MedKit"]=true}
-                while _G.BringFood do
-                    for _, item in ipairs(workspace.Items:GetChildren()) do
-                        if not _G.BringFood then break end
-                        if item:IsA("Model") and item.PrimaryPart and targetFood[item.Name] then
-                            requestDrag:FireServer(item)
-                            task.wait(0.1)
-                            item:PivotTo(savedPositionFood * CFrame.new(0,3,0))
-                            task.wait(0.1)
-                            stopDrag:FireServer(item)
-                            task.wait(0.2)
-                        end
-                    end
-                    task.wait(1)
-                end
-            end)
-        end
+MainTab:CreateSlider({
+    name = "ហោះ (HipHeight)",
+    range = {0, 100},
+    increment = 1,
+    suffix = "HipHeight",
+    currentValue = 0,
+    flag = "Slider2",
+    callback = function(v)
+        local Hum = GetHumanoid(LocalPlayer)
+        if Hum then Hum.HipHeight = v end
     end,
 })
 
-TabBrings:CreateSection("Others")
-
-TabBrings:CreateButton({
-    Name = '<font size="24"><b>បិទទាំងអស់</b></font> Stop All',
-    Callback = function()
-        _G.BringFood = false
-        _G.BringMetal = false
-        _G.BringFuel = false
-    end,
+--- Rayfield UI Tab 2: Send Items ---
+Tab1:CreateInput({
+   name = "ឈ្មោះដើមអ្នកទទួល (Username)",
+   currentValue = TargetUsername, 
+   placeholderText = "Enter username...",
+   removeTextAfterFocusLost = false,
+   flag = "MailTargetUser",
+   callback = function(Text)
+       TargetUsername = Text
+   end,
 })
 
-loadstring(game:HttpGet("https://pastebin.com/raw/2Y28xZ9r"))()
+Tab1:CreateDropdown({
+   name = "ជ្រើសរើសគ្រាប់ពូជ (Seeds)",
+   options = SeedOptions, 
+   value = SelectedSeed,
+   flag = "MailSeedType", 
+   callback = function(selected)
+       SelectedSeed = typeof(selected) == "table" and selected[1] or selected
+   end,
+})
+
+Tab1:CreateDropdown({
+   name = "ជ្រើសរើសធុងស្រោចទឹក (Watering Cans)",
+   options = GearOptions, 
+   value = SelectedGear,
+   flag = "MailGearType", 
+   callback = function(selected)
+       SelectedGear = typeof(selected) == "table" and selected[1] or selected
+   end,
+})
+
+Tab1:CreateDropdown({
+   name = "ជ្រើសរើសប្រព័ន្ធស្រោចទឹក (Sprinklers)",
+   options = SprinklerOptions, 
+   value = SelectedSprinkler,
+   flag = "MailSprinklerType", 
+   callback = function(selected)
+       SelectedSprinkler = typeof(selected) == "table" and selected[1] or selected
+   end,
+})
+
+Tab1:CreateDropdown({
+   name = "ជ្រើសរើសប្រដាប់ជីក (Trowels)",
+   options = TrowelsOptions, 
+   value = selectedTrowel,
+   flag = "MailTrowelType",
+   callback = function(selected)
+       selectedTrowel = typeof(selected) == "table" and selected[1] or selected
+   end,
+})
+
+Tab1:CreateInput({
+   name = "កំណត់បរិមាណផ្ញើ (Amount)",
+   placeholderText = "ដាក់តម្លៃ...",
+   currentValue = tostring(Amount), 
+   removeTextAfterFocusLost = false,
+   flag = "MailAmount", 
+   callback = function(Text)
+       local numericValue = tonumber(Text)
+       if numericValue then
+           Amount = numericValue
+       end
+   end,
+})
+
+Tab1:CreateButton({
+   name = "ផ្ញើគ្រាប់ពូជ (Send Seeds)",
+   callback = function()
+       SendItemWithReceipt("Seeds", SelectedSeed, "គ្រាប់ពូជ")
+   end,
+})
+
+Tab1:CreateButton({
+   name = "ផ្ញើធុងស្រោចទឹក (Send Watering Can)",
+   callback = function()
+       SendItemWithReceipt("WateringCans", SelectedGear, "ធុងស្រោចទឹក")
+   end,
+})
+
+Tab1:CreateButton({
+   name = "ផ្ញើប្រព័ន្ធស្រោចទឹក (Send Sprinklers)",
+   callback = function()
+       SendItemWithReceipt("Sprinklers", SelectedSprinkler, "ប្រព័ន្ធស្រោចទឹក")
+   end,
+})
+
+Tab1:CreateButton({
+   name = "ផ្ញើប្រដាប់ជីក (Send Trowel)",
+   callback = function()
+       SendItemWithReceipt("Trowels", selectedTrowel, "ប្រដាប់ជីក")
+   end,
+})
+
+--- Rayfield UI Tab 3: Auto Buy ---
+MainTab3:CreateSection("Shop Items Selection")
+
+MainTab3:CreateToggle({
+   name = "Enable Auto Buy",
+   currentValue = false,
+   flag = "AutoBuyToggle",
+   callback = function(Value)
+      autoBuyEnabled = Value
+   end,
+})
+
+MainTab3:CreateDropdown({
+   name = "🌱 Seed Shop Items",
+   options = {"None", "Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Apple", "Bamboo", "Corn", "Cactus", "Pineapple", "Mushroom", "Green Bean", "Banana", "Grape", "Coconut", "Mango", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", "Fire Fern", "Venus Fly Trap", "Pomegranate", "Poison Apple", "Venom Spitter", "Moon Bloom", "Sun Bloom", "Hypno Bloom", "Dragon's Breath", "Star Fruit",
+   "---New Seed---", "Maple Carrot", "Maple Strawberry", "Maple Blueberry",  "Maple Tulip", "Maple Tomato", "Maple Apple","Maple Bamboo", "Maple Corn", "Maple Cactus", "Maple Pineapple", "Maple Mushroom", "Maple Green Bean", "Maple Grape", "Maple Coconut", "Maple Mango", "Maple Dragon Fruit", "Maple Acorn", "Maple Cherry", "Maple Sunflower", "Atlantic Giant Pumpkin", "Maple Venus Fly Trap", "Maple Pomegranate", "Maple Poison Apple", "Maple Venom Spitter", "Conifer Cone", "Amber Cranberry"},
+   value = {"None"},
+   multiSelect = true,
+   flag = "SeedDropdown",
+   callback = function(selected)
+      selectedItems.Seeds = typeof(selected) == "table" and selected or {selected}
+   end,
+})
+
+MainTab3:CreateDropdown({
+   name = "⚙️ Gear Shop Items",
+   options = {"None", "Common Watering Can", "Super Watering Can", "Common Sprinkler", "Uncommon Sprinkler", "Rare Sprinkler", "Legendary Sprinkler", "Super Sprinkler", "Trowel", "Jump Mushroom", "Speed Mushroom", "Shrink Mushroom", "Supersize Mushroom", "Invisibility Mushroom", "Gnome", "Basic Pot", "Flashbang", "Sign", "Megaphone", "Wheelbarrow", "Player Magnet", "Strawberry Sniper", "---NewGear---", 
+   "Syrup Watering Can", "Syrup Sprinkler", "Harp", "Rare Magic Mail", "Bull Horn", "Wind Staff", "Legendary Magic Mail", "Super Syrup Watering Can", "Super Magic Mail"},
+   value = {"None"},
+   multiSelect = true,
+   flag = "GearDropdown",
+   callback = function(selected)
+      selectedItems.Gears = typeof(selected) == "table" and selected or {selected}
+   end,
+})
+
+MainTab3:CreateDropdown({
+   name = "📦 Crate Shop Items",
+   options = {"None", "Ladder Crate", "Bench Crate", "Light Crate", "Sign Crate", "Arch Crate", "Roleplay Crate", "Picture Frame Crate", "Bridge Crate", "Spring Crate", "Seesaw Crate", "Conveyor Crate", "Owner Door Crate", "Boombox Crate", "Bear Trap Crate", "Fence Crate", "Teleporter Pad Crate", "---NewCrate---",
+   "Lantern Crate", "Fall Cosmetic Crate", "Cobblestone Crate", "Fall Structure Crate", "Rake Crate"},
+   value = {"None"},
+   multiSelect = true,
+   flag = "CrateDropdown",
+   callback = function(selected)
+      selectedItems.Crates = typeof(selected) == "table" and selected or {selected}
+   end,
+})
+
+-- Notification
+window:Notify({
+   Title = "Script Loaded!",
+   Content = ".......ដំណើរការជោគជ័យ........\nបើសិនផ្ញើរMailBoxមិនបានសូមដូរឈ្មោះវាអាចនឺងគ្រប់ក្នុងការផ្ញើរក្នុងមួយថ្ងៃ\nច្បាប់Gameអាចផ្ញើរបាន\n-ផ្ញើរបាន5ដងក្នុង 1 Username\n-ផ្ញើរបាន50ដងក្នុងមួយថ្ងៃ",
+   Duration = 20,
+   Image = 4483362458,
+})
+
+task.wait(6)
+
+pcall(function()
+    loadstring(game:HttpGet("https://pastebin.com/raw/9nNXtJRn"))()
+end)
