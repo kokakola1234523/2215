@@ -1,24 +1,354 @@
-local HENG = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
-local window = HENG:CreateWindow({
-    name = "Grow a Garden2",
-    subtitle = "TaoTao Hub   -   By 2BK2",
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
+
+local MainWindow = Rayfield:CreateWindow({
+    name = "Grow a Garden 2",
+    subtitle = "ToaToa Hub   -   By 2BK2",
+    configurationSaving = {
+        enabled = true,
+        folderName = "BK_Hub_Config",
+        fileName = "BK Hub"
+    },
+    keySystem = false
 })
 
--- Services & Setup
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+
+-- Variables
+local autoPlantEnabled = false
+local autoCollectEnabled = false
+local autoBuyEnabled = false
+local noclipConnection = nil
+local isTeleporting = false
+
+--------------------------------------------------------------------------------
+-- 1. AUTO HOLD SEED
+--------------------------------------------------------------------------------
+task.spawn(function()
+    while true do
+        if autoPlantEnabled then
+            local character = LocalPlayer.Character
+            if character and character:FindFirstChild("Humanoid") then
+                local humanoid = character.Humanoid
+                local backpack = LocalPlayer:FindFirstChild("Backpack")
+                
+                local currentTool = character:FindFirstChildOfClass("Tool")
+                local isHoldingSeed = false
+                
+                if currentTool then
+                    local cat = currentTool:GetAttribute("MainCategory")
+                        or (currentTool:FindFirstChild("MainCategory") and currentTool.MainCategory.Value)
+                    if cat == "Seed" then
+                        isHoldingSeed = true
+                    end
+                end
+                
+                if not isHoldingSeed and backpack then
+                    for _, item in ipairs(backpack:GetChildren()) do
+                        local mainCategory = item:GetAttribute("MainCategory")
+                            or (item:FindFirstChild("MainCategory") and item.MainCategory.Value)
+                        
+                        if mainCategory == "Seed" and item:IsA("Tool") then
+                            humanoid:EquipTool(item)
+                            break
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(0.5)
+    end
+end)
+
+--------------------------------------------------------------------------------
+-- 2. AUTO CLICK UNDER FEET
+--------------------------------------------------------------------------------
+local function clickUnderFeet()
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        local feetWorldPos = character.HumanoidRootPart.Position - Vector3.new(0, 3, 0)
+        local screenPos, onScreen = Camera:WorldToViewportPoint(feetWorldPos)
+        
+        if onScreen then
+            VirtualInputManager:SendMouseButtonEvent(screenPos.X, screenPos.Y, 0, true, game, 1)
+            task.wait(0.05)
+            VirtualInputManager:SendMouseButtonEvent(screenPos.X, screenPos.Y, 0, false, game, 1)
+        end
+    end
+end
+
+task.spawn(function()
+    while true do
+        if autoPlantEnabled then
+            clickUnderFeet()
+        end
+        task.wait(0.9)
+    end
+end)
+
+--------------------------------------------------------------------------------
+-- 3. AUTO WALK & NOCLIP SYSTEM
+--------------------------------------------------------------------------------
+local function findMyPlot()
+    local gardens = Workspace:FindFirstChild("Gardens")
+    if not gardens then return nil end
+    
+    for _, plot in ipairs(gardens:GetChildren()) do
+        local ownerVal = plot:FindFirstChild("Owner") or plot:FindFirstChild("Player")
+        local ownerAttr = plot:GetAttribute("Owner") or plot:GetAttribute("Player")
+        
+        if (ownerVal and (ownerVal.Value == LocalPlayer.Name or ownerVal.Value == LocalPlayer))
+            or (ownerAttr == LocalPlayer.Name)
+            or (plot.Name == LocalPlayer.Name)
+        then
+            return plot
+        end
+    end
+    
+    return gardens:FindFirstChild("Plot4") or gardens:GetChildren()[1]
+end
+
+local function setupAutoPlay(character)
+    if not character then return end
+    
+    local humanoid = character:WaitForChild("Humanoid", 5)
+    local rootPart = character:WaitForChild("HumanoidRootPart", 5)
+    if not humanoid or not rootPart then return end
+
+    local myPlot = findMyPlot()
+    if not myPlot then return end
+    
+    local visualFolder = myPlot:WaitForChild("Visual", 5)
+    local plantArea = visualFolder and visualFolder:WaitForChild("PlantAreaColumn1", 5)
+    local plantsFolder = myPlot:WaitForChild("Plants", 5)
+
+    if noclipConnection then noclipConnection:Disconnect() end
+    noclipConnection = RunService.Stepped:Connect(function()
+        if autoPlantEnabled and character and character.Parent then
+            for _, part in ipairs(character:GetDescendants()) do
+                if part:IsA("BasePart") and part.CanCollide then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end)
+
+    local function getRandomPositionInPart(part)
+        local size = part.Size
+        local randomX = math.random(-size.X / 2 + 2, size.X / 2 - 2)
+        local randomZ = math.random(-size.Z / 2 + 2, size.Z / 2 - 2)
+        local randomY = size.Y / 2 + 1
+
+        local targetCFrame = part.CFrame * CFrame.new(randomX, randomY, randomZ)
+        return targetCFrame.Position
+    end
+
+    if plantArea then
+        task.spawn(function()
+            while autoPlantEnabled and character and character.Parent and humanoid.Health > 0 do
+                local targetPos = getRandomPositionInPart(plantArea)
+                humanoid:MoveTo(targetPos)
+                
+                local isMoving = true
+                local timer = 0
+                while isMoving and autoPlantEnabled and character and character.Parent and humanoid.Health > 0 do
+                    timer = timer + 0.1
+                    local distance = (rootPart.Position - targetPos).Magnitude
+                    if distance < 3 or timer > 6 then
+                        isMoving = false
+                    end
+                    task.wait(0.1)
+                end
+            end
+        end)
+    end
+
+    local function disableCollision(object)
+        if object:IsA("BasePart") then
+            object.CanCollide = false
+            object.CanQuery = false
+        end
+    end
+
+    if plantsFolder then
+        plantsFolder.DescendantAdded:Connect(function(descendant)
+            if autoPlantEnabled then
+                disableCollision(descendant)
+            end
+        end)
+        for _, descendant in ipairs(plantsFolder:GetDescendants()) do
+            if autoPlantEnabled then
+                disableCollision(descendant)
+            end
+        end
+    end
+end
+
+LocalPlayer.CharacterAdded:Connect(function(newCharacter)
+    if autoPlantEnabled then
+        setupAutoPlay(newCharacter)
+    end
+end)
+
+--------------------------------------------------------------------------------
+-- 4. COLLECTION & SEED PACKS SYSTEM
+--------------------------------------------------------------------------------
+local mapFolder = Workspace:WaitForChild("Map", 10)
+local spawnLocationsFolder = mapFolder and mapFolder:WaitForChild("SeedPackSpawnServerLocations", 10)
+
+local function getCharacterParts()
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local rootPart = character:WaitForChild("HumanoidRootPart", 5)
+    return character, rootPart
+end
+
+local function setNoclip(enabled)
+    local character = LocalPlayer.Character
+    if not character then return end
+    
+    if enabled then
+        if not noclipConnection then
+            noclipConnection = RunService.Stepped:Connect(function()
+                for _, part in ipairs(character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end)
+        end
+    else
+        if noclipConnection then
+            noclipConnection:Disconnect()
+            noclipConnection = nil
+        end
+        for _, part in ipairs(character:GetDescendants()) do
+            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                part.CanCollide = true
+            end
+        end
+    end
+end
+
+local function walkAndInteract(targetPart)
+    if not autoCollectEnabled then return end
+    
+    local character, humanoidRootPart = getCharacterParts()
+    if not humanoidRootPart or not targetPart or not targetPart.Parent then return end
+    
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+    
+    setNoclip(true)
+    
+    local targetPosition
+    if targetPart:IsA("Model") then
+        targetPosition = targetPart:GetPivot().Position
+    elseif targetPart:IsA("BasePart") then
+        targetPosition = targetPart.Position
+    else
+        local part = targetPart:FindFirstChildWhichIsA("BasePart", true)
+        if part then
+            targetPosition = part.Position
+        else
+            setNoclip(false)
+            return
+        end
+    end
+    
+    humanoid:MoveTo(targetPosition)
+    
+    local connection
+    local reached = false
+    
+    connection = RunService.Heartbeat:Connect(function()
+        if not autoCollectEnabled or not targetPart or not targetPart.Parent then
+            if connection then connection:Disconnect() end
+            return
+        end
+        
+        if targetPart:IsA("Model") then
+            targetPosition = targetPart:GetPivot().Position
+        elseif targetPart:IsA("BasePart") then
+            targetPosition = targetPosition or targetPart.Position
+        end
+        
+        humanoid:MoveTo(targetPosition)
+        
+        if (humanoidRootPart.Position - targetPosition).Magnitude <= 4 then
+            reached = true
+            if connection then connection:Disconnect() end
+        end
+    end)
+    
+    local startTime = tick()
+    while autoCollectEnabled and not reached and targetPart and targetPart.Parent and (tick() - startTime < 10) do
+        task.wait(0.1)
+    end
+    
+    if connection then connection:Disconnect() end
+    setNoclip(false)
+    
+    if autoCollectEnabled then
+        local prompt = targetPart:FindFirstChildOfClass("ProximityPrompt", true)
+        if prompt then
+            prompt.MaxActivationDistance = 9999
+            fireproximityprompt(prompt)
+        end
+    end
+    task.wait(0.2)
+end
+
+local function processItems()
+    if isTeleporting or not spawnLocationsFolder then return end
+    isTeleporting = true
+    
+    while autoCollectEnabled do
+        local children = spawnLocationsFolder:GetChildren()
+        if #children == 0 then break end
+        
+        local currentItem = children[1]
+        if currentItem then
+            pcall(function()
+                walkAndInteract(currentItem)
+            end)
+        end
+        task.wait(0.1)
+    end
+    
+    isTeleporting = false
+    setNoclip(false)
+end
+
+if spawnLocationsFolder then
+    spawnLocationsFolder.ChildAdded:Connect(function()
+        if autoCollectEnabled and not isTeleporting then
+            task.spawn(processItems)
+        end
+    end)
+end
+
+--------------------------------------------------------------------------------
+-- 5. AUTO BUY & NETWORKING
+--------------------------------------------------------------------------------
 local Networking = require(ReplicatedStorage.SharedModules.Networking)
 
-local PurchaseSeeds = Networking.SeedShop and Networking.SeedShop.PurchaseSeed
-local PurchaseGears = Networking.GearShop and Networking.GearShop.PurchaseGear
-local PurchaseCrates = Networking.CrateShop and Networking.CrateShop.PurchaseCrate
+local PurchaseSeeds = Networking.SeedShop.PurchaseSeed
+local PurchaseGears = Networking.GearShop.PurchaseGear
+local PurchaseCrates = Networking.CrateShop.PurchaseCrate
 
 local Shops = {
-    { Stock = ReplicatedStorage:FindFirstChild("StockValues") and ReplicatedStorage.StockValues.SeedShop.Items, Event = PurchaseSeeds },
-    { Stock = ReplicatedStorage:FindFirstChild("StockValues") and ReplicatedStorage.StockValues.GearShop.Items, Event = PurchaseGears },
-    { Stock = ReplicatedStorage:FindFirstChild("StockValues") and ReplicatedStorage.StockValues.CrateShop.Items, Event = PurchaseCrates }
+    { Stock = ReplicatedStorage.StockValues.SeedShop.Items, Event = PurchaseSeeds },
+    { Stock = ReplicatedStorage.StockValues.GearShop.Items, Event = PurchaseGears },
+    { Stock = ReplicatedStorage.StockValues.CrateShop.Items, Event = PurchaseCrates }
 }
 
--- តុសម្រាប់រក្សាទុកទំនិញដែលបានជ្រើសរើសចេញពី Dropdown
 local selectedItems = {
     Seeds = {},
     Gears = {},
@@ -27,28 +357,21 @@ local selectedItems = {
 
 local prices = {}
 local playerdata = nil
-local autoBuyEnabled = false
 
--- Safe GC for Prices & Sheckles
-pcall(function()
-    for _, v in pairs(getgc()) do
-        if type(v) == "function" then
-            local success, info = pcall(debug.info, v, "s")
-            if success and info and info:match("RestockStoreController") then
-                local upvalues = debug.getupvalues(v)
-                for _, upv in pairs(upvalues) do
-                    if type(upv) == "table" then
-                        if upv.Data and upv.Data.Sheckles ~= nil then
-                            playerdata = upv
-                        elseif not prices[1] and type(next(upv)) == "string" then
-                            table.insert(prices, upv)
-                        end
-                    end
+for _, v in pairs(getgc()) do
+    if type(v) == "function" and debug.info(v, "s"):match("RestockStoreController") then
+        local upvalues = debug.getupvalues(v)
+        for _, upv in pairs(upvalues) do
+            if type(upv) == "table" then
+                if upv.Data and upv.Data.Sheckles ~= nil then
+                    playerdata = upv
+                elseif not prices[1] and type(next(upv)) == "string" then
+                    table.insert(prices, upv)
                 end
             end
         end
     end
-end)
+end
 
 local function canAfford(itemName)
     if not playerdata or not playerdata.Data then return true end
@@ -62,41 +385,37 @@ local function canAfford(itemName)
     return true
 end
 
--- Auto Buy Loop Function
 local lastBuyAttempt = {}
-
 task.spawn(function()
     while task.wait(0.2) do
         if autoBuyEnabled then
             local activeItems = {}
             for _, category in pairs(selectedItems) do
                 for _, itemName in ipairs(category) do
-                    if itemName ~= "None" and itemName ~= "" and not itemName:match("^%-%-%-") then
+                    if itemName ~= "None" and itemName ~= "" then
                         table.insert(activeItems, itemName)
                     end
                 end
             end
 
             for _, shop in ipairs(Shops) do
-                if shop.Stock and shop.Event then
-                    for _, item in ipairs(shop.Stock:GetChildren()) do
-                        if item and item.Value > 0 and table.find(activeItems, item.Name) then
-                            if canAfford(item.Name) then
-                                pcall(function()
-                                    shop.Event:Fire(item.Name)
-                                end)
-                                task.wait(0.1)
-                            else
-                                local now = tick()
-                                if not lastBuyAttempt[item.Name] or (now - lastBuyAttempt[item.Name]) > 10 then
-                                    lastBuyAttempt[item.Name] = now
-                                    window:Notify({
-                                        Title = "⚠️ លុយមិនគ្រប់",
-                                        Content = "មិនគ្រប់ Sheckles សម្រាប់ទិញ: " .. item.Name,
-                                        Duration = 2,
-                                        Image = 4483362458
-                                    })
-                                end
+                for _, item in ipairs(shop.Stock:GetChildren()) do
+                    if item and item.Value > 0 and table.find(activeItems, item.Name) then
+                        if canAfford(item.Name) then
+                            pcall(function()
+                                shop.Event:Fire(item.Name)
+                            end)
+                            task.wait(0.05)
+                        else
+                            local now = tick()
+                            if not lastBuyAttempt[item.Name] or (now - lastBuyAttempt[item.Name]) > 10 then
+                                lastBuyAttempt[item.Name] = now
+                                MainWindow:Notify({
+                                    title = "⚠️ លុយមិនគ្រប់",
+                                    content = "មិនគ្រប់ Sheckles សម្រាប់ទិញ: " .. item.Name,
+                                    duration = 2,
+                                    icon = "alert-triangle"
+                                })
                             end
                         end
                     end
@@ -106,23 +425,19 @@ task.spawn(function()
     end
 end)
 
-local MainTab = window:CreateTab({ name = "Home", icon = 93364949241311 })
-local Tab1 = window:CreateTab({ name = "Send Item", icon = 93364949241311 })
-local MainTab3 = window:CreateTab({ name = "Auto Buy", icon = 93364949241311 }) 
+--------------------------------------------------------------------------------
+-- 6. TABS & UI CREATION (RAYFIELD GEN2 SYNTAX)
+--------------------------------------------------------------------------------
+local MainTab = MainWindow:CreateTab({ name = "Main", icon = "home" })
+local Tab1 = MainWindow:CreateTab({ name = "Send Items", icon = "send" }) 
+local MainTab3 = MainWindow:CreateTab({ name = "Auto Buy", icon = "shopping-cart" })
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local Workspace = game:GetService("Workspace")
-
-local autoCollectEnabled = false
-
+-- Auto Collect Dropped Items
 local function collectDroppedItems()
     local droppedItemsFolder = Workspace:FindFirstChild("DroppedItems")
-    
     if droppedItemsFolder then
         local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
         local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5)
-        
         if not humanoidRootPart then return end
         
         for _, item in ipairs(droppedItemsFolder:GetChildren()) do
@@ -131,27 +446,20 @@ local function collectDroppedItems()
             local promptAnchor = item:FindFirstChild("PromptAnchor")
             local prompt = promptAnchor and promptAnchor:FindFirstChildOfClass("ProximityPrompt") 
                            or item:FindFirstChildOfClass("ProximityPrompt")
-            
             local targetPart = item:IsA("Model") and item.PrimaryPart or item:IsA("BasePart") and item
             
             if targetPart and prompt then
                 humanoidRootPart.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
                 task.wait(0.3)
-                
                 fireproximityprompt(prompt)
-                
                 task.wait(0.3)
             end
         end
     end
 end
 
--- Send Setup Modules
-local FruitValueCalc
-pcall(function()
-    FruitValueCalc = require(ReplicatedStorage:WaitForChild("SharedModules"):WaitForChild("FruitValueCalc"))
-end)
-
+-- Mail & Steal Utilities
+local FruitValueCalc = require(ReplicatedStorage:WaitForChild("SharedModules"):WaitForChild("FruitValueCalc"))
 local TargetUsername = ""
 local SelectedSeed = "Bamboo"
 local SelectedGear = "Super Watering Can"
@@ -165,7 +473,7 @@ local GearOptions = {"Super Watering Can", "Common Watering Can", "Syrup Waterin
 local SeedOptions = {"Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Apple", "Bamboo","Corn","Cactus", "Pineapple", "Baby Cactus", "Horned Melon",
 "Mushroom", "Green Bean", "Banana", "Grape", "Coconut", "Glow Mushroom", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", "Poison Ivy", "Venus Fly Trap", "Pomegranate",
 "Poison Apple", "Venom Spitter", "Ghost Pepper", "Moon Bloom","Sun Bloom", "Dragon's Breath", "Hypno Bloom", "Rocket Pop", "Fire Fern", "Star Fruit", "Rainbow", "Mega", "Gold", "---New Seed---",
-"Maple Carrot", "Maple Strawberry", "Maple Blueberry", "Maple Tulip", "Maple Tomato", "Maple Apple","Maple Bamboo", "Maple Corn", "Maple Cactus", "Maple Pineapple", "Maple Mushroom", "Maple Green Bean", "Maple Grape", "Maple Coconut", "Maple Mango", "Maple Dragon Fruit", "Maple Acorn", "Maple Cherry", "Maple Sunflower", "Atlantic Giant Pumpkin", "Maple Venus Fly Trap", "Maple Pomegranate", "Maple Poison Apple", "Maple Venom Spitter", "Conifer Cone", "Amber Cranberry" }
+"Maple Carrot", "Maple Strawberry", "Maple Blueberry",  "Maple Tulip", "Maple Tomato", "Maple Apple","Maple Bamboo", "Maple Corn", "Maple Cactus", "Maple Pineapple", "Maple Mushroom", "Maple Green Bean", "Maple Grape", "Maple Coconut", "Maple Mango", "Maple Dragon Fruit", "Maple Acorn", "Maple Cherry", "Maple Sunflower", "Atlantic Giant Pumpkin", "Maple Venus Fly Trap", "Maple Pomegranate", "Maple Poison Apple", "Maple Venom Spitter", "Conifer Cone", "Amber Cranberry" }
 
 local Plots = Workspace:WaitForChild("Gardens")
 local VisitedFruits = {}
@@ -174,8 +482,7 @@ local function getUserId(username)
     local success, userId = pcall(function()
         return Players:GetUserIdFromNameAsync(username)
     end)
-    if success then return userId end
-    return nil
+    return success and userId or nil
 end
 
 local GetHumanoid = function(Player)
@@ -200,7 +507,7 @@ local GetPlot = function(Player)
 end
 
 local CalculateValue = function(Fruit)
-    if not Fruit or not FruitValueCalc then return 0 end
+    if not Fruit then return 0 end
     local FruitName = Fruit:GetAttribute("CorePartName") or Fruit:GetAttribute("PlantName")
     local SizeMultiplier = Fruit:GetAttribute("SizeMulti") or Fruit:GetAttribute("Age")
     local Mutation = Fruit:GetAttribute("Mutation")
@@ -277,21 +584,17 @@ local Steal = function(Fruit)
             VisitedFruits[Fruit] = true
             Root.CFrame = HarvestPart.CFrame
             task.wait(0.05)
-            if Networking.Steal then
-                pcall(function()
-                    Networking.Steal.BeginSteal:Fire(UserId, PlantId, FruitId or "")
-                    Networking.Steal.CompleteSteal:Fire()
-                end)
-            end
+            Networking.Steal.BeginSteal:Fire(UserId, PlantId, FruitId or "")
+            Networking.Steal.CompleteSteal:Fire()
             task.wait(0.05)
         end
     end
 end
 
 local function ShowReceipt(recipient, category, itemName, count)
-    window:Notify({
-        Title = "🧾 វិក្កយបត្រផ្ញើទំនិញ (RECEIPT)",
-        Content = string.format(
+    MainWindow:Notify({
+        title = "🧾 វិក្កយបត្រផ្ញើទំនិញ (RECEIPT)",
+        content = string.format(
             "---------------------------\n" ..
             "👤 អ្នកទទួល: %s\n" ..
             "📦 ប្រភេទ: %s\n" ..
@@ -301,24 +604,29 @@ local function ShowReceipt(recipient, category, itemName, count)
             "-----------By @2BK2 ----------------",
             recipient, category, itemName, count
         ),
-        Duration = 30,
-        Image = 4483362458
+        duration = 15,
+        icon = "file-text"
     })
 end
 
 local function SendItemWithReceipt(category, itemKey, categoryNameKhmer)
-    if itemKey:match("^%-%-%-") then
-        window:Notify({Title = "កំហុស", Content = "មិនអាចផ្ញើ Option នេះបានទេ!", Duration = 3, Image = 4483362458})
-        return
-    end
-
     local targetId = getUserId(TargetUsername)
     if not targetId then
-        window:Notify({Title = "រកមិនឃើញ", Content = "រកមិនឃើញគណនីឈ្មោះ " .. TargetUsername .. " ឡើយ!", Duration = 5, Image = 4483362458})
+        MainWindow:Notify({
+            title = "រកមិនឃើញ", 
+            content = "រកមិនឃើញគណនីឈ្មោះ " .. TargetUsername .. " ឡើយ!", 
+            duration = 5,
+            icon = "user-x"
+        })
         return
     end
 
-    window:Notify({Title = "Mailbox", Content = "កំពុងដំណើរការផ្ញើ...", Duration = 2, Image = 4483362458})
+    MainWindow:Notify({
+        title = "Mailbox", 
+        content = "កំពុងដំណើរការផ្ញើ...", 
+        duration = 2,
+        icon = "mail"
+    })
     
     local itemsToSend = {
         {
@@ -336,14 +644,19 @@ local function SendItemWithReceipt(category, itemKey, categoryNameKhmer)
     if success then
         ShowReceipt(TargetUsername, categoryNameKhmer, itemKey, Amount)
     else
-        window:Notify({Title = "កំហុសប្រព័ន្ធ", Content = "ការផ្ញើបរាជ័យ: " .. tostring(err), Duration = 5, Image = 4483362458})
+        MainWindow:Notify({
+            title = "កំហុសប្រព័ន្ធ", 
+            content = "ការផ្ញើបរាជ័យ: " .. tostring(err), 
+            duration = 5,
+            icon = "alert-circle"
+        })
     end
 end
 
---- Rayfield UI Tab 1: Main ---
+--- Main Tab Elements ---
 MainTab:CreateToggle({
-    name = "លួចដំណាំគេ (Auto Steal)",
-    currentValue = false,
+    name = "លួចដំណាំគេ (Only at Night)",
+    value = false,
     flag = "StealToggle",
     callback = function(Value)
         _G.AutoSteal = Value
@@ -364,7 +677,7 @@ MainTab:CreateToggle({
                             else
                                 break
                             end
-                            task.wait(0.1)
+                            task.wait(0.05)
                         end
                         ReturnToPlot()
                         table.clear(VisitedFruits)
@@ -380,8 +693,8 @@ MainTab:CreateToggle({
 
 _G.SellAll = false
 MainTab:CreateToggle({
-    name = "លក់ទាំងអស់ (Auto Sell)",
-    currentValue = false,
+    name = "លក់ទាំងអស់ (Auto sell)",
+    value = false,
     flag = "Toggle_AlwaysSell",
     callback = function(Value)
         _G.SellAll = Value
@@ -389,9 +702,7 @@ MainTab:CreateToggle({
             task.spawn(function()
                 while _G.SellAll do
                     pcall(function()
-                        if Networking.NPCS and Networking.NPCS.SellAll then
-                            Networking.NPCS.SellAll:Fire()
-                        end
+                        Networking.NPCS.SellAll:Fire()
                     end)
                     task.wait(1)
                 end
@@ -438,18 +749,16 @@ local function harvest(plant)
     if not plant then return end
     local id = plant:GetAttribute("PlantId")
     local fruitid = plant:GetAttribute("FruitId") or ""
-    if id and Networking.Garden and Networking.Garden.CollectFruit then
-        pcall(function()
-            Networking.Garden.CollectFruit:Fire(id, fruitid)
-        end)
+    if id then
+        Networking.Garden.CollectFruit:Fire(id, fruitid)
     end
 end
 
 _G.AutoHarvest = false
 
 MainTab:CreateToggle({
-   name = "ប្រមូលផល (Auto Harvest)",
-   currentValue = false,
+   name = "ប្រមូលផល (Harvest)",
+   value = false,
    flag = "AutoHarvestFlag", 
    callback = function(Value)
        _G.AutoHarvest = Value
@@ -460,7 +769,7 @@ MainTab:CreateToggle({
                        if not _G.AutoHarvest then break end
                        harvest(v)
                    end
-                   task.wait(0.2)
+                   task.wait(0.1)
                end
            end)
        end
@@ -468,12 +777,30 @@ MainTab:CreateToggle({
 })
 
 MainTab:CreateToggle({
-    name = "ប្រមូលអីវ៉ានដែលគេទម្លាក់ (Auto Collect)",
-    currentValue = false,
+    name = "ដាំគ្រាប់ពូជទាំងអស់(Plant All Seeds)",
+    flag = "AutoPlantSeed",
+    value = false,
+    callback = function(value)
+        autoPlantEnabled = value
+        if autoPlantEnabled then
+            if LocalPlayer.Character then
+                setupAutoPlay(LocalPlayer.Character)
+            end
+        else
+            if noclipConnection then
+                noclipConnection:Disconnect()
+                noclipConnection = nil
+            end
+        end
+    end,
+})
+
+MainTab:CreateToggle({
+    name = "ប្រមូលទំនិញដែលគេទំម្លាក់ (Collect Items)",
+    value = false,
     flag = "AutoCollectToggle",
     callback = function(Value)
         autoCollectEnabled = Value
-        
         if autoCollectEnabled then
             task.spawn(function()
                 while autoCollectEnabled do
@@ -487,25 +814,34 @@ MainTab:CreateToggle({
     end,
 })
 
-MainTab:CreateSlider({
-    name = "ល្បឿន (WalkSpeed)",
-    range = {16, 100},
-    increment = 1,
-    suffix = "WalkSpeed",
-    currentValue = 16,
-    flag = "Slider8",
-    callback = function(v)
-        local Hum = GetHumanoid(LocalPlayer)
-        if Hum then Hum.WalkSpeed = v end
+MainTab:CreateToggle({
+    name = "ប្រមូលគ្រាប់ពូជរដូវកាល (Collect Seed)",
+    value = false,
+    flag = "AutoCollectSeedPacks",
+    callback = function(Value)
+        autoCollectEnabled = Value
+        
+        if autoCollectEnabled then
+            -- បង្ហាញ Notify តែពេលបើក (ON)
+            MainWindow:Notify({
+               title = "ប្រមូលគ្រាប់ពូជ (Collect Seed)",
+               content = "នែនាំអោយប្រើទន្សាយ6",
+               duration = 15,
+               icon = "check-circle"
+            })
+            task.spawn(processItems)
+        else
+            setNoclip(false)
+        end
     end,
 })
 
 MainTab:CreateSlider({
-    name = "ហោះ (HipHeight)",
+    name = "ហោះ (Fly)",
     range = {0, 100},
     increment = 1,
     suffix = "HipHeight",
-    currentValue = 0,
+    value = 0,
     flag = "Slider2",
     callback = function(v)
         local Hum = GetHumanoid(LocalPlayer)
@@ -513,12 +849,11 @@ MainTab:CreateSlider({
     end,
 })
 
---- Rayfield UI Tab 2: Send Items ---
+--- Send Items Tab Elements ---
 Tab1:CreateInput({
    name = "ឈ្មោះដើមអ្នកទទួល (Username)",
-   currentValue = TargetUsername, 
-   placeholderText = "Enter username...",
-   removeTextAfterFocusLost = false,
+   value = TargetUsername, 
+   placeholder = "Enter username...",
    flag = "MailTargetUser",
    callback = function(Text)
        TargetUsername = Text
@@ -529,9 +864,10 @@ Tab1:CreateDropdown({
    name = "ជ្រើសរើសគ្រាប់ពូជ (Seeds)",
    options = SeedOptions, 
    value = SelectedSeed,
+   multiSelect = false,
    flag = "MailSeedType", 
-   callback = function(selected)
-       SelectedSeed = typeof(selected) == "table" and selected[1] or selected
+   callback = function(Option)
+       SelectedSeed = typeof(Option) == "table" and Option[1] or Option
    end,
 })
 
@@ -539,9 +875,10 @@ Tab1:CreateDropdown({
    name = "ជ្រើសរើសធុងស្រោចទឹក (Watering Cans)",
    options = GearOptions, 
    value = SelectedGear,
+   multiSelect = false,
    flag = "MailGearType", 
-   callback = function(selected)
-       SelectedGear = typeof(selected) == "table" and selected[1] or selected
+   callback = function(Option)
+       SelectedGear = typeof(Option) == "table" and Option[1] or Option
    end,
 })
 
@@ -549,27 +886,28 @@ Tab1:CreateDropdown({
    name = "ជ្រើសរើសប្រព័ន្ធស្រោចទឹក (Sprinklers)",
    options = SprinklerOptions, 
    value = SelectedSprinkler,
+   multiSelect = false,
    flag = "MailSprinklerType", 
-   callback = function(selected)
-       SelectedSprinkler = typeof(selected) == "table" and selected[1] or selected
+   callback = function(Option)
+       SelectedSprinkler = typeof(Option) == "table" and Option[1] or Option
    end,
 })
 
 Tab1:CreateDropdown({
-   name = "ជ្រើសរើសប្រដាប់ជីក (Trowels)",
+   name = "ជ្រើសរើសប្រដាប់ជីក (Trowel)",
    options = TrowelsOptions, 
    value = selectedTrowel,
+   multiSelect = false,
    flag = "MailTrowelType",
-   callback = function(selected)
-       selectedTrowel = typeof(selected) == "table" and selected[1] or selected
+   callback = function(Option)
+       selectedTrowel = typeof(Option) == "table" and Option[1] or Option
    end,
 })
 
 Tab1:CreateInput({
-   name = "កំណត់បរិមាណផ្ញើ (Amount)",
-   placeholderText = "ដាក់តម្លៃ...",
-   currentValue = tostring(Amount), 
-   removeTextAfterFocusLost = false,
+   name = "កំណត់បរិមាណផ្ញើរ (Amount)",
+   placeholder = "ដាក់តម្លៃ...",
+   value = tostring(Amount), 
    flag = "MailAmount", 
    callback = function(Text)
        local numericValue = tonumber(Text)
@@ -587,7 +925,7 @@ Tab1:CreateButton({
 })
 
 Tab1:CreateButton({
-   name = "ផ្ញើធុងស្រោចទឹក (Send Watering Can)",
+   name = "ផ្ញើធុងស្រោចទឹក (Super Watering)",
    callback = function()
        SendItemWithReceipt("WateringCans", SelectedGear, "ធុងស្រោចទឹក")
    end,
@@ -601,18 +939,16 @@ Tab1:CreateButton({
 })
 
 Tab1:CreateButton({
-   name = "ផ្ញើប្រដាប់ជីក (Send Trowel)",
+   name = "ផ្ញើប្រដាប់ជីក (Trowel)",
    callback = function()
        SendItemWithReceipt("Trowels", selectedTrowel, "ប្រដាប់ជីក")
    end,
 })
 
---- Rayfield UI Tab 3: Auto Buy ---
-MainTab3:CreateSection("Shop Items Selection")
-
+--- Auto Buy Tab Elements ---
 MainTab3:CreateToggle({
    name = "Enable Auto Buy",
-   currentValue = false,
+   value = false,
    flag = "AutoBuyToggle",
    callback = function(Value)
       autoBuyEnabled = Value
@@ -622,12 +958,12 @@ MainTab3:CreateToggle({
 MainTab3:CreateDropdown({
    name = "🌱 Seed Shop Items",
    options = {"None", "Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Apple", "Bamboo", "Corn", "Cactus", "Pineapple", "Mushroom", "Green Bean", "Banana", "Grape", "Coconut", "Mango", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", "Fire Fern", "Venus Fly Trap", "Pomegranate", "Poison Apple", "Venom Spitter", "Moon Bloom", "Sun Bloom", "Hypno Bloom", "Dragon's Breath", "Star Fruit",
-   "---New Seed---", "Maple Carrot", "Maple Strawberry", "Maple Blueberry",  "Maple Tulip", "Maple Tomato", "Maple Apple","Maple Bamboo", "Maple Corn", "Maple Cactus", "Maple Pineapple", "Maple Mushroom", "Maple Green Bean", "Maple Grape", "Maple Coconut", "Maple Mango", "Maple Dragon Fruit", "Maple Acorn", "Maple Cherry", "Maple Sunflower", "Atlantic Giant Pumpkin", "Maple Venus Fly Trap", "Maple Pomegranate", "Maple Poison Apple", "Maple Venom Spitter", "Conifer Cone", "Amber Cranberry"},
+   "---New Seed---", "Maple Carrot", "Maple Strawberry", "Maple Blueberry",  "Maple Tulip", "Maple Tomato", "Maple Apple","Maple Bamboo", "Maple Corn", "Maple Cactus", "Maple Pineapple", "Maple Mashroom", "Maple Green Bean", "Maple Grape", "Maple Coconut", "Maple Mango", "Maple Dragon Fruit", "Maple Acorn", "Maple Cherry", "Maple Sunflower", "Atlantic Giant Pumpkin", "Maple Venus Fly Trap", "Maple Pomegranate", "Maple Poison Apple", "Maple Venom Spitter", "Conifer Cone", "Amber Cranberry"},
    value = {"None"},
    multiSelect = true,
    flag = "SeedDropdown",
-   callback = function(selected)
-      selectedItems.Seeds = typeof(selected) == "table" and selected or {selected}
+   callback = function(Options)
+      selectedItems.Seeds = Options
    end,
 })
 
@@ -638,8 +974,8 @@ MainTab3:CreateDropdown({
    value = {"None"},
    multiSelect = true,
    flag = "GearDropdown",
-   callback = function(selected)
-      selectedItems.Gears = typeof(selected) == "table" and selected or {selected}
+   callback = function(Options)
+      selectedItems.Gears = Options
    end,
 })
 
@@ -650,17 +986,17 @@ MainTab3:CreateDropdown({
    value = {"None"},
    multiSelect = true,
    flag = "CrateDropdown",
-   callback = function(selected)
-      selectedItems.Crates = typeof(selected) == "table" and selected or {selected}
+   callback = function(Options)
+      selectedItems.Crates = Options
    end,
 })
 
--- Notification
-window:Notify({
-   Title = "Script Loaded!",
-   Content = ".......ដំណើរការជោគជ័យ........\nបើសិនផ្ញើរMailBoxមិនបានសូមដូរឈ្មោះវាអាចនឺងគ្រប់ក្នុងការផ្ញើរក្នុងមួយថ្ងៃ\nច្បាប់Gameអាចផ្ញើរបាន\n-ផ្ញើរបាន5ដងក្នុង 1 Username\n-ផ្ញើរបាន50ដងក្នុងមួយថ្ងៃ",
-   Duration = 20,
-   Image = 4483362458,
+-- Welcome Notification
+MainWindow:Notify({
+   title = "Script Loaded!",
+   content = ".......ដំណើរការជោគជ័យ........\nបើសិនផ្ញើរMailBoxមិនបានសូមដូរឈ្មោះវាអាចនឺងគ្រប់ក្នុងការផ្ញើរក្នុងមួយថ្ងៃ\nច្បាប់Gameអាចផ្ញើរបាន\n-ផ្ញើរបាន5ដងក្នុង 1 Username\n-ផ្ញើរបាន50ដងក្នុងមួយថ្ងៃ",
+   duration = 15,
+   icon = "check-circle"
 })
 
 task.wait(6)
