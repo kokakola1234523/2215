@@ -15,11 +15,11 @@ mainFrame.BackgroundTransparency = 0.15
 mainFrame.BorderSizePixel = 0
 mainFrame.Parent = screenGui
 
--- Content Frame នៅកណ្ដាលអេក្រង់ (កើនកម្ពស់ដើម្បីដាក់អក្សរណែនាំ)
+-- Content Frame នៅកណ្ដាលអេក្រង់
 local centerContainer = Instance.new("Frame")
 centerContainer.Name = "CenterContainer"
-centerContainer.Size = UDim2.new(0, 500, 0, 360)
-centerContainer.Position = UDim2.new(0.5, -250, 0.5, -180)
+centerContainer.Size = UDim2.new(0, 520, 0, 390)
+centerContainer.Position = UDim2.new(0.5, -260, 0.5, -195)
 centerContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 centerContainer.BorderSizePixel = 0
 centerContainer.Parent = mainFrame
@@ -35,8 +35,8 @@ titleLabel.Position = UDim2.new(0, 0, 0, 8)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "Payment & Contact Links"
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.TextSize = 22
-titleLabel.Font = Enum.Font.SourceSansBold
+titleLabel.TextSize = 24
+titleLabel.Font = Enum.Font.GothamBold
 titleLabel.Parent = centerContainer
 
 ---------------------------------------------------------
@@ -45,12 +45,12 @@ titleLabel.Parent = centerContainer
 local paywayBox = Instance.new("TextBox")
 paywayBox.Name = "PaywayBox"
 paywayBox.Size = UDim2.new(0, 310, 0, 45)
-paywayBox.Position = UDim2.new(0.05, 0, 0.18, 0)
+paywayBox.Position = UDim2.new(0.05, 0, 0.16, 0)
 paywayBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-paywayBox.TextColor3 = Color3.fromRGB(220, 220, 220)
+paywayBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 paywayBox.Text = "https://link.payway.com.kh/1q503411o"
 paywayBox.TextSize = 14
-paywayBox.Font = Enum.Font.SourceSans
+paywayBox.Font = Enum.Font.GothamBold
 paywayBox.ClearTextOnFocus = false
 paywayBox.Parent = centerContainer
 
@@ -60,13 +60,13 @@ paywayBoxCorner.Parent = paywayBox
 
 local copyPaywayBtn = Instance.new("TextButton")
 copyPaywayBtn.Name = "CopyPaywayBtn"
-copyPaywayBtn.Size = UDim2.new(0, 130, 0, 45)
-copyPaywayBtn.Position = UDim2.new(0.69, 0, 0.18, 0)
+copyPaywayBtn.Size = UDim2.new(0, 140, 0, 45)
+copyPaywayBtn.Position = UDim2.new(0.67, 0, 0.16, 0)
 copyPaywayBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
-copyPaywayBtn.Text = "Copy PayWay"
+copyPaywayBtn.Text = "Open PayWay"
 copyPaywayBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-copyPaywayBtn.TextSize = 14
-copyPaywayBtn.Font = Enum.Font.SourceSansBold
+copyPaywayBtn.TextSize = 16
+copyPaywayBtn.Font = Enum.Font.GothamBold
 copyPaywayBtn.Parent = centerContainer
 
 local copyPaywayCorner = Instance.new("UICorner")
@@ -79,12 +79,12 @@ copyPaywayCorner.Parent = copyPaywayBtn
 local tgBox = Instance.new("TextBox")
 tgBox.Name = "TgBox"
 tgBox.Size = UDim2.new(0, 310, 0, 45)
-tgBox.Position = UDim2.new(0.05, 0, 0.34, 0)
+tgBox.Position = UDim2.new(0.05, 0, 0.31, 0)
 tgBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-tgBox.TextColor3 = Color3.fromRGB(220, 220, 220)
+tgBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 tgBox.Text = "https://t.me/TWOBKTWOSELLER"
 tgBox.TextSize = 14
-tgBox.Font = Enum.Font.SourceSans
+tgBox.Font = Enum.Font.GothamBold
 tgBox.ClearTextOnFocus = false
 tgBox.Parent = centerContainer
 
@@ -94,13 +94,13 @@ tgBoxCorner.Parent = tgBox
 
 local copyTgBtn = Instance.new("TextButton")
 copyTgBtn.Name = "CopyTgBtn"
-copyTgBtn.Size = UDim2.new(0, 130, 0, 45)
-copyTgBtn.Position = UDim2.new(0.69, 0, 0.34, 0)
+copyTgBtn.Size = UDim2.new(0, 140, 0, 45)
+copyTgBtn.Position = UDim2.new(0.67, 0, 0.31, 0)
 copyTgBtn.BackgroundColor3 = Color3.fromRGB(0, 136, 204)
-copyTgBtn.Text = "Copy Telegram"
+copyTgBtn.Text = "Open Telegram"
 copyTgBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-copyTgBtn.TextSize = 14
-copyTgBtn.Font = Enum.Font.SourceSansBold
+copyTgBtn.TextSize = 16
+copyTgBtn.Font = Enum.Font.GothamBold
 copyTgBtn.Parent = centerContainer
 
 local copyTgCorner = Instance.new("UICorner")
@@ -108,17 +108,17 @@ copyTgCorner.CornerRadius = UDim.new(0, 8)
 copyTgCorner.Parent = copyTgBtn
 
 ---------------------------------------------------------
--- 6. ប៊ូតុង Copy ទាំងអស់ (Copy Both Links)
+-- 6. ប៊ូតុង Copy ទាំងពីរ (Copy All)
 ---------------------------------------------------------
 local copyAllBtn = Instance.new("TextButton")
 copyAllBtn.Name = "CopyAllBtn"
-copyAllBtn.Size = UDim2.new(0.9, 0, 0, 45)
-copyAllBtn.Position = UDim2.new(0.05, 0, 0.52, 0)
+copyAllBtn.Size = UDim2.new(0.92, 0, 0, 45)
+copyAllBtn.Position = UDim2.new(0.04, 0, 0.47, 0)
 copyAllBtn.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
 copyAllBtn.Text = "Copy Both Links"
 copyAllBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-copyAllBtn.TextSize = 17
-copyAllBtn.Font = Enum.Font.SourceSansBold
+copyAllBtn.TextSize = 18
+copyAllBtn.Font = Enum.Font.GothamBold
 copyAllBtn.Parent = centerContainer
 
 local copyAllCorner = Instance.new("UICorner")
@@ -126,19 +126,19 @@ copyAllCorner.CornerRadius = UDim.new(0, 10)
 copyAllCorner.Parent = copyAllBtn
 
 ---------------------------------------------------------
--- 7. អក្សរណែនាំពីរបៀបយក Link ទៅដាក់ក្នុង Chrome / Website
+-- 7. អក្សរណែនាំ
 ---------------------------------------------------------
 local instructionLabel = Instance.new("TextLabel")
 instructionLabel.Name = "InstructionLabel"
-instructionLabel.Size = UDim2.new(0.9, 0, 0, 85)
-instructionLabel.Position = UDim2.new(0.05, 0, 0.69, 0)
+instructionLabel.Size = UDim2.new(0.92, 0, 0, 110)
+instructionLabel.Position = UDim2.new(0.04, 0, 0.64, 0)
 instructionLabel.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 instructionLabel.BorderSizePixel = 0
-instructionLabel.Text = "📌 របៀបប្រកាត់ប្រើ Link៖\n1. ចុចប៊ូតុង Copy ខាងលើ\n2. បើក Google Chrome ឬ Browser\n3. Paste (CTRL+V) ចូលទៅក្នុងប្រអប់ Address Bar រួចចុច Enter"
-instructionLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-instructionLabel.TextSize = 13
+instructionLabel.Text = "📌 របៀបប្រើប្រាស់៖\n១. ចុច Open ដើម្បីបើក Link ទៅកាន់ Web ដោយផ្ទាល់\n២. បើមិនលោត Web ទេ វានឹង Copy Link ស្វ័យប្រវត្តិ\n៣. យកទៅ Paste ក្នុង Chrome ឬ Telegram"
+instructionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+instructionLabel.TextSize = 15
 instructionLabel.TextWrapped = true
-instructionLabel.Font = Enum.Font.SourceSans
+instructionLabel.Font = Enum.Font.GothamBold
 instructionLabel.Parent = centerContainer
 
 local instructionCorner = Instance.new("UICorner")
@@ -146,12 +146,17 @@ instructionCorner.CornerRadius = UDim.new(0, 8)
 instructionCorner.Parent = instructionLabel
 
 ---------------------------------------------------------
--- 8. Functions សម្រាប់ Copy
+-- 8. Functions សម្រាប់ បើក Direct Link ឬ Copy
 ---------------------------------------------------------
-local function handleCopy(button, textToCopy, originalText, originalColor)
-    if setclipboard then
-        setclipboard(textToCopy)
-        button.Text = "Copied!"
+local function openOrCopyLink(button, url, originalText, originalColor)
+    -- ១. ព្យាយាមបើក Web Direct (ប្រសិនបើ Executor support openurl)
+    if openurl then
+        openurl(url)
+        button.Text = "Opening..."
+    elseif setclipboard then
+        -- ២. ប្រសិនបើ Executor មិន support openurl ទេ វានឹង Copy ជំនួស
+        setclipboard(url)
+        button.Text = "Copied Link!"
         button.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
     else
         button.Text = "Ctrl+C"
@@ -163,14 +168,19 @@ local function handleCopy(button, textToCopy, originalText, originalColor)
 end
 
 copyPaywayBtn.MouseButton1Click:Connect(function()
-    handleCopy(copyPaywayBtn, paywayBox.Text, "Copy PayWay", Color3.fromRGB(0, 120, 215))
+    openOrCopyLink(copyPaywayBtn, paywayBox.Text, "Open PayWay", Color3.fromRGB(0, 120, 215))
 end)
 
 copyTgBtn.MouseButton1Click:Connect(function()
-    handleCopy(copyTgBtn, tgBox.Text, "Copy Telegram", Color3.fromRGB(0, 136, 204))
+    openOrCopyLink(copyTgBtn, tgBox.Text, "Open Telegram", Color3.fromRGB(0, 136, 204))
 end)
 
 copyAllBtn.MouseButton1Click:Connect(function()
     local combinedText = "PayWay: " .. paywayBox.Text .. "\nTelegram: " .. tgBox.Text
-    handleCopy(copyAllBtn, combinedText, "Copy Both Links", Color3.fromRGB(40, 167, 69))
+    if setclipboard then
+        setclipboard(combinedText)
+        copyAllBtn.Text = "Copied Both!"
+    end
+    task.wait(2)
+    copyAllBtn.Text = "Copy Both Links"
 end)
