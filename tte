@@ -33,7 +33,7 @@ local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, 0, 0, 45)
 titleLabel.Position = UDim2.new(0, 0, 0, 8)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "Payment & Contact Links"
+titleLabel.Text = "ការបង់ប្រាក់ & ការទំនាក់ទំនង"
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleLabel.TextSize = 24
 titleLabel.Font = Enum.Font.GothamBold
@@ -63,7 +63,7 @@ copyPaywayBtn.Name = "CopyPaywayBtn"
 copyPaywayBtn.Size = UDim2.new(0, 140, 0, 45)
 copyPaywayBtn.Position = UDim2.new(0.67, 0, 0.16, 0)
 copyPaywayBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
-copyPaywayBtn.Text = "Copy PayWay"
+copyPaywayBtn.Text = "Copy ABA QR"
 copyPaywayBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 copyPaywayBtn.TextSize = 16
 copyPaywayBtn.Font = Enum.Font.GothamBold
@@ -154,7 +154,7 @@ local function executeCopy(button, textToCopy, originalText, originalColor)
     
     if clipboardFunc then
         clipboardFunc(textToCopy)
-        button.Text = "Copied to Clipboard!"
+        button.Text = "Copied"
         button.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
     else
         button.Text = "Highlight & Ctrl+C"
