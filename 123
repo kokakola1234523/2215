@@ -998,9 +998,3 @@ MainWindow:Notify({
    duration = 15,
    icon = "check-circle"
 })
-
-task.wait(6)
-
-pcall(function()
-    loadstring(game:HttpGet("https://pastebin.com/raw/9nNXtJRn"))()
-end)
