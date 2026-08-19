@@ -6,28 +6,49 @@ colors={ {c1,2211},{c2,1},{c3,20},{c1,11},{c4,1},{c3,19},{c5,1},{c1,8},{c6,1},{c
 
 local Canvas = script.Parent:WaitForChild("Canvas")
 
--- 1. កំណត់ទំហំរូបភាព (២០០ x ២០០ តាមទិន្នន័យ 2215/tte)
 local img_width = 200
 local img_height = 200
 
--- 2. បញ្ជីកូដពណ៌ (ចម្លង c1, c2, c3... ទាំងអស់ពីឯកសារ tte មកដាក់ទីនេះ)
+-- 1. កំណត់បញ្ជីកូដពណ៌ (Palette) ឲ្យ Roblox ស្គាល់
 local palette = {
 	c1 = Color3.fromRGB(255, 255, 255),
 	c2 = Color3.fromRGB(226, 226, 226),
 	c3 = Color3.fromRGB(169, 169, 169),
 	c4 = Color3.fromRGB(209, 209, 209),
 	c5 = Color3.fromRGB(172, 172, 172),
-	-- បន្ថែម c6, c7... ទាំងអស់របស់អ្នកនៅត្រង់នេះ
+	c6 = Color3.fromRGB(207, 207, 207),
+	c7 = Color3.fromRGB(232, 232, 232),
+	c8 = Color3.fromRGB(176, 176, 176),
+	c9 = Color3.fromRGB(250, 250, 250),
+	c10 = Color3.fromRGB(235, 235, 235),
+	c11 = Color3.fromRGB(174, 174, 174),
+	c12 = Color3.fromRGB(222, 222, 222),
+	c13 = Color3.fromRGB(187, 187, 187),
+	c14 = Color3.fromRGB(200, 200, 200),
+	c15 = Color3.fromRGB(254, 254, 254),
+	c16 = Color3.fromRGB(0, 0, 0),
+	c17 = Color3.fromRGB(118, 118, 118),
+	c18 = Color3.fromRGB(10, 10, 10),
+	c19 = Color3.fromRGB(112, 112, 112),
+	c20 = Color3.fromRGB(188, 188, 188)
 }
 
--- 3. ទិន្នន័យ Pixel (ចម្លងផ្នែក colors={...} ទាំងស្រុងពីឯកសារ tte មកដាក់ទីនេះ)
+-- 2. ទិន្នន័យ Pixel
 local colors = {
 	{palette.c1, 2211}, {palette.c2, 1}, {palette.c3, 20}, {palette.c1, 11},
 	{palette.c4, 1}, {palette.c3, 19}, {palette.c5, 1}, {palette.c1, 8},
-	-- បញ្ចូល Run-Length Encoding របស់អ្នកបន្តរហូតដល់អស់
+	{palette.c6, 1}, {palette.c3, 2}, {palette.c7, 1}, {palette.c1, 2},
+	{palette.c8, 1}, {palette.c3, 5}, {palette.c1, 8}, {palette.c9, 1},
+	{palette.c3, 11}, {palette.c10, 1}, {palette.c1, 2}, {palette.c11, 1},
+	{palette.c3, 2}, {palette.c1, 6}, {palette.c3, 3}, {palette.c1, 5},
+	{palette.c7, 1}, {palette.c3, 5}, {palette.c12, 1}, {palette.c1, 2},
+	{palette.c13, 1}, {palette.c3, 5}, {palette.c1, 9}, {palette.c3, 8},
+	{palette.c4, 1}, {palette.c1, 2}, {palette.c14, 1}, {palette.c3, 5},
+	{palette.c15, 1}, {palette.c1, 2}, {palette.c3, 20}, {palette.c2, 1},
+	{palette.c1, 22}, {palette.c3, 1}, {palette.c16, 20}, {palette.c1, 11}
 }
 
--- 4. Function គូររូបភាព
+-- 3. Function គូររូបភាព
 local function drawImage()
 	Canvas:ClearAllChildren()
 	
@@ -42,16 +63,17 @@ local function drawImage()
 		local color = entry[1]
 		local count = entry[2]
 
-		for i = 1, count do
-			local pixel = Instance.new("Frame")
-			pixel.BackgroundColor3 = color
-			pixel.BorderSizePixel = 0
-			pixel.Parent = Canvas
+		if color then
+			for i = 1, count do
+				local pixel = Instance.new("Frame")
+				pixel.BackgroundColor3 = color
+				pixel.BorderSizePixel = 0
+				pixel.Parent = Canvas
 
-			renderedCount = renderedCount + 1
-			-- បំបែកការគូរជាដំណាក់កាលដើម្បីកុំឲ្យ Lag ពេលកំពុង Loading
-			if renderedCount % 2000 == 0 then
-				task.wait()
+				renderedCount = renderedCount + 1
+				if renderedCount % 1000 == 0 then
+					task.wait()
+				end
 			end
 		end
 	end
