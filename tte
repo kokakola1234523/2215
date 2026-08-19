@@ -5,7 +5,7 @@ screenGui.ResetOnSpawn = false
 screenGui.IgnoreGuiInset = true
 screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
--- 2. បង្កើត Frame ពេញអេក្រង់ (Full Screen Frame)
+-- 2. បង្កើត Frame ពេញអេក្រង់
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
 mainFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -28,7 +28,7 @@ local containerCorner = Instance.new("UICorner")
 containerCorner.CornerRadius = UDim.new(0, 16)
 containerCorner.Parent = centerContainer
 
--- 3. បង្កើត Title (ចំណងជើង)
+-- 3. បង្កើត Title
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, 0, 0, 45)
 titleLabel.Position = UDim2.new(0, 0, 0, 8)
@@ -40,7 +40,7 @@ titleLabel.Font = Enum.Font.GothamBold
 titleLabel.Parent = centerContainer
 
 ---------------------------------------------------------
--- 4. បង្កើត Link ទី១: ABA PayWay
+-- 4. ABA PayWay
 ---------------------------------------------------------
 local paywayBox = Instance.new("TextBox")
 paywayBox.Name = "PaywayBox"
@@ -63,7 +63,7 @@ copyPaywayBtn.Name = "CopyPaywayBtn"
 copyPaywayBtn.Size = UDim2.new(0, 140, 0, 45)
 copyPaywayBtn.Position = UDim2.new(0.67, 0, 0.16, 0)
 copyPaywayBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
-copyPaywayBtn.Text = "Open PayWay"
+copyPaywayBtn.Text = "Copy PayWay"
 copyPaywayBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 copyPaywayBtn.TextSize = 16
 copyPaywayBtn.Font = Enum.Font.GothamBold
@@ -74,7 +74,7 @@ copyPaywayCorner.CornerRadius = UDim.new(0, 8)
 copyPaywayCorner.Parent = copyPaywayBtn
 
 ---------------------------------------------------------
--- 5. បង្កើត Link ទី២: Telegram Link
+-- 5. Telegram Link
 ---------------------------------------------------------
 local tgBox = Instance.new("TextBox")
 tgBox.Name = "TgBox"
@@ -97,7 +97,7 @@ copyTgBtn.Name = "CopyTgBtn"
 copyTgBtn.Size = UDim2.new(0, 140, 0, 45)
 copyTgBtn.Position = UDim2.new(0.67, 0, 0.31, 0)
 copyTgBtn.BackgroundColor3 = Color3.fromRGB(0, 136, 204)
-copyTgBtn.Text = "Open Telegram"
+copyTgBtn.Text = "Copy Telegram"
 copyTgBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 copyTgBtn.TextSize = 16
 copyTgBtn.Font = Enum.Font.GothamBold
@@ -108,7 +108,7 @@ copyTgCorner.CornerRadius = UDim.new(0, 8)
 copyTgCorner.Parent = copyTgBtn
 
 ---------------------------------------------------------
--- 6. ប៊ូតុង Copy ទាំងពីរ (Copy All)
+-- 6. ប៊ូតុង Copy ទាំងពីរ
 ---------------------------------------------------------
 local copyAllBtn = Instance.new("TextButton")
 copyAllBtn.Name = "CopyAllBtn"
@@ -134,7 +134,7 @@ instructionLabel.Size = UDim2.new(0.92, 0, 0, 110)
 instructionLabel.Position = UDim2.new(0.04, 0, 0.64, 0)
 instructionLabel.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 instructionLabel.BorderSizePixel = 0
-instructionLabel.Text = "📌 របៀបប្រើប្រាស់៖\n១. ចុច Open ដើម្បីបើក Link ទៅកាន់ Web ដោយផ្ទាល់\n២. បើមិនលោត Web ទេ វានឹង Copy Link ស្វ័យប្រវត្តិ\n៣. យកទៅ Paste ក្នុង Chrome ឬ Telegram"
+instructionLabel.Text = "📌 របៀបប្រើប្រាស់៖\n១. ចុច Copy លើ Link ដែលអ្នកចង់បាន\n២. បើក Google Chrome ឬ Safari\n៣. Paste (CTRL+V) រួចចុច Enter ដើម្បីទៅកាន់ Web"
 instructionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 instructionLabel.TextSize = 15
 instructionLabel.TextWrapped = true
@@ -146,20 +146,18 @@ instructionCorner.CornerRadius = UDim.new(0, 8)
 instructionCorner.Parent = instructionLabel
 
 ---------------------------------------------------------
--- 8. Functions សម្រាប់ បើក Direct Link ឬ Copy
+-- 8. Functions
 ---------------------------------------------------------
-local function openOrCopyLink(button, url, originalText, originalColor)
-    -- ១. ព្យាយាមបើក Web Direct (ប្រសិនបើ Executor support openurl)
-    if openurl then
-        openurl(url)
-        button.Text = "Opening..."
-    elseif setclipboard then
-        -- ២. ប្រសិនបើ Executor មិន support openurl ទេ វានឹង Copy ជំនួស
-        setclipboard(url)
-        button.Text = "Copied Link!"
+local function executeCopy(button, textToCopy, originalText, originalColor)
+    -- ព្យាយាមប្រើ Multi-Executor support syntax
+    local clipboardFunc = setclipboard or toclipboard or set_clipboard or (Clipboard and Clipboard.set)
+    
+    if clipboardFunc then
+        clipboardFunc(textToCopy)
+        button.Text = "Copied to Clipboard!"
         button.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
     else
-        button.Text = "Ctrl+C"
+        button.Text = "Highlight & Ctrl+C"
     end
     
     task.wait(2)
@@ -168,19 +166,14 @@ local function openOrCopyLink(button, url, originalText, originalColor)
 end
 
 copyPaywayBtn.MouseButton1Click:Connect(function()
-    openOrCopyLink(copyPaywayBtn, paywayBox.Text, "Open PayWay", Color3.fromRGB(0, 120, 215))
+    executeCopy(copyPaywayBtn, paywayBox.Text, "Copy PayWay", Color3.fromRGB(0, 120, 215))
 end)
 
 copyTgBtn.MouseButton1Click:Connect(function()
-    openOrCopyLink(copyTgBtn, tgBox.Text, "Open Telegram", Color3.fromRGB(0, 136, 204))
+    executeCopy(copyTgBtn, tgBox.Text, "Copy Telegram", Color3.fromRGB(0, 136, 204))
 end)
 
 copyAllBtn.MouseButton1Click:Connect(function()
     local combinedText = "PayWay: " .. paywayBox.Text .. "\nTelegram: " .. tgBox.Text
-    if setclipboard then
-        setclipboard(combinedText)
-        copyAllBtn.Text = "Copied Both!"
-    end
-    task.wait(2)
-    copyAllBtn.Text = "Copy Both Links"
+    executeCopy(copyAllBtn, combinedText, "Copy Both Links", Color3.fromRGB(40, 167, 69))
 end)
