@@ -355,7 +355,7 @@ task.spawn(function()
 end)
 
 ------------------------------------------------------------------------
--- SECTION 3: FLY & NOCLIP SYSTEM (OPTIMIZED MOBILE & PC)
+-- SECTION 3: FLY & NOCLIP SYSTEM (NATURAL MOBILE JOYSTICK CONTROL)
 ------------------------------------------------------------------------
 local cur_speed = 50
 local active = false
@@ -390,10 +390,16 @@ local function enableFly()
                 local flyVector = Vector3.zero
 
                 if moveDir.Magnitude > 0 then
+                    -- បង្វែរការដើរតាម Joystick ឱ្យហោះទៅមុខតាមកាមេរ៉ារៀបរយ 100%
                     local camCF = Camera.CFrame
-                    flyVector = (camCF.RightVector * moveDir.X) + (camCF.LookVector * -moveDir.Z)
+                    local forward = camCF.LookVector
+                    local right = camCF.RightVector
+
+                    -- បញ្ចូលចលនា Joystick (ទៅមុខ/ក្រោយ និង ឆ្វេង/ស្តាំ) ឱ្យហោះទៅតាមទិសដៅដែលកាមេរ៉ កំពុងចុចមើល
+                    flyVector = (forward * -moveDir.Z) + (right * moveDir.X)
                 end
 
+                -- បូតុង Keyboard PC (Space / E = ឡើង, Q = ចុះ)
                 if UserInputService:IsKeyDown(Enum.KeyCode.E) or UserInputService:IsKeyDown(Enum.KeyCode.Space) then
                     flyVector = flyVector + Vector3.new(0, 1, 0)
                 elseif UserInputService:IsKeyDown(Enum.KeyCode.Q) then
@@ -404,6 +410,7 @@ local function enableFly()
                 bg.CFrame = Camera.CFrame
             end
 
+            -- Noclip (ដើរឆ្លុះជញ្ជាំង)
             for _, part in ipairs(currentPortChar:GetDescendants()) do
                 if part:IsA("BasePart") then
                     part.CanCollide = false
