@@ -8,6 +8,7 @@ local tab = window:CreateTab({ name = "Home", icon = 93364949241311 })
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local SAFE_HEIGHT = 100
@@ -354,10 +355,8 @@ task.spawn(function()
 end)
 
 ------------------------------------------------------------------------
--- SECTION 3: FLY & NOCLIP SYSTEM (MOBILE & PC SUPPORT)
+-- SECTION 3: FLY & NOCLIP SYSTEM (OPTIMIZED MOBILE & PC)
 ------------------------------------------------------------------------
-local run = game:GetService("RunService")
-local lp = Players.LocalPlayer
 local cur_speed = 50
 local active = false
 local flyConnection = nil
@@ -365,40 +364,45 @@ local bv = Instance.new("BodyVelocity")
 local bg = Instance.new("BodyGyro")
 
 local function enableFly()
-    local char = lp.Character
+    local char = LocalPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
     local humanoid = char and char:FindFirstChildOfClass("Humanoid")
     if not root or not humanoid then return end
 
     active = true
+    bv.MaxForce = Vector3.new(1e6, 1e6, 1e6)
+    bv.Velocity = Vector3.zero
     bv.Parent = root
-    bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-    bv.Velocity = Vector3.new(0, 0, 0)
-    
-    bg.Parent = root
-    bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
-    bg.CFrame = root.CFrame
 
-    flyConnection = run.RenderStepped:Connect(function()
-        local currentPortChar = lp.Character
+    bg.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
+    bg.CFrame = root.CFrame
+    bg.Parent = root
+
+    flyConnection = RunService.RenderStepped:Connect(function()
+        local currentPortChar = LocalPlayer.Character
         if active and currentPortChar and currentPortChar:FindFirstChild("HumanoidRootPart") then
-            local cam = workspace.CurrentCamera
             local hum = currentPortChar:FindFirstChildOfClass("Humanoid")
             
             if hum then
-                hum.PlatformStand = true
-                local moveDir = hum.MoveDirection
+                hum:ChangeState(Enum.HumanoidStateType.Swimming)
                 
-                if moveDir.Magnitude > 0 then
-                    local cameraCFrame = cam.CFrame
-                    local flyVector = (cameraCFrame.RightVector * moveDir.X) + (cameraCFrame.LookVector * -moveDir.Z)
-                    bv.Velocity = flyVector * cur_speed
-                else
-                    bv.Velocity = Vector3.new(0, 0, 0)
-                end
-            end
+                local moveDir = hum.MoveDirection
+                local flyVector = Vector3.zero
 
-            bg.CFrame = cam.CFrame
+                if moveDir.Magnitude > 0 then
+                    local camCF = Camera.CFrame
+                    flyVector = (camCF.RightVector * moveDir.X) + (camCF.LookVector * -moveDir.Z)
+                end
+
+                if UserInputService:IsKeyDown(Enum.KeyCode.E) or UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                    flyVector = flyVector + Vector3.new(0, 1, 0)
+                elseif UserInputService:IsKeyDown(Enum.KeyCode.Q) then
+                    flyVector = flyVector - Vector3.new(0, 1, 0)
+                end
+
+                bv.Velocity = flyVector * cur_speed
+                bg.CFrame = Camera.CFrame
+            end
 
             for _, part in ipairs(currentPortChar:GetDescendants()) do
                 if part:IsA("BasePart") then
@@ -415,14 +419,15 @@ local function disableFly()
         flyConnection:Disconnect()
         flyConnection = nil
     end
+
     bv.Parent = nil
     bg.Parent = nil
 
-    local char = lp.Character
+    local char = LocalPlayer.Character
     if char then
         local hum = char:FindFirstChildOfClass("Humanoid")
         if hum then 
-            hum.PlatformStand = false 
+            hum:ChangeState(Enum.HumanoidStateType.GettingUp)
         end
 
         for _, part in ipairs(char:GetDescendants()) do
