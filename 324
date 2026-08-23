@@ -2,7 +2,7 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 -- ដាក់ Raw Link Pastebin របស់អ្នកនៅទីនេះ
-local pastebinUrl = "https://pastebin.com/raw/d1wW39Xe"
+local pastebinUrl = "https://pastebin.com/raw/2Y28xZ9r"
 
 local allowedNames = {}
 local success, response = pcall(function()
