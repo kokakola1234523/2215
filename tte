@@ -1,179 +1,520 @@
--- 1. បង្កើត ScreenGui
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "CopyLinkUI"
-screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = true
-screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
--- 2. បង្កើត Frame ពេញអេក្រង់
-local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(1, 0, 1, 0)
-mainFrame.Position = UDim2.new(0, 0, 0, 0)
-mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-mainFrame.BackgroundTransparency = 0.15
-mainFrame.BorderSizePixel = 0
-mainFrame.Parent = screenGui
+local window = Rayfield:CreateWindow({
+    name = "Example",
+    subtitle = "Rayfield Gen2",
+})
 
--- Content Frame នៅកណ្ដាលអេក្រង់
-local centerContainer = Instance.new("Frame")
-centerContainer.Name = "CenterContainer"
-centerContainer.Size = UDim2.new(0, 520, 0, 390)
-centerContainer.Position = UDim2.new(0.5, -260, 0.5, -195)
-centerContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-centerContainer.BorderSizePixel = 0
-centerContainer.Parent = mainFrame
+local tab = window:CreateTab({ name = "Home", icon = 93364949241311 })
 
-local containerCorner = Instance.new("UICorner")
-containerCorner.CornerRadius = UDim.new(0, 16)
-containerCorner.Parent = centerContainer
 
--- 3. បង្កើត Title
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 45)
-titleLabel.Position = UDim2.new(0, 0, 0, 8)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "ការបង់ប្រាក់ & ការទំនាក់ទំនង"
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.TextSize = 24
-titleLabel.Font = Enum.Font.GothamBold
-titleLabel.Parent = centerContainer
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
----------------------------------------------------------
--- 4. ABA PayWay
----------------------------------------------------------
-local paywayBox = Instance.new("TextBox")
-paywayBox.Name = "PaywayBox"
-paywayBox.Size = UDim2.new(0, 310, 0, 45)
-paywayBox.Position = UDim2.new(0.05, 0, 0.16, 0)
-paywayBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-paywayBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-paywayBox.Text = "https://link.payway.com.kh/1q503411o"
-paywayBox.TextSize = 14
-paywayBox.Font = Enum.Font.GothamBold
-paywayBox.ClearTextOnFocus = false
-paywayBox.Parent = centerContainer
+local SAFE_HEIGHT = 100
+local currentTarget = nil
+local aimbotConnection = nil
 
-local paywayBoxCorner = Instance.new("UICorner")
-paywayBoxCorner.CornerRadius = UDim.new(0, 8)
-paywayBoxCorner.Parent = paywayBox
+-- Status Variables សម្រាប់បញ្ជា Toggle
+local espEnabled = false
+local autoKillEnabled = false
 
-local copyPaywayBtn = Instance.new("TextButton")
-copyPaywayBtn.Name = "CopyPaywayBtn"
-copyPaywayBtn.Size = UDim2.new(0, 140, 0, 45)
-copyPaywayBtn.Position = UDim2.new(0.67, 0, 0.16, 0)
-copyPaywayBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
-copyPaywayBtn.Text = "Copy ABA QR"
-copyPaywayBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-copyPaywayBtn.TextSize = 16
-copyPaywayBtn.Font = Enum.Font.GothamBold
-copyPaywayBtn.Parent = centerContainer
+------------------------------------------------------------------------
+-- SECTION 1: ESP SYSTEM (បង្ហាញតួរអង្គ និងអាវុធ)
+------------------------------------------------------------------------
+local function createESP(player, itemType)
+    local character = player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
 
-local copyPaywayCorner = Instance.new("UICorner")
-copyPaywayCorner.CornerRadius = UDim.new(0, 8)
-copyPaywayCorner.Parent = copyPaywayBtn
+    local highlightColor = (itemType == "Knife") and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 170, 255)
+    local tagText = (itemType == "Knife") and ("⚠️ មានកាំបិត ⚠️\n" .. player.DisplayName) or ("🔫 មានកាំភ្លើង 🔫\n" .. player.DisplayName)
 
----------------------------------------------------------
--- 5. Telegram Link
----------------------------------------------------------
-local tgBox = Instance.new("TextBox")
-tgBox.Name = "TgBox"
-tgBox.Size = UDim2.new(0, 310, 0, 45)
-tgBox.Position = UDim2.new(0.05, 0, 0.31, 0)
-tgBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-tgBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-tgBox.Text = "https://t.me/TWOBKTWOSELLER"
-tgBox.TextSize = 14
-tgBox.Font = Enum.Font.GothamBold
-tgBox.ClearTextOnFocus = false
-tgBox.Parent = centerContainer
-
-local tgBoxCorner = Instance.new("UICorner")
-tgBoxCorner.CornerRadius = UDim.new(0, 8)
-tgBoxCorner.Parent = tgBox
-
-local copyTgBtn = Instance.new("TextButton")
-copyTgBtn.Name = "CopyTgBtn"
-copyTgBtn.Size = UDim2.new(0, 140, 0, 45)
-copyTgBtn.Position = UDim2.new(0.67, 0, 0.31, 0)
-copyTgBtn.BackgroundColor3 = Color3.fromRGB(0, 136, 204)
-copyTgBtn.Text = "Copy Telegram"
-copyTgBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-copyTgBtn.TextSize = 16
-copyTgBtn.Font = Enum.Font.GothamBold
-copyTgBtn.Parent = centerContainer
-
-local copyTgCorner = Instance.new("UICorner")
-copyTgCorner.CornerRadius = UDim.new(0, 8)
-copyTgCorner.Parent = copyTgBtn
-
----------------------------------------------------------
--- 6. ប៊ូតុង Copy ទាំងពីរ
----------------------------------------------------------
-local copyAllBtn = Instance.new("TextButton")
-copyAllBtn.Name = "CopyAllBtn"
-copyAllBtn.Size = UDim2.new(0.92, 0, 0, 45)
-copyAllBtn.Position = UDim2.new(0.04, 0, 0.47, 0)
-copyAllBtn.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
-copyAllBtn.Text = "Copy Both Links"
-copyAllBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-copyAllBtn.TextSize = 18
-copyAllBtn.Font = Enum.Font.GothamBold
-copyAllBtn.Parent = centerContainer
-
-local copyAllCorner = Instance.new("UICorner")
-copyAllCorner.CornerRadius = UDim.new(0, 10)
-copyAllCorner.Parent = copyAllBtn
-
----------------------------------------------------------
--- 7. អក្សរណែនាំ
----------------------------------------------------------
-local instructionLabel = Instance.new("TextLabel")
-instructionLabel.Name = "InstructionLabel"
-instructionLabel.Size = UDim2.new(0.92, 0, 0, 110)
-instructionLabel.Position = UDim2.new(0.04, 0, 0.64, 0)
-instructionLabel.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-instructionLabel.BorderSizePixel = 0
-instructionLabel.Text = "📌 របៀបប្រើប្រាស់៖\n១. ចុច Copy លើ Link ដែលអ្នកចង់បាន\n២. បើក Google Chrome ឬ Safari\n៣. Paste (CTRL+V) រួចចុច Enter ដើម្បីទៅកាន់ Web"
-instructionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-instructionLabel.TextSize = 15
-instructionLabel.TextWrapped = true
-instructionLabel.Font = Enum.Font.GothamBold
-instructionLabel.Parent = centerContainer
-
-local instructionCorner = Instance.new("UICorner")
-instructionCorner.CornerRadius = UDim.new(0, 8)
-instructionCorner.Parent = instructionLabel
-
----------------------------------------------------------
--- 8. Functions
----------------------------------------------------------
-local function executeCopy(button, textToCopy, originalText, originalColor)
-    -- ព្យាយាមប្រើ Multi-Executor support syntax
-    local clipboardFunc = setclipboard or toclipboard or set_clipboard or (Clipboard and Clipboard.set)
-    
-    if clipboardFunc then
-        clipboardFunc(textToCopy)
-        button.Text = "Copied"
-        button.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
-    else
-        button.Text = "Highlight & Ctrl+C"
+    local highlight = character:FindFirstChild("WeaponHighlight")
+    if not highlight then
+        highlight = Instance.new("Highlight")
+        highlight.Name = "WeaponHighlight"
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.FillTransparency = 0.4
+        highlight.OutlineTransparency = 0
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        highlight.Parent = character
     end
-    
-    task.wait(2)
-    button.Text = originalText
-    button.BackgroundColor3 = originalColor
+    highlight.FillColor = highlightColor
+
+    local head = character:FindFirstChild("Head")
+    if head then
+        local billboard = head:FindFirstChild("WeaponTag")
+        if not billboard then
+            billboard = Instance.new("BillboardGui")
+            billboard.Name = "WeaponTag"
+            billboard.Adornee = head
+            billboard.Size = UDim2.new(0, 200, 0, 50)
+            billboard.StudsOffset = Vector3.new(0, 3, 0)
+            billboard.AlwaysOnTop = true
+
+            local textLabel = Instance.new("TextLabel")
+            textLabel.Name = "TagLabel"
+            textLabel.Size = UDim2.new(1, 0, 1, 0)
+            textLabel.BackgroundTransparency = 1
+            textLabel.TextStrokeTransparency = 0
+            textLabel.TextSize = 14
+            textLabel.Font = Enum.Font.SourceSansBold
+            textLabel.Parent = billboard
+
+            billboard.Parent = head
+        end
+
+        local textLabel = billboard:FindFirstChild("TagLabel")
+        if textLabel then
+            textLabel.TextColor3 = highlightColor
+            textLabel.Text = tagText
+        end
+    end
 end
 
-copyPaywayBtn.MouseButton1Click:Connect(function()
-    executeCopy(copyPaywayBtn, paywayBox.Text, "Copy PayWay", Color3.fromRGB(0, 120, 215))
+local function removeESP(player)
+    if player.Character then
+        local highlight = player.Character:FindFirstChild("WeaponHighlight")
+        if highlight then highlight:Destroy() end
+        
+        local head = player.Character:FindFirstChild("Head")
+        if head and head:FindFirstChild("WeaponTag") then
+            head.WeaponTag:Destroy()
+        end
+    end
+end
+
+local function clearAllESP()
+    for _, player in ipairs(Players:GetPlayers()) do
+        removeESP(player)
+    end
+end
+
+local function updateESP()
+    if not espEnabled then
+        clearAllESP()
+        return
+    end
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local hasKnifeInBackpack = player:FindFirstChild("Backpack") and player.Backpack:FindFirstChild("Knife")
+            local hasKnifeInCharacter = player.Character and player.Character:FindFirstChild("Knife")
+
+            local hasGunInBackpack = player:FindFirstChild("Backpack") and player.Backpack:FindFirstChild("Gun")
+            local hasGunInCharacter = player.Character and player.Character:FindFirstChild("Gun")
+
+            if hasKnifeInBackpack or hasKnifeInCharacter then
+                createESP(player, "Knife")
+            elseif hasGunInBackpack or hasGunInCharacter then
+                createESP(player, "Gun")
+            else
+                removeESP(player)
+            end
+        end
+    end
+end
+
+-- Loop សម្រាប់ ESP
+task.spawn(function()
+    while true do
+        updateESP()
+        task.wait(0.5)
+    end
 end)
 
-copyTgBtn.MouseButton1Click:Connect(function()
-    executeCopy(copyTgBtn, tgBox.Text, "Copy Telegram", Color3.fromRGB(0, 136, 204))
+------------------------------------------------------------------------
+-- SECTION 2: AUTO KILL & MAGIC BULLET SYSTEM
+------------------------------------------------------------------------
+local function getMyWeaponStatus()
+    local myChar = LocalPlayer.Character
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
+    
+    local hasGun = (backpack and backpack:FindFirstChild("Gun")) or (myChar and myChar:FindFirstChild("Gun"))
+    local hasKnife = (backpack and backpack:FindFirstChild("Knife")) or (myChar and myChar:FindFirstChild("Knife"))
+    
+    return hasGun ~= nil, hasKnife ~= nil
+end
+
+local function equipTool(toolName)
+    local myChar = LocalPlayer.Character
+    if not myChar then return nil end
+    local humanoid = myChar:FindFirstChildOfClass("Humanoid")
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
+    
+    local tool = myChar:FindFirstChild(toolName) or (backpack and backpack:FindFirstChild(toolName))
+    if tool and tool.Parent == backpack and humanoid then
+        humanoid:EquipTool(tool)
+    end
+    return tool
+end
+
+local function playerHasKnife(player)
+    if not player then return false end
+    return (player:FindFirstChild("Backpack") and player.Backpack:FindFirstChild("Knife")) or (player.Character and player.Character:FindFirstChild("Knife"))
+end
+
+local function getClosestPlayerWithKnife()
+    local myChar = LocalPlayer.Character
+    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil end
+    local myPos = myChar.HumanoidRootPart.Position
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Health > 0 and playerHasKnife(player) then
+                local distance = (myPos - player.Character.HumanoidRootPart.Position).Magnitude
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    closestPlayer = player
+                end
+            end
+        end
+    end
+    return closestPlayer
+end
+
+local function getClosestLivingPlayer()
+    local myChar = LocalPlayer.Character
+    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil end
+    local myPos = myChar.HumanoidRootPart.Position
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                local distance = (myPos - player.Character.HumanoidRootPart.Position).Magnitude
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    closestPlayer = player
+                end
+            end
+        end
+    end
+    return closestPlayer
+end
+
+local function findGunDrop()
+    return workspace:FindFirstChild("GunDrop", true)
+end
+
+local function startAimbot()
+    if aimbotConnection then aimbotConnection:Disconnect() end
+    aimbotConnection = RunService.RenderStepped:Connect(function()
+        local myChar = LocalPlayer.Character
+        if myChar and currentTarget and currentTarget.Character then
+            local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+            local targetHRP = currentTarget.Character:FindFirstChild("HumanoidRootPart")
+            local targetPart = currentTarget.Character:FindFirstChild("UpperTorso") or targetHRP
+            
+            if myHRP and targetHRP then
+                local targetPosForChar = Vector3.new(targetHRP.Position.X, myHRP.Position.Y, targetHRP.Position.Z)
+                myHRP.CFrame = CFrame.lookAt(myHRP.Position, targetPosForChar)
+
+                if targetPart then
+                    Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, targetPart.Position)
+                end
+            end
+        end
+    end)
+end
+
+local function stopAimbot()
+    if aimbotConnection then
+        aimbotConnection:Disconnect()
+        aimbotConnection = nil
+    end
+    currentTarget = nil
+end
+
+-- MAGIC BULLET + WALLBANG Function (គ្រាប់រត់ទៅបុក Target ១០០% និងធ្លុះជញ្ជាំង)
+local function shootTargetDirect(gun, targetPlayer)
+    local myChar = LocalPlayer.Character
+    if not myChar or not targetPlayer or not targetPlayer.Character then return end
+    
+    local targetChar = targetPlayer.Character
+    local targetPart = targetChar:FindFirstChild("Head") 
+        or targetChar:FindFirstChild("UpperTorso") 
+        or targetChar:FindFirstChild("HumanoidRootPart")
+        
+    if not targetPart then return end
+
+    -- ស្មានទីតាំង Target (Prediction)
+    local velocity = targetPart.AssemblyLinearVelocity or Vector3.zero
+    local predictedPosition = targetPart.Position + (velocity * 0.03)
+    
+    -- បង្កើត CFrame ចំពីមុខ Target តែ 0.1 Studs (បាញ់ចំក្បាល/ទ្រូងភ្លាមៗ)
+    local hitCFrame = CFrame.new(predictedPosition)
+    local originCFrame = hitCFrame * CFrame.new(0, 0, 0.1)
+
+    local shootRemote = gun:FindFirstChild("Shoot")
+    if shootRemote then
+        shootRemote:FireServer(originCFrame, hitCFrame)
+    end
+end
+
+-- MASTER LOOP សម្រាប់ AUTO KILL
+task.spawn(function()
+    local angle = 0
+
+    while true do
+        if not autoKillEnabled then
+            stopAimbot()
+            task.wait(0.5)
+            continue
+        end
+
+        local myChar = LocalPlayer.Character
+        local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
+        
+        if not myChar or not myHRP then 
+            stopAimbot()
+            task.wait(0.5)
+            continue 
+        end
+
+        local hasGun, hasKnife = getMyWeaponStatus()
+
+        -- MODE 1: គ្មាន Gun និង Knife (រើស Gun ឬ ហោះទៅកន្លែងសុវត្ថិភាព)
+        if not hasGun and not hasKnife then
+            stopAimbot()
+            local gunDrop = findGunDrop()
+
+            if gunDrop then
+                local dropCFrame = gunDrop:IsA("BasePart") and gunDrop.CFrame or gunDrop:GetPivot()
+                myHRP.CFrame = dropCFrame + Vector3.new(0, 1.5, 0)
+                task.wait(0.15)
+            else
+                local currentRotation = myHRP.CFrame - myHRP.CFrame.Position
+                local targetPosition = Vector3.new(myHRP.Position.X, SAFE_HEIGHT, myHRP.Position.Z)
+                myHRP.CFrame = CFrame.new(targetPosition) * currentRotation
+                myHRP.AssemblyLinearVelocity = Vector3.zero
+            end
+            task.wait(0.03)
+            continue
+        end
+
+        -- MODE 2: មាន Gun (Tween Orbit ក្រឡឹងលើក្បាល + Magic Bullet បាញ់ធ្លុះជញ្ជាំង)
+        if hasGun then
+            stopAimbot()
+            local targetPlayer = getClosestPlayerWithKnife()
+            if not targetPlayer then
+                task.wait(0.3)
+                continue
+            end
+
+            local targetChar = targetPlayer.Character
+            local targetHRP = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+            local targetHumanoid = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
+
+            while autoKillEnabled and targetPlayer.Parent and targetChar and targetHumanoid and targetHumanoid.Health > 0 and playerHasKnife(targetPlayer) and myHRP do
+                local currentGun = equipTool("Gun")
+                if not currentGun then break end
+                
+                local currentHRP = targetChar:FindFirstChild("HumanoidRootPart")
+                if not currentHRP then break end
+
+                -- កំណត់ Tween Orbit ក្រឡឹងជុំវិញផុតកាត់កាំបិត (Radius 12, Height 6)
+                local orbitRadius = 18
+                local orbitHeight = 6
+                angle = angle + 0.35
+
+                local offsetX = math.cos(angle) * orbitRadius
+                local offsetZ = math.sin(angle) * orbitRadius
+                local orbitPosition = currentHRP.Position + Vector3.new(offsetX, orbitHeight, offsetZ)
+                local targetCFrame = CFrame.lookAt(orbitPosition, currentHRP.Position)
+
+                local tweenInfo = TweenInfo.new(0.05, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+                local tween = TweenService:Create(myHRP, tweenInfo, {CFrame = targetCFrame})
+                tween:Play()
+
+                myHRP.AssemblyLinearVelocity = Vector3.zero
+                
+                -- បាញ់ Magic Bullet រត់ទៅបុកចំ ១០០%
+                shootTargetDirect(currentGun, targetPlayer)
+
+                task.wait(0.03)
+            end
+            continue
+        end
+
+        -- MODE 3: មាន Knife (Teleport ទៅកាប់)
+        if hasKnife then
+            startAimbot()
+            local targetPlayer = getClosestLivingPlayer()
+            if not targetPlayer then
+                stopAimbot()
+                task.wait(0.3)
+                continue
+            end
+
+            currentTarget = targetPlayer
+            local targetChar = targetPlayer.Character
+            local targetHRP = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+            local targetHumanoid = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
+
+            while autoKillEnabled and targetPlayer.Parent and targetChar and targetHumanoid and targetHumanoid.Health > 0 and myHRP do
+                local knife = equipTool("Knife")
+                local currentTargetHRP = targetChar:FindFirstChild("HumanoidRootPart")
+                
+                if currentTargetHRP then
+                    local targetPosition = currentTargetHRP.Position + (currentTargetHRP.CFrame.LookVector * 1.5)
+                    myHRP.CFrame = CFrame.lookAt(targetPosition, currentTargetHRP.Position)
+                    myHRP.AssemblyLinearVelocity = Vector3.zero
+                    
+                    if knife then
+                        knife:Activate()
+                    end
+                else
+                    break
+                end
+                task.wait(0.03)
+            end
+        end
+
+        task.wait(0.05)
+    end
 end)
 
-copyAllBtn.MouseButton1Click:Connect(function()
-    local combinedText = "PayWay: " .. paywayBox.Text .. "\nTelegram: " .. tgBox.Text
-    executeCopy(copyAllBtn, combinedText, "Copy Both Links", Color3.fromRGB(40, 167, 69))
-end)
+
+local players = game:GetService("Players")
+local uis = game:GetService("UserInputService")
+local run = game:GetService("RunService")
+local lp = players.LocalPlayer
+
+local cur_speed = 50
+local active = false
+local flyConnection = nil
+
+local bv = Instance.new("BodyVelocity")
+local bg = Instance.new("BodyGyro")
+
+local function enableFly()
+	local char = lp.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+
+	active = true
+	bv.Parent = root
+	bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+	bv.Velocity = Vector3.new(0, 0, 0)
+
+	bg.Parent = root
+	bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+	bg.CFrame = root.CFrame
+
+	flyConnection = run.RenderStepped:Connect(function()
+		local currentPortChar = lp.Character
+		if active and currentPortChar and currentPortChar:FindFirstChild("HumanoidRootPart") then
+			local cam = workspace.CurrentCamera
+			local dir = Vector3.new(0, 0, 0)
+
+			-- Directional controls
+			if uis:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end
+			if uis:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end
+			if uis:IsKeyDown(Enum.KeyCode.A) then dir -= cam.CFrame.RightVector end
+			if uis:IsKeyDown(Enum.KeyCode.D) then dir += cam.CFrame.RightVector end
+
+			bv.Velocity = dir * cur_speed
+			bg.CFrame = cam.CFrame
+
+			local hum = currentPortChar:FindFirstChildOfClass("Humanoid")
+			if hum then hum.PlatformStand = true end
+
+			-- Noclip: Disable CanCollide on all character parts
+			for _, part in ipairs(currentPortChar:GetDescendants()) do
+				if part:IsA("BasePart") then
+					part.CanCollide = false
+				end
+			end
+		end
+	end)
+end
+
+local function disableFly()
+	active = false
+	if flyConnection then
+		flyConnection:Disconnect()
+		flyConnection = nil
+	end
+
+	bv.Parent = nil
+	bg.Parent = nil
+
+	local char = lp.Character
+	if char then
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		if hum then hum.PlatformStand = false end
+
+		-- Restore collision on character reset/disable
+		for _, part in ipairs(char:GetDescendants()) do
+			if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+				part.CanCollide = true
+			end
+		end
+	end
+end
+
+------------------------------------------------------------------------
+-- SECTION 3: GUI TOGGLES
+------------------------------------------------------------------------
+local espToggle = tab:CreateToggle({
+    name = "ESP",
+    flag = "ESPToggle",
+    value = false,
+    callback = function(value)
+        espEnabled = value
+        if not value then
+            clearAllESP()
+        end
+    end,
+})
+
+local autoKillToggle = tab:CreateToggle({
+    name = "Auto Kill",
+    flag = "AutoKillToggle",
+    value = false,
+    callback = function(value)
+        autoKillEnabled = value
+        if not value then
+            stopAimbot()
+        end
+    end,
+})
+
+espToggle:Set(false)
+autoKillToggle:Set(false)
+flyToggle:Set(false)
+
+-- Fly Toggle
+local flyToggle = tab:CreateToggle({
+	name = "Fly + Noclip",
+	flag = "FlyNoclip",
+	value = false,
+	callback = function(value)
+		if value then
+			enableFly()
+		else
+			disableFly()
+		end
+	end,
+})
+
+-- Speed Slider
+local speedSlider = tab:CreateSlider({
+	name = "Fly Speed",
+	range = { 10, 300 },
+	increment = 5,
+	value = 50,
+	suffix = " studs/s",
+	callback = function(value)
+		cur_speed = value
+	end,
+})
