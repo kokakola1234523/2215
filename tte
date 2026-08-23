@@ -287,7 +287,8 @@ task.spawn(function()
         if hasGun then
             stopAimbot()
             local targetPlayer = getClosestPlayerWithKnife()
-            if not targetPlayer then
+            if not targetPlayer me
+            then
                 task.wait(0.3)
                 continue
             end
@@ -355,7 +356,7 @@ task.spawn(function()
 end)
 
 ------------------------------------------------------------------------
--- SECTION 3: FLY & NOCLIP SYSTEM (NATURAL MOBILE JOYSTICK CONTROL)
+-- SECTION 3: FLY & NOCLIP SYSTEM (WASD EXACT JOYSTICK MATCH)
 ------------------------------------------------------------------------
 local cur_speed = 50
 local active = false
@@ -390,16 +391,15 @@ local function enableFly()
                 local flyVector = Vector3.zero
 
                 if moveDir.Magnitude > 0 then
-                    -- បង្វែរការដើរតាម Joystick ឱ្យហោះទៅមុខតាមកាមេរ៉ារៀបរយ 100%
+                    -- បង្វែរចលនា Touch Joystick ឱ្យត្រូវគ្នានឹងទិសដៅ WASD / Camera 100%
                     local camCF = Camera.CFrame
-                    local forward = camCF.LookVector
-                    local right = camCF.RightVector
-
-                    -- បញ្ចូលចលនា Joystick (ទៅមុខ/ក្រោយ និង ឆ្វេង/ស្តាំ) ឱ្យហោះទៅតាមទិសដៅដែលកាមេរ៉ កំពុងចុចមើល
-                    flyVector = (forward * -moveDir.Z) + (right * moveDir.X)
+                    local cameraRelativeMove = camCF:VectorToWorldSpace(Vector3.new(moveDir.X, 0, moveDir.Z))
+                    
+                    -- ប្រសិនបើប្រើ Joystick លើ Mobile, MoveDirection ត្រូវបានគណនាធៀបនឹង Camera LookVector
+                    flyVector = moveDir
                 end
 
-                -- បូតុង Keyboard PC (Space / E = ឡើង, Q = ចុះ)
+                -- ការប្រើប្រាស់ Key PC ( Space/E = ឡើង, Q = ចុះ )
                 if UserInputService:IsKeyDown(Enum.KeyCode.E) or UserInputService:IsKeyDown(Enum.KeyCode.Space) then
                     flyVector = flyVector + Vector3.new(0, 1, 0)
                 elseif UserInputService:IsKeyDown(Enum.KeyCode.Q) then
