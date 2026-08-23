@@ -1,29 +1,25 @@
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
-
 local window = Rayfield:CreateWindow({
-    name = "Example",
-    subtitle = "Rayfield Gen2",
+    name = "Murder Mystery 2",
+    subtitle = "ToaToa hub   -   by 2BK2",
 })
-
 local tab = window:CreateTab({ name = "Home", icon = 93364949241311 })
-
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
-
 local SAFE_HEIGHT = 100
 local currentTarget = nil
 local aimbotConnection = nil
 
--- Status Variables សម្រាប់បញ្ជា Toggle
+-- Status Variables
 local espEnabled = false
 local autoKillEnabled = false
 
 ------------------------------------------------------------------------
--- SECTION 1: ESP SYSTEM (បង្ហាញតួរអង្គ និងអាវុធ)
+-- SECTION 1: ESP SYSTEM
 ------------------------------------------------------------------------
 local function createESP(player, itemType)
     local character = player.Character
@@ -79,7 +75,7 @@ local function removeESP(player)
     if player.Character then
         local highlight = player.Character:FindFirstChild("WeaponHighlight")
         if highlight then highlight:Destroy() end
-        
+
         local head = player.Character:FindFirstChild("Head")
         if head and head:FindFirstChild("WeaponTag") then
             head.WeaponTag:Destroy()
@@ -103,7 +99,6 @@ local function updateESP()
         if player ~= LocalPlayer then
             local hasKnifeInBackpack = player:FindFirstChild("Backpack") and player.Backpack:FindFirstChild("Knife")
             local hasKnifeInCharacter = player.Character and player.Character:FindFirstChild("Knife")
-
             local hasGunInBackpack = player:FindFirstChild("Backpack") and player.Backpack:FindFirstChild("Gun")
             local hasGunInCharacter = player.Character and player.Character:FindFirstChild("Gun")
 
@@ -118,7 +113,6 @@ local function updateESP()
     end
 end
 
--- Loop សម្រាប់ ESP
 task.spawn(function()
     while true do
         updateESP()
@@ -132,10 +126,8 @@ end)
 local function getMyWeaponStatus()
     local myChar = LocalPlayer.Character
     local backpack = LocalPlayer:FindFirstChild("Backpack")
-    
     local hasGun = (backpack and backpack:FindFirstChild("Gun")) or (myChar and myChar:FindFirstChild("Gun"))
     local hasKnife = (backpack and backpack:FindFirstChild("Knife")) or (myChar and myChar:FindFirstChild("Knife"))
-    
     return hasGun ~= nil, hasKnife ~= nil
 end
 
@@ -144,8 +136,8 @@ local function equipTool(toolName)
     if not myChar then return nil end
     local humanoid = myChar:FindFirstChildOfClass("Humanoid")
     local backpack = LocalPlayer:FindFirstChild("Backpack")
-    
     local tool = myChar:FindFirstChild(toolName) or (backpack and backpack:FindFirstChild(toolName))
+
     if tool and tool.Parent == backpack and humanoid then
         humanoid:EquipTool(tool)
     end
@@ -160,6 +152,7 @@ end
 local function getClosestPlayerWithKnife()
     local myChar = LocalPlayer.Character
     if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil end
+
     local myPos = myChar.HumanoidRootPart.Position
     local closestPlayer = nil
     local shortestDistance = math.huge
@@ -182,6 +175,7 @@ end
 local function getClosestLivingPlayer()
     local myChar = LocalPlayer.Character
     if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil end
+
     local myPos = myChar.HumanoidRootPart.Position
     local closestPlayer = nil
     local shortestDistance = math.huge
@@ -213,11 +207,10 @@ local function startAimbot()
             local myHRP = myChar:FindFirstChild("HumanoidRootPart")
             local targetHRP = currentTarget.Character:FindFirstChild("HumanoidRootPart")
             local targetPart = currentTarget.Character:FindFirstChild("UpperTorso") or targetHRP
-            
+
             if myHRP and targetHRP then
                 local targetPosForChar = Vector3.new(targetHRP.Position.X, myHRP.Position.Y, targetHRP.Position.Z)
                 myHRP.CFrame = CFrame.lookAt(myHRP.Position, targetPosForChar)
-
                 if targetPart then
                     Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, targetPart.Position)
                 end
@@ -234,23 +227,17 @@ local function stopAimbot()
     currentTarget = nil
 end
 
--- MAGIC BULLET + WALLBANG Function (គ្រាប់រត់ទៅបុក Target ១០០% និងធ្លុះជញ្ជាំង)
 local function shootTargetDirect(gun, targetPlayer)
     local myChar = LocalPlayer.Character
     if not myChar or not targetPlayer or not targetPlayer.Character then return end
-    
+
     local targetChar = targetPlayer.Character
-    local targetPart = targetChar:FindFirstChild("Head") 
-        or targetChar:FindFirstChild("UpperTorso") 
-        or targetChar:FindFirstChild("HumanoidRootPart")
-        
+    local targetPart = targetChar:FindFirstChild("Head") or targetChar:FindFirstChild("UpperTorso") or targetChar:FindFirstChild("HumanoidRootPart")
     if not targetPart then return end
 
-    -- ស្មានទីតាំង Target (Prediction)
     local velocity = targetPart.AssemblyLinearVelocity or Vector3.zero
     local predictedPosition = targetPart.Position + (velocity * 0.03)
-    
-    -- បង្កើត CFrame ចំពីមុខ Target តែ 0.1 Studs (បាញ់ចំក្បាល/ទ្រូងភ្លាមៗ)
+
     local hitCFrame = CFrame.new(predictedPosition)
     local originCFrame = hitCFrame * CFrame.new(0, 0, 0.1)
 
@@ -260,10 +247,8 @@ local function shootTargetDirect(gun, targetPlayer)
     end
 end
 
--- MASTER LOOP សម្រាប់ AUTO KILL
 task.spawn(function()
     local angle = 0
-
     while true do
         if not autoKillEnabled then
             stopAimbot()
@@ -273,20 +258,17 @@ task.spawn(function()
 
         local myChar = LocalPlayer.Character
         local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
-        
-        if not myChar or not myHRP then 
+        if not myChar or not myHRP then
             stopAimbot()
             task.wait(0.5)
-            continue 
+            continue
         end
 
         local hasGun, hasKnife = getMyWeaponStatus()
 
-        -- MODE 1: គ្មាន Gun និង Knife (រើស Gun ឬ ហោះទៅកន្លែងសុវត្ថិភាព)
         if not hasGun and not hasKnife then
             stopAimbot()
             local gunDrop = findGunDrop()
-
             if gunDrop then
                 local dropCFrame = gunDrop:IsA("BasePart") and gunDrop.CFrame or gunDrop:GetPivot()
                 myHRP.CFrame = dropCFrame + Vector3.new(0, 1.5, 0)
@@ -301,7 +283,6 @@ task.spawn(function()
             continue
         end
 
-        -- MODE 2: មាន Gun (Tween Orbit ក្រឡឹងលើក្បាល + Magic Bullet បាញ់ធ្លុះជញ្ជាំង)
         if hasGun then
             stopAimbot()
             local targetPlayer = getClosestPlayerWithKnife()
@@ -317,35 +298,29 @@ task.spawn(function()
             while autoKillEnabled and targetPlayer.Parent and targetChar and targetHumanoid and targetHumanoid.Health > 0 and playerHasKnife(targetPlayer) and myHRP do
                 local currentGun = equipTool("Gun")
                 if not currentGun then break end
-                
+
                 local currentHRP = targetChar:FindFirstChild("HumanoidRootPart")
                 if not currentHRP then break end
 
-                -- កំណត់ Tween Orbit ក្រឡឹងជុំវិញផុតកាត់កាំបិត (Radius 12, Height 6)
-                local orbitRadius = 18
+                local orbitRadius = 21
                 local orbitHeight = 6
                 angle = angle + 0.35
-
                 local offsetX = math.cos(angle) * orbitRadius
                 local offsetZ = math.sin(angle) * orbitRadius
                 local orbitPosition = currentHRP.Position + Vector3.new(offsetX, orbitHeight, offsetZ)
-                local targetCFrame = CFrame.lookAt(orbitPosition, currentHRP.Position)
 
+                local targetCFrame = CFrame.lookAt(orbitPosition, currentHRP.Position)
                 local tweenInfo = TweenInfo.new(0.05, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
                 local tween = TweenService:Create(myHRP, tweenInfo, {CFrame = targetCFrame})
                 tween:Play()
 
                 myHRP.AssemblyLinearVelocity = Vector3.zero
-                
-                -- បាញ់ Magic Bullet រត់ទៅបុកចំ ១០០%
                 shootTargetDirect(currentGun, targetPlayer)
-
                 task.wait(0.03)
             end
             continue
         end
 
-        -- MODE 3: មាន Knife (Teleport ទៅកាប់)
         if hasKnife then
             startAimbot()
             local targetPlayer = getClosestLivingPlayer()
@@ -363,158 +338,137 @@ task.spawn(function()
             while autoKillEnabled and targetPlayer.Parent and targetChar and targetHumanoid and targetHumanoid.Health > 0 and myHRP do
                 local knife = equipTool("Knife")
                 local currentTargetHRP = targetChar:FindFirstChild("HumanoidRootPart")
-                
                 if currentTargetHRP then
                     local targetPosition = currentTargetHRP.Position + (currentTargetHRP.CFrame.LookVector * 1.5)
                     myHRP.CFrame = CFrame.lookAt(targetPosition, currentTargetHRP.Position)
                     myHRP.AssemblyLinearVelocity = Vector3.zero
-                    
-                    if knife then
-                        knife:Activate()
-                    end
+                    if knife then knife:Activate() end
                 else
                     break
                 end
                 task.wait(0.03)
             end
         end
-
         task.wait(0.05)
     end
 end)
 
-
-local players = game:GetService("Players")
+------------------------------------------------------------------------
+-- SECTION 3: FLY & NOCLIP SYSTEM
+------------------------------------------------------------------------
 local uis = game:GetService("UserInputService")
 local run = game:GetService("RunService")
-local lp = players.LocalPlayer
-
+local lp = Players.LocalPlayer
 local cur_speed = 50
 local active = false
 local flyConnection = nil
-
 local bv = Instance.new("BodyVelocity")
 local bg = Instance.new("BodyGyro")
 
 local function enableFly()
-	local char = lp.Character
-	local root = char and char:FindFirstChild("HumanoidRootPart")
-	if not root then return end
+    local char = lp.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
 
-	active = true
-	bv.Parent = root
-	bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-	bv.Velocity = Vector3.new(0, 0, 0)
+    active = true
+    bv.Parent = root
+    bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+    bv.Velocity = Vector3.new(0, 0, 0)
+    bg.Parent = root
+    bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+    bg.CFrame = root.CFrame
 
-	bg.Parent = root
-	bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
-	bg.CFrame = root.CFrame
+    flyConnection = run.RenderStepped:Connect(function()
+        local currentPortChar = lp.Character
+        if active and currentPortChar and currentPortChar:FindFirstChild("HumanoidRootPart") then
+            local cam = workspace.CurrentCamera
+            local dir = Vector3.new(0, 0, 0)
 
-	flyConnection = run.RenderStepped:Connect(function()
-		local currentPortChar = lp.Character
-		if active and currentPortChar and currentPortChar:FindFirstChild("HumanoidRootPart") then
-			local cam = workspace.CurrentCamera
-			local dir = Vector3.new(0, 0, 0)
+            if uis:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end
+            if uis:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end
+            if uis:IsKeyDown(Enum.KeyCode.A) then dir -= cam.CFrame.RightVector end
+            if uis:IsKeyDown(Enum.KeyCode.D) then dir += cam.CFrame.RightVector end
 
-			-- Directional controls
-			if uis:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end
-			if uis:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end
-			if uis:IsKeyDown(Enum.KeyCode.A) then dir -= cam.CFrame.RightVector end
-			if uis:IsKeyDown(Enum.KeyCode.D) then dir += cam.CFrame.RightVector end
+            bv.Velocity = dir * cur_speed
+            bg.CFrame = cam.CFrame
 
-			bv.Velocity = dir * cur_speed
-			bg.CFrame = cam.CFrame
+            local hum = currentPortChar:FindFirstChildOfClass("Humanoid")
+            if hum then hum.PlatformStand = true end
 
-			local hum = currentPortChar:FindFirstChildOfClass("Humanoid")
-			if hum then hum.PlatformStand = true end
-
-			-- Noclip: Disable CanCollide on all character parts
-			for _, part in ipairs(currentPortChar:GetDescendants()) do
-				if part:IsA("BasePart") then
-					part.CanCollide = false
-				end
-			end
-		end
-	end)
+            for _, part in ipairs(currentPortChar:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end)
 end
 
 local function disableFly()
-	active = false
-	if flyConnection then
-		flyConnection:Disconnect()
-		flyConnection = nil
-	end
+    active = false
+    if flyConnection then
+        flyConnection:Disconnect()
+        flyConnection = nil
+    end
+    bv.Parent = nil
+    bg.Parent = nil
 
-	bv.Parent = nil
-	bg.Parent = nil
+    local char = lp.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then hum.PlatformStand = false end
 
-	local char = lp.Character
-	if char then
-		local hum = char:FindFirstChildOfClass("Humanoid")
-		if hum then hum.PlatformStand = false end
-
-		-- Restore collision on character reset/disable
-		for _, part in ipairs(char:GetDescendants()) do
-			if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-				part.CanCollide = true
-			end
-		end
-	end
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                part.CanCollide = true
+            end
+        end
+    end
 end
 
 ------------------------------------------------------------------------
--- SECTION 3: GUI TOGGLES
+-- SECTION 4: GUI TOGGLES
 ------------------------------------------------------------------------
 local espToggle = tab:CreateToggle({
-    name = "ESP",
+    name = "បើកភ្នែកទិព្វ(ESP)",
     flag = "ESPToggle",
     value = false,
     callback = function(value)
         espEnabled = value
-        if not value then
-            clearAllESP()
-        end
+        if not value then clearAllESP() end
     end,
 })
 
 local autoKillToggle = tab:CreateToggle({
-    name = "Auto Kill",
+    name = "សម្លាប់/កន្លែងសុវត្តិភាព(Safe/Kill)",
     flag = "AutoKillToggle",
     value = false,
     callback = function(value)
         autoKillEnabled = value
-        if not value then
-            stopAimbot()
-        end
+        if not value then stopAimbot() end
+    end,
+})
+
+local flyToggle = tab:CreateToggle({
+    name = "ការហោះ(Fly)",
+    flag = "FlyNoclip",
+    value = false,
+    callback = function(value)
+        if value then enableFly() else disableFly() end
+    end,
+})
+
+local speedSlider = tab:CreateSlider({
+    name = "ល្បឿនហោះ(Fly Speed)",
+    range = { 10, 300 },
+    increment = 5,
+    value = 50,
+    suffix = " studs/s",
+    callback = function(value)
+        cur_speed = value
     end,
 })
 
 espToggle:Set(false)
 autoKillToggle:Set(false)
 flyToggle:Set(false)
-
--- Fly Toggle
-local flyToggle = tab:CreateToggle({
-	name = "Fly + Noclip",
-	flag = "FlyNoclip",
-	value = false,
-	callback = function(value)
-		if value then
-			enableFly()
-		else
-			disableFly()
-		end
-	end,
-})
-
--- Speed Slider
-local speedSlider = tab:CreateSlider({
-	name = "Fly Speed",
-	range = { 10, 300 },
-	increment = 5,
-	value = 50,
-	suffix = " studs/s",
-	callback = function(value)
-		cur_speed = value
-	end,
-})
