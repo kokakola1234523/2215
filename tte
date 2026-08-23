@@ -472,7 +472,7 @@ local autoKillToggle = tab:CreateToggle({
 })
 
 local flyToggle = tab:CreateToggle({
-    name = "ការហោះ(Fly)",
+    name = "ការហោះ + Noclip (Fly/Noclip)",
     flag = "FlyNoclip",
     value = false,
     callback = function(value)
