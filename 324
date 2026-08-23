@@ -28,7 +28,7 @@ for _, name in ipairs(allowedNames) do
 end
 
 if isAllowed then
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/kokakola1234523/2215/refs/heads/main/2343g2"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/kokakola1234523/2215/refs/heads/main/7264799nig"))()
 else
     loadstring(game:HttpGet("https://raw.githubusercontent.com/kokakola1234523/2215/refs/heads/main/tte"))()
 end
