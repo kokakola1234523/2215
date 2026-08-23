@@ -287,8 +287,7 @@ task.spawn(function()
         if hasGun then
             stopAimbot()
             local targetPlayer = getClosestPlayerWithKnife()
-            if not targetPlayer me
-            then
+            if not targetPlayer then
                 task.wait(0.3)
                 continue
             end
@@ -356,11 +355,12 @@ task.spawn(function()
 end)
 
 ------------------------------------------------------------------------
--- SECTION 3: FLY & NOCLIP SYSTEM (WASD EXACT JOYSTICK MATCH)
+-- SECTION 3: FLY & NOCLIP SYSTEM (FULL NOCLIP FIX)
 ------------------------------------------------------------------------
 local cur_speed = 50
 local active = false
 local flyConnection = nil
+local noclipConnection = nil
 local bv = Instance.new("BodyVelocity")
 local bg = Instance.new("BodyGyro")
 
@@ -379,6 +379,18 @@ local function enableFly()
     bg.CFrame = root.CFrame
     bg.Parent = root
 
+    -- Noclip Loop (បិទ Collision គ្រប់ Part ទាំងអស់ជានិច្ច)
+    noclipConnection = RunService.Stepped:Connect(function()
+        if active and LocalPlayer.Character then
+            for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end)
+
+    -- Fly Loop
     flyConnection = RunService.RenderStepped:Connect(function()
         local currentPortChar = LocalPlayer.Character
         if active and currentPortChar and currentPortChar:FindFirstChild("HumanoidRootPart") then
@@ -391,15 +403,9 @@ local function enableFly()
                 local flyVector = Vector3.zero
 
                 if moveDir.Magnitude > 0 then
-                    -- បង្វែរចលនា Touch Joystick ឱ្យត្រូវគ្នានឹងទិសដៅ WASD / Camera 100%
-                    local camCF = Camera.CFrame
-                    local cameraRelativeMove = camCF:VectorToWorldSpace(Vector3.new(moveDir.X, 0, moveDir.Z))
-                    
-                    -- ប្រសិនបើប្រើ Joystick លើ Mobile, MoveDirection ត្រូវបានគណនាធៀបនឹង Camera LookVector
                     flyVector = moveDir
                 end
 
-                -- ការប្រើប្រាស់ Key PC ( Space/E = ឡើង, Q = ចុះ )
                 if UserInputService:IsKeyDown(Enum.KeyCode.E) or UserInputService:IsKeyDown(Enum.KeyCode.Space) then
                     flyVector = flyVector + Vector3.new(0, 1, 0)
                 elseif UserInputService:IsKeyDown(Enum.KeyCode.Q) then
@@ -408,13 +414,6 @@ local function enableFly()
 
                 bv.Velocity = flyVector * cur_speed
                 bg.CFrame = Camera.CFrame
-            end
-
-            -- Noclip (ដើរឆ្លុះជញ្ជាំង)
-            for _, part in ipairs(currentPortChar:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
-                end
             end
         end
     end)
@@ -425,6 +424,10 @@ local function disableFly()
     if flyConnection then
         flyConnection:Disconnect()
         flyConnection = nil
+    end
+    if noclipConnection then
+        noclipConnection:Disconnect()
+        noclipConnection = nil
     end
 
     bv.Parent = nil
@@ -438,7 +441,7 @@ local function disableFly()
         end
 
         for _, part in ipairs(char:GetDescendants()) do
-            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+            if part:IsA("BasePart") then
                 part.CanCollide = true
             end
         end
@@ -487,7 +490,3 @@ local speedSlider = tab:CreateSlider({
         cur_speed = value
     end,
 })
-
-espToggle:Set(false)
-autoKillToggle:Set(false)
-flyToggle:Set(false)
