@@ -1,11 +1,31 @@
-local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
+local TweenService = game:GetService("TweenService")
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
-local window = Rayfield:CreateWindow({
-    name = "Steal an Egg",
-    subtitle = "Toa Toa Hub   -   by 2BK2",
-})
+-- Target CFrame with your coordinates and rotation matrix
+local targetCFrame = CFrame.new(
+    502.072418, 70.8011246, -366.667084,
+    0.00921290647, -8.88573126e-08, -0.999957561,
+    2.34353532e-08, 1, -8.8645173e-08,
+    0.999957561, -2.26176802e-08, 0.00921290647
+)
 
-local tab = window:CreateTab({ name = "Home", icon = 93364949241311 })
+-- Customize the tween speed/settings here
+local tweenTime = 2 -- Time in seconds it takes to reach the destination
+local tweenInfo = TweenInfo.new(
+    tweenTime,
+    Enum.EasingStyle.Quad, -- Easing style (e.g., Quad, Linear, Sine)
+    Enum.EasingDirection.Out
+)
+
+-- Create and play the tween
+local tween = TweenService:Create(humanoidRootPart, tweenInfo, {CFrame = targetCFrame})
+tween:Play()
+
+task.wait(1)
+
+
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -15,19 +35,32 @@ local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
-
 camera.CameraType = Enum.CameraType.Scriptable
 
--- Global toggle សម្រាប់បញ្ជាប្រព័ន្ធទាំងអស់ (ចាប់ផ្តើមដោយបិទ)
+-- Global States (សម្រាប់បញ្ហា Auto-Farm)
 getgenv().AutoInteract = false 
+getgenv().AutoBigEgg = false   
+
+-- Configuration សម្រាប់ ESP & Dropdown
+local COLOR_BIGGEST = Color3.fromRGB(255, 0, 128)  
+local COLOR_NORMAL  = Color3.fromRGB(0, 255, 128)  
+
+local allAreaNames = {
+	"Cherry Blossom", "Cosmic", "Prehistoric",
+	"Abyss Ocean", "Desert", "Jungle",
+	"Lake", "Snow", "Volcano"
+}
+local selectedModules = { 
+	"Cherry Blossom", "Cosmic", "Prehistoric", 
+	"Abyss Ocean", "Desert", "Jungle", "Lake", "Snow", "Volcano" 
+}
 
 -- ==========================================
 -- ១. កូដបញ្ជាកាមេរ៉ា (Camera System)
 -- ==========================================
 local distance = 12
-local angleX = 0 -- មុំងាកឆ្វេង/ស្តាំ
-local angleY = 15 -- មុំងាកឡើង/ចុះ
-
+local angleX = 0 
+local angleY = 15 
 local isRightMouseDown = false
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -65,64 +98,124 @@ end)
 
 
 -- ==========================================
--- ២. កូដ Noclip & Fly ជាប់រហូត (Permanent Fly & Noclip)
+-- ២. កូដ Fly & Noclip ជាប់រហូត (មិនបិទវិញទេ ទោះបិទ Toggle)
 -- ==========================================
 local bodyVelocity = nil
 local bodyGyro = nil
-
-local function enableFly(hrp)
-	if not bodyVelocity or bodyVelocity.Parent ~= hrp then
-		bodyVelocity = Instance.new("BodyVelocity")
-		bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-		bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-		bodyVelocity.Parent = hrp
-	end
-
-	if not bodyGyro or bodyGyro.Parent ~= hrp then
-		bodyGyro = Instance.new("BodyGyro")
-		bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-		bodyGyro.CFrame = hrp.CFrame
-		bodyGyro.Parent = hrp
-	end
-end
-
-local function disableFly()
-	if bodyVelocity then
-		bodyVelocity:Destroy()
-		bodyVelocity = nil
-	end
-	if bodyGyro then
-		bodyGyro:Destroy()
-		bodyGyro = nil
-	end
-end
 
 RunService.Stepped:Connect(function()
 	local character = player.Character
 	if character and character:FindFirstChild("HumanoidRootPart") then
 		local hrp = character.HumanoidRootPart
 		
-		if getgenv().AutoInteract then
-			-- បើក Noclip (បុកធ្លុះជញ្ជាំង)
-			for _, part in ipairs(character:GetDescendants()) do
-				if part:IsA("BasePart") and part.CanCollide then
-					part.CanCollide = false
-				end
+		-- បើក Noclip ជានិច្ច
+		for _, part in ipairs(character:GetDescendants()) do
+			if part:IsA("BasePart") and part.CanCollide then
+				part.CanCollide = false
 			end
-			
-			-- បើក Fly (ហោះជាប់រហូត)
-			enableFly(hrp)
-		else
-			disableFly()
 		end
-	else
-		disableFly()
+		
+		-- បើក Fly ជានិច្ច មិនឱ្យធ្លាក់ចុះក្រោម
+		if not bodyVelocity or bodyVelocity.Parent ~= hrp then
+			bodyVelocity = Instance.new("BodyVelocity")
+			bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+			bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+			bodyVelocity.Parent = hrp
+		end
+
+		if not bodyGyro or bodyGyro.Parent ~= hrp then
+			bodyGyro = Instance.new("BodyGyro")
+			bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+			bodyGyro.CFrame = hrp.CFrame
+			bodyGyro.Parent = hrp
+		end
 	end
 end)
 
 
 -- ==========================================
--- ៣. កូដ Auto-Farm / Dynamic Ground Level Tween
+-- ៣. ប្រព័ន្ធ ESP មើលឃើញស៊ុត
+-- ==========================================
+local function getEggSize(slot)
+	local targetPart = slot:FindFirstChild("Hitbox", true) or (slot:IsA("BasePart") and slot or slot:FindFirstChildWhichIsA("BasePart", true))
+	if targetPart then
+		local size = targetPart.Size
+		local volume = size.X * size.Y * size.Z
+		return volume, targetPart
+	end
+	return 0, nil
+end
+
+local function updateEggESP()
+	local areaEggSlotsClient = Workspace:FindFirstChild("AreaEggSlotsClient")
+	if not areaEggSlotsClient then return end
+
+	local slots = areaEggSlotsClient:GetChildren()
+	local maxVolume = -1
+	local biggestSlot = nil
+
+	for _, slot in ipairs(slots) do
+		local volume, _ = getEggSize(slot)
+		if volume >= 90 and volume > maxVolume then
+			maxVolume = volume
+			biggestSlot = slot
+		end
+	end
+
+	for _, slot in ipairs(slots) do
+		local volume, targetPart = getEggSize(slot)
+		local billboard = slot:FindFirstChild("EggSizeESP")
+
+		if volume < 90 then
+			if billboard then billboard:Destroy() end
+		else
+			if not billboard and targetPart then
+				billboard = Instance.new("BillboardGui")
+				billboard.Name = "EggSizeESP"
+				billboard.AlwaysOnTop = true
+				billboard.Size = UDim2.new(0, 100, 0, 40)
+				billboard.StudsOffset = Vector3.new(0, 2, 0)
+				billboard.Adornee = targetPart
+
+				local textLabel = Instance.new("TextLabel")
+				textLabel.Name = "Label"
+				textLabel.Size = UDim2.new(1, 0, 1, 0)
+				textLabel.BackgroundTransparency = 1
+				textLabel.TextStrokeTransparency = 0
+				textLabel.Font = Enum.Font.SourceSansBold
+				textLabel.Parent = billboard
+
+				billboard.Parent = slot
+			end
+
+			if billboard then
+				local isBiggest = (slot == biggestSlot)
+				local textLabel = billboard.Label
+
+				if isBiggest then
+					textLabel.TextColor3 = COLOR_BIGGEST
+					textLabel.TextSize = 22
+					textLabel.Text = string.format("👑 %.1f", volume)
+				else
+					textLabel.TextColor3 = COLOR_NORMAL
+					textLabel.TextSize = 18
+					textLabel.Text = string.format("%.1f", volume)
+				end
+			end
+		end
+	end
+end
+
+task.spawn(function()
+	while true do
+		pcall(updateEggESP)
+		task.wait(0.3)
+	end
+end)
+
+
+-- ==========================================
+-- ៤. កូដ Auto-Farm (បែងចែកមុខងារតាម Toggle ទាំងពីរ)
 -- ==========================================
 task.spawn(function()
 	local character = player.Character or player.CharacterAdded:Wait()
@@ -133,9 +226,9 @@ task.spawn(function()
 	local areas = objects and objects:WaitForChild("Areas", 5)
 	local guardAreas = areas and areas:WaitForChild("GuardAreas", 5)
 
-	local SPEED = 300            
-	local HEIGHT_OFFSET = 3.5    -- កម្ពស់បន្ថែមពីលើ surface ដី
-	local MAX_PROXIMITY_DIST = 20 
+	local SPEED = 350            
+	local HEIGHT_OFFSET = 3.5    
+	local MAX_PROXIMITY_DIST = 15 
 	local WAIT_AT_BASE = 1       
 
 	local originalCFrame = CFrame.new(
@@ -146,7 +239,7 @@ task.spawn(function()
 	)
 
 	local function getGroundYForPosition(targetPosition)
-		local closestY = targetPosition.Y 
+		local closestY = targetPosition.Y
 		local shortestDistance = math.huge
 
 		if guardAreas then
@@ -164,14 +257,34 @@ task.spawn(function()
 		return closestY
 	end
 
+	local function isHitboxInAllowedArea(hitbox)
+		if not hitbox then return false end
+		local hitboxPos = hitbox.Position
+
+		for _, name in ipairs(selectedModules) do
+			local areaObj = guardAreas and guardAreas:FindFirstChild(name)
+			if areaObj then
+				local areaPart = areaObj:IsA("BasePart") and areaObj or (areaObj.PrimaryPart or areaObj:FindFirstChildWhichIsA("BasePart", true))
+				if areaPart then
+					local dist = (Vector2.new(hitboxPos.X, hitboxPos.Z) - Vector2.new(areaPart.Position.X, areaPart.Position.Z)).Magnitude
+					if dist <= 150 then 
+						return true
+					end
+				end
+			end
+		end
+		return false
+	end
+
 	local function getTweenInfo(startCFrame, targetCFrame)
 		local dist = (startCFrame.Position - targetCFrame.Position).Magnitude
 		local duration = dist / SPEED
 		return TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
 	end
 
-	local function interactNearbyPrompts()
-		if not getgenv().AutoInteract then return end
+	local function interactNearbyPrompts(isBigEggMode)
+		local activeCheck = isBigEggMode and getgenv().AutoBigEgg or getgenv().AutoInteract
+		if not activeCheck then return end
 		
 		local currentPos = hrp.Position
 		for _, prompt in ipairs(Workspace:GetDescendants()) do
@@ -188,17 +301,16 @@ task.spawn(function()
 	end
 
 	while true do
+		-- វិធីទី ១៖ លួចតាម Dropdown
 		if getgenv().AutoInteract then
 			for _, slot in ipairs(areaEggSlotsClient:GetChildren()) do
 				if not getgenv().AutoInteract then break end
 				
 				local hitbox = slot:FindFirstChild("Hitbox", true)
-				if hitbox and hitbox:IsA("BasePart") then
-					
+				if hitbox and hitbox:IsA("BasePart") and isHitboxInAllowedArea(hitbox) then
 					local targetPos = hitbox.Position
 					local groundY = getGroundYForPosition(targetPos)
 					local dynamicTargetY = groundY + HEIGHT_OFFSET
-					
 					local targetCFrame = CFrame.new(targetPos.X, dynamicTargetY, targetPos.Z) * hitbox.CFrame.Rotation
 					
 					local tweenToInfo = getTweenInfo(hrp.CFrame, targetCFrame)
@@ -207,7 +319,7 @@ task.spawn(function()
 					tweenTo.Completed:Wait()
 					
 					task.wait(0.9)
-					interactNearbyPrompts()
+					interactNearbyPrompts(false)
 
 					local tweenBackInfo = getTweenInfo(hrp.CFrame, originalCFrame)
 					local tweenBack = TweenService:Create(hrp, tweenBackInfo, {CFrame = originalCFrame})
@@ -218,14 +330,69 @@ task.spawn(function()
 				end
 			end
 		end
-		task.wait(0.5)
+
+		-- វិធីទី ២៖ លួចតែស៊ុតធំៗ (Big Eggs Only)
+		if getgenv().AutoBigEgg then
+			local slots = areaEggSlotsClient:GetChildren()
+			local bestSlot = nil
+			local maxVolume = -1
+
+			for _, slot in ipairs(slots) do
+				local volume, _ = getEggSize(slot)
+				if volume >= 90 and volume > maxVolume then
+					maxVolume = volume
+					bestSlot = slot
+				end
+			end
+
+			if bestSlot then
+				local hitbox = bestSlot:FindFirstChild("Hitbox", true) or (bestSlot:IsA("BasePart") and bestSlot or bestSlot:FindFirstChildWhichIsA("BasePart", true))
+				if hitbox then
+					local targetPos = hitbox.Position
+					local groundY = getGroundYForPosition(targetPos)
+					local dynamicTargetY = groundY + HEIGHT_OFFSET
+					local targetCFrame = CFrame.new(targetPos.X, dynamicTargetY, targetPos.Z) * hitbox.CFrame.Rotation
+					
+					local tweenToInfo = getTweenInfo(hrp.CFrame, targetCFrame)
+					local tweenTo = TweenService:Create(hrp, tweenToInfo, {CFrame = targetCFrame})
+					tweenTo:Play()
+					tweenTo.Completed:Wait()
+					
+					task.wait(0.9)
+					interactNearbyPrompts(true)
+
+					local tweenBackInfo = getTweenInfo(hrp.CFrame, originalCFrame)
+					local tweenBack = TweenService:Create(hrp, tweenBackInfo, {CFrame = originalCFrame})
+					tweenBack:Play()
+					tweenBack.Completed:Wait()
+					
+					task.wait(WAIT_AT_BASE)
+				end
+			else
+				task.wait(0.5)
+			end
+		end
+
+		task.wait(0.1)
 	end
 end)
 
 
+-- ==========================================
+-- ៥. បង្កើត Rayfield UI (Gen 2)
+-- ==========================================
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
+
+local window = Rayfield:CreateWindow({
+    name = "Steal an Egg",
+    subtitle = "Toa Toa Hub   -   by 2BK2",
+})
+
+local tab = window:CreateTab({ name = "Farm"})
+local tab1 = window:CreateTab({ name = "Shop" })
 
 tab:CreateButton({
-    name = "កុំអោយហ្គេមចាប់ល្បឿនបាន(Bypass)",
+    name = "ចុចខ្ញុំមុនគេមុននឹងបើការលួច(Bypass)",
     callback = function()
         -- ទាញយកនិងដំណើរការស្គ្រីបពី GitHub របស់អ្នក
         local success, err = pcall(function()
@@ -239,21 +406,39 @@ tab:CreateButton({
         end
     end,
 })
--- ==========================================
--- ៤. Rayfield UI Integration (តំណភ្ជាប់ UI)
--- ==========================================
-local sprint = tab:CreateToggle({
-    name = "លួចសុតទាំងអស់(Steal All)",
-    flag = "AutoStealall",
-    value = false,
-    callback = function(value)
-        getgenv().AutoInteract = value
-        print("Auto Steal All Status:", value)
+
+tab:CreateDropdown({
+    name = "ជ្រើសរើសទីតាំង(Select Areas)",
+    multiSelect = true,
+    options = allAreaNames,
+    value = selectedModules,
+    callback = function(selected)
+        selectedModules = selected
+        print("Selected Areas updated!")
     end,
 })
 
-sprint:Set(false)
+-- Toggle ទី ១: លួចតាម Dropdown
+tab:CreateToggle({
+    name = "លួចតែស៊ុតនៅទីតាំងដែរបានជ្រើសរើស(Select)",
+    flag = "steal_dropdown",
+    value = false,
+    callback = function(value)
+        getgenv().AutoInteract = value
+        print("Auto Steal Dropdown Status:", value)
+    end,
+})
 
+-- Toggle ទី ២: លួចតែស៊ុតធំៗ
+tab:CreateToggle({
+    name = "លួចតែស៊ុតធំៗ(Steal Big Egg)",
+    flag = "steal_bigeggs",
+    value = false,
+    callback = function(value)
+        getgenv().AutoBigEgg = value
+        print("Auto Steal Big Eggs Status:", value)
+    end,
+})
 
 
 
@@ -324,8 +509,8 @@ local function clickAllExistingItems()
 end
 
 -- ៣. បង្កើត Rayfield Toggle ដើម្បីបញ្ជាការបើក/បិទ
-local autoSellToggle = tab:CreateToggle({
-    name = "លក់សុទទាំងអស់(Sell All)",
+local autoSellToggle = tab1:CreateToggle({
+    name = "លក់ស៊ុតទាំងអស់(Sell All)",
     flag = "AutoSell",
     value = false,
     callback = function(value)
@@ -338,7 +523,6 @@ local autoSellToggle = tab:CreateToggle({
         end
     end,
 })
-
 task.wait(2)
 
 window:Notify({
