@@ -394,7 +394,7 @@ local tab = window:CreateTab({ name = "Farm"})
 local tab1 = window:CreateTab({ name = "Shop" })
 
 window:Notify({
-    title = "----សូមរងចាំបន្តិចសិន----",
+    title = "----ហាមចុចបើកអីទាំងអស់----\n!រង់ចាំបន្តិចសិន!",
     content = "មិនទាន់លេងបានទេចាំអោយប្រព័ន្ធដំណើរការចប់សិន\nហាមចុចបើកមុខងារអីទាំងអស់",
     duration = 15,
 })
