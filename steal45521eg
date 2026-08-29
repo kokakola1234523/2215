@@ -4,29 +4,22 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
 local player = Players.LocalPlayer
 local camera = Workspace.CurrentCamera
 camera.CameraType = Enum.CameraType.Scriptable
 
 -- Global States
-getgenv().AutoInteract = false 
-getgenv().AutoBigEgg = false   
-getgenv().AutoPartFarm = false 
+getgenv().AutoInteract = false
+getgenv().AutoBigEgg = false
+getgenv().AutoPartFarm = false
+getgenv().AutoRainbowEgg = false -- បន្ថែមមុខងារ Rainbow Egg
 
 -- Configuration
-local COLOR_BIGGEST = Color3.fromRGB(255, 0, 128)  
-local COLOR_NORMAL  = Color3.fromRGB(0, 255, 128)  
+local COLOR_BIGGEST = Color3.fromRGB(255, 0, 128)
+local COLOR_NORMAL  = Color3.fromRGB(0, 255, 128)
 local MIN_PARTS_COUNT = 20
-
-local allAreaNames = {
-    "Cherry Blossom", "Cosmic", "Prehistoric",
-    "Abyss Ocean", "Desert", "Jungle",
-    "Lake", "Snow", "Volcano"
-}
-local selectedModules = { 
-    "Cherry Blossom"
-}
+local allAreaNames = {"Titan Temple", "Cherry Blossom", "Cosmic", "Prehistoric", "Abyss Ocean", "Desert", "Jungle", "Lake", "Snow", "Volcano" }
+local selectedModules = {"Titan Temple" }
 
 -- Safe Character Getter Helper
 local function getHRP()
@@ -38,8 +31,8 @@ end
 -- ១. កូដបញ្ជាកាមេរ៉ា (Camera System Support PC & Mobile)
 -- ==========================================
 local distance = 12
-local angleX = 0 
-local angleY = 15 
+local angleX = 0
+local angleY = 15
 local isRightMouseDown = false
 local touchOrigin = nil
 
@@ -96,20 +89,17 @@ RunService.Stepped:Connect(function()
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         local hrp = char.HumanoidRootPart
-        
         for _, part in ipairs(char:GetDescendants()) do
             if part:IsA("BasePart") and part.CanCollide then
                 part.CanCollide = false
             end
         end
-        
         if not bodyVelocity or bodyVelocity.Parent ~= hrp then
             bodyVelocity = Instance.new("BodyVelocity")
             bodyVelocity.Velocity = Vector3.zero
             bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
             bodyVelocity.Parent = hrp
         end
-
         if not bodyGyro or bodyGyro.Parent ~= hrp then
             bodyGyro = Instance.new("BodyGyro")
             bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
@@ -134,11 +124,9 @@ end
 local function updateEggESP()
     local areaEggSlotsClient = Workspace:FindFirstChild("AreaEggSlotsClient")
     if not areaEggSlotsClient then return end
-
     local slots = areaEggSlotsClient:GetChildren()
     local maxVolume = -1
     local biggestSlot = nil
-
     for _, slot in ipairs(slots) do
         local volume = getEggSize(slot)
         if volume >= 90 and volume > maxVolume then
@@ -146,11 +134,9 @@ local function updateEggESP()
             biggestSlot = slot
         end
     end
-
     for _, slot in ipairs(slots) do
         local volume, targetPart = getEggSize(slot)
         local billboard = slot:FindFirstChild("EggSizeESP")
-
         if volume < 90 then
             if billboard then billboard:Destroy() end
         else
@@ -161,7 +147,6 @@ local function updateEggESP()
                 billboard.Size = UDim2.new(0, 100, 0, 40)
                 billboard.StudsOffset = Vector3.new(0, 2, 0)
                 billboard.Adornee = targetPart
-
                 local textLabel = Instance.new("TextLabel")
                 textLabel.Name = "Label"
                 textLabel.Size = UDim2.new(1, 0, 1, 0)
@@ -169,14 +154,11 @@ local function updateEggESP()
                 textLabel.TextStrokeTransparency = 0
                 textLabel.Font = Enum.Font.SourceSansBold
                 textLabel.Parent = billboard
-
                 billboard.Parent = slot
             end
-
             if billboard then
                 local isBiggest = (slot == biggestSlot)
                 local textLabel = billboard.Label
-
                 if isBiggest then
                     textLabel.TextColor3 = COLOR_BIGGEST
                     textLabel.TextSize = 22
@@ -213,17 +195,14 @@ end
 
 local function applyMultiPartESP(eggFolder)
     if not (eggFolder:IsA("Model") or eggFolder:IsA("BasePart") or eggFolder:IsA("Folder")) then return end
-
     local totalParts = countParts(eggFolder)
     local highlight = eggFolder:FindFirstChild("EggESP_Highlight")
     local billboard = eggFolder:FindFirstChild("EggESP_Text")
-
     if totalParts < MIN_PARTS_COUNT then
         if highlight then highlight:Destroy() end
         if billboard then billboard:Destroy() end
         return
     end
-
     if not highlight then
         highlight = Instance.new("Highlight")
         highlight.Name = "EggESP_Highlight"
@@ -234,14 +213,12 @@ local function applyMultiPartESP(eggFolder)
         highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
         highlight.Parent = eggFolder
     end
-
     if not billboard then
         billboard = Instance.new("BillboardGui")
         billboard.Name = "EggESP_Text"
         billboard.AlwaysOnTop = true
         billboard.Size = UDim2.new(0, 180, 0, 35)
         billboard.StudsOffset = Vector3.new(0, 3.5, 0)
-
         local nameLabel = Instance.new("TextLabel")
         nameLabel.Name = "Label"
         nameLabel.Parent = billboard
@@ -252,7 +229,6 @@ local function applyMultiPartESP(eggFolder)
         nameLabel.TextStrokeTransparency = 0
         nameLabel.TextSize = 14
         nameLabel.Font = Enum.Font.SourceSansBold
-
         local targetPart = eggFolder:IsA("BasePart") and eggFolder or eggFolder:FindFirstChildWhichIsA("BasePart", true)
         if targetPart then
             billboard.Adornee = targetPart
@@ -264,7 +240,6 @@ end
 task.spawn(function()
     local areaEggSlotsClient = Workspace:WaitForChild("AreaEggSlotsClient", 15)
     if not areaEggSlotsClient then return end
-
     while task.wait(0.5) do
         for _, egg in ipairs(areaEggSlotsClient:GetChildren()) do
             pcall(applyMultiPartESP, egg)
@@ -280,23 +255,16 @@ task.spawn(function()
     local objects = Workspace:WaitForChild("__OBJECTS", 5)
     local areas = objects and objects:WaitForChild("Areas", 5)
     local guardAreas = areas and areas:WaitForChild("GuardAreas", 5)
-
-    local SPEED = 550             
-    local FLY_OFFSET_HEIGHT = 50 
-    local HEIGHT_OFFSET = 1.5    
+    local SPEED = 500
+    local FLY_OFFSET_HEIGHT = 45
+    local HEIGHT_OFFSET = 1.5
     local MAX_PROXIMITY_DIST = 2
-    local WAIT_AT_BASE = 1       
-
-    local originalCFrame = CFrame.new(
-        540.517273, 70.5475159, -364.945435, 0.0517056733, 5.14744904e-08, 
-        -0.998662353, -5.42448539e-08, 1, 4.87349148e-08, 
-        0.998662353, 5.1652421e-08, 0.0517056733
-    )
+    local WAIT_AT_BASE = 1
+    local originalCFrame = CFrame.new(545.609619, 70.8011246, -393.126251, 0.0714070275, 4.42698642e-08, -0.997447252, -2.46360377e-09, 1, 4.42067964e-08, 0.997447252, -6.99361014e-10, 0.0714070275)
 
     local function getGroundYForPosition(targetPosition)
         local closestY = targetPosition.Y
         local shortestDistance = math.huge
-
         if guardAreas then
             for _, part in ipairs(guardAreas:GetChildren()) do
                 local basePart = part:IsA("BasePart") and part or (part.PrimaryPart or part:FindFirstChildWhichIsA("BasePart", true))
@@ -315,16 +283,13 @@ task.spawn(function()
     local function isHitboxInAllowedArea(hitbox)
         if not hitbox then return false end
         local hitboxPos = hitbox.Position
-
         for _, name in ipairs(selectedModules) do
             local areaObj = guardAreas and guardAreas:FindFirstChild(name)
             if areaObj then
                 local areaPart = areaObj:IsA("BasePart") and areaObj or (areaObj.PrimaryPart or areaObj:FindFirstChildWhichIsA("BasePart", true))
                 if areaPart then
                     local dist = (Vector2.new(hitboxPos.X, hitboxPos.Z) - Vector2.new(areaPart.Position.X, areaPart.Position.Z)).Magnitude
-                    if dist <= 500 then 
-                        return true
-                    end
+                    if dist <= 500 then return true end
                 end
             end
         end
@@ -348,7 +313,6 @@ task.spawn(function()
     local function interactNearbyPrompts()
         local hrp = getHRP()
         if not hrp then return end
-        
         local currentPos = hrp.Position
         for _, prompt in ipairs(Workspace:GetDescendants()) do
             if prompt:IsA("ProximityPrompt") and prompt.Enabled then
@@ -365,30 +329,24 @@ task.spawn(function()
     local function stealEggAtLocation(hitbox)
         local hrp = getHRP()
         if not hrp or not hitbox then return end
-
         hrp.AssemblyLinearVelocity = Vector3.zero
-
         local targetPos = hitbox.Position
         local groundY = getGroundYForPosition(targetPos)
         local flyY = groundY + FLY_OFFSET_HEIGHT
         local collectTargetCF = CFrame.new(targetPos.X, groundY + HEIGHT_OFFSET, targetPos.Z) * hitbox.CFrame.Rotation
-
         local currentGroundY = getGroundYForPosition(hrp.Position)
         local startFlyY = math.max(hrp.Position.Y, currentGroundY + FLY_OFFSET_HEIGHT)
         local highStartCF = CFrame.new(hrp.Position.X, startFlyY, hrp.Position.Z) * hrp.CFrame.Rotation
-        
-        -- Fly Up
+
         local tweenUp = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, highStartCF), {CFrame = highStartCF})
         tweenUp:Play()
         tweenUp.Completed:Wait()
 
-        -- Fly Across
         local highTargetCF = CFrame.new(targetPos.X, flyY, targetPos.Z) * hitbox.CFrame.Rotation
         local tweenFlyTo = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, highTargetCF), {CFrame = highTargetCF})
         tweenFlyTo:Play()
         tweenFlyTo.Completed:Wait()
 
-        -- Drop Down
         local tweenDownToEgg = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, collectTargetCF), {CFrame = collectTargetCF})
         tweenDownToEgg:Play()
         tweenDownToEgg.Completed:Wait()
@@ -397,22 +355,18 @@ task.spawn(function()
         interactNearbyPrompts()
         task.wait(0.4)
 
-        -- Fly Back Up
         hrp = getHRP()
         if not hrp then return end
-        
         local tweenBackUp = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, highTargetCF), {CFrame = highTargetCF})
         tweenBackUp:Play()
         tweenBackUp.Completed:Wait()
 
-        -- Fly Back Base
         local baseGroundY = getGroundYForPosition(originalCFrame.Position)
         local highBaseCF = CFrame.new(originalCFrame.Position.X, baseGroundY + FLY_OFFSET_HEIGHT, originalCFrame.Position.Z) * originalCFrame.Rotation
         local tweenFlyBack = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, highBaseCF), {CFrame = highBaseCF})
         tweenFlyBack:Play()
         tweenFlyBack.Completed:Wait()
 
-        -- Land
         local tweenLanding = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, originalCFrame), {CFrame = originalCFrame})
         tweenLanding:Play()
         tweenLanding.Completed:Wait()
@@ -423,10 +377,19 @@ task.spawn(function()
     local function getTargetEgg()
         local slots = areaEggSlotsClient:GetChildren()
 
+        -- ពិនិត្យរកមើលស៊ុត Rainbow (Hitbox.FX.Rainbow) មុនគេ
+        if getgenv().AutoRainbowEgg then
+            for _, slot in ipairs(slots) do
+                local hasRainbow = slot:FindFirstChild("Hitbox.FX.Rainbow", true) or slot:FindFirstChild("FX.Rainbow", true)
+                if hasRainbow then
+                    return slot
+                end
+            end
+        end
+
         if getgenv().AutoPartFarm then
             local bestPartEgg = nil
             local maxParts = -1
-
             for _, slot in ipairs(slots) do
                 local partsCount = countParts(slot)
                 if partsCount >= MIN_PARTS_COUNT and partsCount > maxParts then
@@ -434,14 +397,12 @@ task.spawn(function()
                     bestPartEgg = slot
                 end
             end
-
             if bestPartEgg then return bestPartEgg end
         end
 
         if getgenv().AutoBigEgg then
             local bestBigEgg = nil
             local maxVolume = -1
-
             for _, slot in ipairs(slots) do
                 local volume = getEggSize(slot)
                 if volume >= 90 and volume > maxVolume then
@@ -449,7 +410,6 @@ task.spawn(function()
                     bestBigEgg = slot
                 end
             end
-
             if bestBigEgg then return bestBigEgg end
         end
 
@@ -467,19 +427,14 @@ task.spawn(function()
 
     while true do
         local targetSlot = getTargetEgg()
-
         if targetSlot then
-            local hitbox = targetSlot:FindFirstChild("Hitbox", true) 
-                or (targetSlot:IsA("BasePart") and targetSlot) 
-                or targetSlot:FindFirstChildWhichIsA("BasePart", true)
-
+            local hitbox = targetSlot:FindFirstChild("Hitbox", true) or (targetSlot:IsA("BasePart") and targetSlot) or targetSlot:FindFirstChildWhichIsA("BasePart", true)
             if hitbox then
                 stealEggAtLocation(hitbox)
             end
         else
             task.wait(0.5)
         end
-
         task.wait(0.1)
     end
 end)
@@ -488,14 +443,11 @@ end)
 -- ៦. បង្កើត Rayfield UI (Gen 2)
 -- ==========================================
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
-
 local window = Rayfield:CreateWindow({
     name = "Steal an Egg",
     subtitle = "Toa Toa Hub   -   by 2BK2",
 })
-
 local tab = window:CreateTab({ name = "Farm"})
-
 
 window:Notify({
     title = "----ហាមចុចបើកអីទាំងអស់----\n!រង់ចាំបន្តិចសិន!",
@@ -531,17 +483,24 @@ tab:CreateToggle({
     end,
 })
 
+-- ប៊ូតុង Rainbow Egg ថ្មី
 tab:CreateToggle({
-    name = "លួចស៊ុតដែលពិសេស (Steal Rainbow Egg)", 
-    flag = "auto_part_farm", 
-    value = false, 
-    callback = function(value) 
-        getgenv().AutoPartFarm = value 
-    end, 
+    name = "លួចស៊ុត៧ពណ៏(Rainbow Testing)",
+    flag = "auto_rainbow_egg",
+    value = false,
+    callback = function(value)
+        getgenv().AutoRainbowEgg = value
+    end,
 })
 
--- ==========================================
-
+tab:CreateToggle({
+    name = "លួចស៊ុតដែលមានស្លាប(MASSIVE EGGS)",
+    flag = "auto_part_farm",
+    value = false,
+    callback = function(value)
+        getgenv().AutoPartFarm = value
+    end,
+})
 
 -- ==========================================
 -- ៨. ប្រព័ន្ធ Bypass & Startup Tween
@@ -549,7 +508,6 @@ tab:CreateToggle({
 local playerScripts = player:WaitForChild("PlayerScripts")
 local gameFolder = playerScripts:WaitForChild("Game", 5)
 local obbyStages = gameFolder and gameFolder:WaitForChild("ObbyStages", 5)
-
 if obbyStages then
     local breakableBlocks = obbyStages:FindFirstChild("BreakableBlocks")
     if breakableBlocks then
@@ -586,21 +544,14 @@ task.spawn(function()
     task.wait(1)
     local hrp = getHRP()
     if not hrp then return end
-
     local objects = workspace:FindFirstChild("__OBJECTS")
     local areas = objects and objects:FindFirstChild("Areas")
     local guardAreas = areas and areas:FindFirstChild("GuardAreas")
-
-    local targetCFrame = CFrame.new(
-        540.517273, 70.5475159, -364.945435, 0.0517056733,
-        5.14744904e-08, -0.998662353, -5.42448539e-08, 1, 
-        4.87349148e-08, 0.998662353, 5.1652421e-08, 0.0517056733
-    )
+    local targetCFrame = CFrame.new(545.609619, 70.8011246, -393.126251, 0.0714070275, 4.42698642e-08, -0.997447252, -2.46360377e-09, 1, 4.42067964e-08, 0.997447252, -6.99361014e-10, 0.0714070275)
 
     local function getGuardAreaGroundY(currentPos)
         local groundY = currentPos.Y
         local shortestDist = math.huge
-        
         if guardAreas then
             for _, part in ipairs(guardAreas:GetChildren()) do
                 local basePart = part:IsA("BasePart") and part or (part.PrimaryPart or part:FindFirstChildWhichIsA("BasePart", true))
@@ -616,18 +567,13 @@ task.spawn(function()
         return groundY
     end
 
-    local tweenTime = 2 
-    local tweenInfo = TweenInfo.new(
-        tweenTime,
-        Enum.EasingStyle.Quad,
-        Enum.EasingDirection.Out
-    )
-
+    local tweenTime = 2
+    local tweenInfo = TweenInfo.new(tweenTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     local currentPos = hrp.Position
     local groundY = getGuardAreaGroundY(currentPos)
     local targetFlyY = groundY + 60
-
     local highStartCF = CFrame.new(currentPos.X, targetFlyY, currentPos.Z) * hrp.CFrame.Rotation
+
     local tweenUp = TweenService:Create(hrp, tweenInfo, {CFrame = highStartCF})
     tweenUp:Play()
     tweenUp.Completed:Wait()
