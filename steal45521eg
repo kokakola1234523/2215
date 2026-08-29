@@ -12,7 +12,8 @@ camera.CameraType = Enum.CameraType.Scriptable
 getgenv().AutoInteract = false
 getgenv().AutoBigEgg = false
 getgenv().AutoPartFarm = false
-getgenv().AutoRainbowEgg = false -- បន្ថែមមុខងារ Rainbow Egg
+getgenv().AutoRainbowEgg = false
+getgenv().AutoMonsterEgg = false -- បន្ថែមមុខងារ MonsterParasiteVisual
 
 -- Configuration
 local COLOR_BIGGEST = Color3.fromRGB(255, 0, 128)
@@ -260,7 +261,9 @@ task.spawn(function()
     local HEIGHT_OFFSET = 1.5
     local MAX_PROXIMITY_DIST = 2
     local WAIT_AT_BASE = 1
-    local originalCFrame = CFrame.new(545.609619, 70.8011246, -393.126251, 0.0714070275, 4.42698642e-08, -0.997447252, -2.46360377e-09, 1, 4.42067964e-08, 0.997447252, -6.99361014e-10, 0.0714070275)
+    
+    -- កែប្រែ CFrame ថ្មីតាមសំណូមពរ
+    local originalCFrame = CFrame.new(538.479553, 70.8011246, -409.704681, 0.730235636, 8.46091197e-08, -0.683195353, -5.78969193e-08, 1, 6.19599163e-08, 0.683195353, -5.69043168e-09, 0.730235636)
 
     local function getGroundYForPosition(targetPosition)
         local closestY = targetPosition.Y
@@ -377,7 +380,17 @@ task.spawn(function()
     local function getTargetEgg()
         local slots = areaEggSlotsClient:GetChildren()
 
-        -- ពិនិត្យរកមើលស៊ុត Rainbow (Hitbox.FX.Rainbow) មុនគេ
+        -- ១. ពិនិត្យរកស៊ុត MonsterParasiteVisual មុនគេ
+        if getgenv().AutoMonsterEgg then
+            for _, slot in ipairs(slots) do
+                local hasMonster = slot:FindFirstChild("MonsterParasiteVisual", true)
+                if hasMonster then
+                    return slot
+                end
+            end
+        end
+
+        -- ២. ពិនិត្យរកស៊ុត Rainbow
         if getgenv().AutoRainbowEgg then
             for _, slot in ipairs(slots) do
                 local hasRainbow = slot:FindFirstChild("Hitbox.FX.Rainbow", true) or slot:FindFirstChild("FX.Rainbow", true)
@@ -447,7 +460,10 @@ local window = Rayfield:CreateWindow({
     name = "Steal an Egg",
     subtitle = "Toa Toa Hub   -   by 2BK2",
 })
+
 local tab = window:CreateTab({ name = "Farm"})
+
+local tab1 = window:CreateTab({ name = "Event"})
 
 window:Notify({
     title = "----ហាមចុចបើកអីទាំងអស់----\n!រង់ចាំបន្តិចសិន!",
@@ -483,7 +499,6 @@ tab:CreateToggle({
     end,
 })
 
--- ប៊ូតុង Rainbow Egg ថ្មី
 tab:CreateToggle({
     name = "លួចស៊ុត៧ពណ៏(Rainbow Testing)",
     flag = "auto_rainbow_egg",
@@ -501,6 +516,57 @@ tab:CreateToggle({
         getgenv().AutoPartFarm = value
     end,
 })
+
+tab1:CreateToggle({
+    name = "លួចស៊ុតដែរមានពីងពាងនៅលើEgg",
+    flag = "auto_monster_egg",
+    value = false,
+    callback = function(value)
+        getgenv().AutoMonsterEgg = value
+    end,
+})
+
+local autoFeedEnabled = false
+
+-- បង្កើត Toggle សម្រាប់បញ្ជាការ Feed
+local feedToggle = tab1:CreateToggle({
+    name = "អោយពីសាច់កង្កែបសុី(Feed Monsters)",
+    flag = "AutoFeed",
+    value = false,
+    callback = function(value)
+        autoFeedEnabled = value
+    end,
+})
+
+-- កូដដំណើរការរៀងរាល់ 0.5 វិនាទី
+task.spawn(function()
+    while true do
+        if autoFeedEnabled then
+            pcall(function()
+                local monstersFolder = workspace:FindFirstChild("MonsterParasiteMonsters")
+                if monstersFolder then
+                    for _, monster in ipairs(monstersFolder:GetChildren()) do
+                        local rootPart = monster:FindFirstChild("RootPart")
+                        if rootPart then
+                            local prompt = rootPart:FindFirstChild("FeedPrompt")
+                            if prompt and prompt:IsA("ProximityPrompt") and prompt.Enabled then
+                                if typeof(fireproximityprompt) == "function" then
+                                    fireproximityprompt(prompt)
+                                elseif prompt:FindFirstChildOfClass("RemoteEvent") then
+                                    prompt:FindFirstChildOfClass("RemoteEvent"):FireServer()
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+        task.wait(0.5)
+    end
+end)
+
+
+
 
 -- ==========================================
 -- ៨. ប្រព័ន្ធ Bypass & Startup Tween
@@ -547,7 +613,9 @@ task.spawn(function()
     local objects = workspace:FindFirstChild("__OBJECTS")
     local areas = objects and objects:FindFirstChild("Areas")
     local guardAreas = areas and areas:FindFirstChild("GuardAreas")
-    local targetCFrame = CFrame.new(545.609619, 70.8011246, -393.126251, 0.0714070275, 4.42698642e-08, -0.997447252, -2.46360377e-09, 1, 4.42067964e-08, 0.997447252, -6.99361014e-10, 0.0714070275)
+    
+    -- កែប្រែ CFrame ពេលចាប់ផ្តើមថ្មីតាមសំណូមពរ
+    local targetCFrame = CFrame.new(538.479553, 70.8011246, -409.704681, 0.730235636, 8.46091197e-08, -0.683195353, -5.78969193e-08, 1, 6.19599163e-08, 0.683195353, -5.69043168e-09, 0.730235636)
 
     local function getGuardAreaGroundY(currentPos)
         local groundY = currentPos.Y
@@ -589,8 +657,8 @@ task.spawn(function()
 
     task.wait(1)
     window:Notify({
-        title = "ប្រើប្រាស់ដោយការទទួលខុសត្រូវ",
-        content = "ToaToa Hub  -  by 2BK2",
+        title = "---ការនែនាំ---",
+        content = "កុំExecute​ Script​ ពីរដងជាប់គ្នារ\nចុចតែម្តងបានហើយមិនចឹងទេវាទាញចុះឡើងដំណើរការមិនស្រួស\nប្រសិនជួបករណីនឹងClear​ Gameចូលម្តងទៀត",
         duration = 5,
     })
 end)
