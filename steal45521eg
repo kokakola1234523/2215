@@ -13,7 +13,7 @@ getgenv().AutoInteract = false
 getgenv().AutoBigEgg = false
 getgenv().AutoPartFarm = false
 getgenv().AutoRainbowEgg = false
-getgenv().AutoMonsterEgg = false -- បន្ថែមមុខងារ MonsterParasiteVisual
+getgenv().AutoMonsterEgg = false 
 
 -- Configuration
 local COLOR_BIGGEST = Color3.fromRGB(255, 0, 128)
@@ -22,10 +22,67 @@ local MIN_PARTS_COUNT = 20
 local allAreaNames = {"Titan Temple", "Cherry Blossom", "Cosmic", "Prehistoric", "Abyss Ocean", "Desert", "Jungle", "Lake", "Snow", "Volcano" }
 local selectedModules = {"Titan Temple" }
 
+-- Key Words សម្រាប់ Detect Rainbow / Special Eggs
+local RAINBOW_KEYWORDS = {"rainbow", "glow", "radicalhalo"}
+
 -- Safe Character Getter Helper
 local function getHRP()
     local char = player.Character or player.CharacterAdded:Wait()
     return char:WaitForChild("HumanoidRootPart", 5)
+end
+
+-- ==========================================
+-- មុខងារពិនិត្យមើលថា Reset Countdown ចប់ ឬជញ្ជាំងទម្លាក់ចុះហើយ (Can Farm)
+-- ==========================================
+local function isWallOpenOrCountdownFinished()
+    local playerGui = player:FindFirstChild("PlayerGui") or CoreGui
+    local resetTimerGui = playerGui:FindFirstChild("ResetStartTimer") or Workspace:FindFirstChild("ResetStartTimer")
+    
+    if resetTimerGui and resetTimerGui.Enabled then
+        local frame = resetTimerGui:FindFirstChild("Frame")
+        if frame then
+            local textLabel = frame:FindFirstChild("TextLabel")
+            if textLabel and textLabel.Visible and textLabel.Text ~= "" then
+                return false
+            end
+        end
+    end
+    
+    local resetWall = Workspace:FindFirstChild("AreaEggResetWall") or Workspace:FindFirstChild("EggResetWall")
+    if resetWall then
+        local wallPart = resetWall:IsA("BasePart") and resetWall or resetWall:FindFirstChildWhichIsA("BasePart", true)
+        if wallPart and wallPart.Transparency < 1 and wallPart.CanCollide then
+            return false
+        end
+    end
+
+    return true
+end
+
+-- ==========================================
+-- មុខងារឆែកមើលថា Egg នោះជា Rainbow / Special Egg (Rainbow, Glow, RadicalHalo)
+-- ==========================================
+local function isRainbowEgg(slot)
+    local slotNameLower = string.lower(slot.Name)
+    
+    -- ១. ឆែកឈ្មោះ Slot
+    for _, keyword in ipairs(RAINBOW_KEYWORDS) do
+        if string.find(slotNameLower, keyword) then
+            return true
+        end
+    end
+
+    -- ២. ឆែកមើល រាល់ Childs & Descendants ទាំងអស់នៅក្នុង Slot
+    for _, item in ipairs(slot:GetDescendants()) do
+        local itemNameLower = string.lower(item.Name)
+        for _, keyword in ipairs(RAINBOW_KEYWORDS) do
+            if string.find(itemNameLower, keyword) then
+                return true
+            end
+        end
+    end
+
+    return false
 end
 
 -- ==========================================
@@ -262,7 +319,6 @@ task.spawn(function()
     local MAX_PROXIMITY_DIST = 2
     local WAIT_AT_BASE = 1
     
-    -- កែប្រែ CFrame ថ្មីតាមសំណូមពរ
     local originalCFrame = CFrame.new(538.479553, 70.8011246, -409.704681, 0.730235636, 8.46091197e-08, -0.683195353, -5.78969193e-08, 1, 6.19599163e-08, 0.683195353, -5.69043168e-09, 0.730235636)
 
     local function getGroundYForPosition(targetPosition)
@@ -380,7 +436,7 @@ task.spawn(function()
     local function getTargetEgg()
         local slots = areaEggSlotsClient:GetChildren()
 
-        -- ១. ពិនិត្យរកស៊ុត MonsterParasiteVisual មុនគេ
+        -- ១. ពិនិត្យរកស៊ុត Monster Parasite
         if getgenv().AutoMonsterEgg then
             for _, slot in ipairs(slots) do
                 local hasMonster = slot:FindFirstChild("MonsterParasiteVisual", true)
@@ -390,16 +446,16 @@ task.spawn(function()
             end
         end
 
-        -- ២. ពិនិត្យរកស៊ុត Rainbow
+        -- ២. ពិនិត្យរក Rainbow Egg (ឆែករក Rainbow, Glow, ឬ RadicalHalo)
         if getgenv().AutoRainbowEgg then
             for _, slot in ipairs(slots) do
-                local hasRainbow = slot:FindFirstChild("Hitbox.FX.Rainbow", true) or slot:FindFirstChild("FX.Rainbow", true)
-                if hasRainbow then
+                if isRainbowEgg(slot) then
                     return slot
                 end
             end
         end
 
+        -- ៣. ពិនិត្យរក Part Farm Egg
         if getgenv().AutoPartFarm then
             local bestPartEgg = nil
             local maxParts = -1
@@ -413,6 +469,7 @@ task.spawn(function()
             if bestPartEgg then return bestPartEgg end
         end
 
+        -- ៤. ពិនិត្យរក Big Egg
         if getgenv().AutoBigEgg then
             local bestBigEgg = nil
             local maxVolume = -1
@@ -426,6 +483,7 @@ task.spawn(function()
             if bestBigEgg then return bestBigEgg end
         end
 
+        -- ៥. ពិនិត្យ Auto Farm តាម Area
         if getgenv().AutoInteract then
             for _, slot in ipairs(slots) do
                 local hitbox = slot:FindFirstChild("Hitbox", true)
@@ -439,14 +497,18 @@ task.spawn(function()
     end
 
     while true do
-        local targetSlot = getTargetEgg()
-        if targetSlot then
-            local hitbox = targetSlot:FindFirstChild("Hitbox", true) or (targetSlot:IsA("BasePart") and targetSlot) or targetSlot:FindFirstChildWhichIsA("BasePart", true)
-            if hitbox then
-                stealEggAtLocation(hitbox)
+        if isWallOpenOrCountdownFinished() then
+            local targetSlot = getTargetEgg()
+            if targetSlot then
+                local hitbox = targetSlot:FindFirstChild("Hitbox", true) or (targetSlot:IsA("BasePart") and targetSlot) or targetSlot:FindFirstChildWhichIsA("BasePart", true)
+                if hitbox then
+                    stealEggAtLocation(hitbox)
+                end
+            else
+                task.wait(0.5)
             end
         else
-            task.wait(0.5)
+            task.wait(0.2)
         end
         task.wait(0.1)
     end
@@ -462,7 +524,6 @@ local window = Rayfield:CreateWindow({
 })
 
 local tab = window:CreateTab({ name = "Farm"})
-
 local tab1 = window:CreateTab({ name = "Event"})
 
 window:Notify({
@@ -500,7 +561,7 @@ tab:CreateToggle({
 })
 
 tab:CreateToggle({
-    name = "លួចស៊ុត៧ពណ៏(Rainbow Testing)",
+    name = "លួចស៊ុត៧ពណ៏(Rainbow / Glow / Halo)",
     flag = "auto_rainbow_egg",
     value = false,
     callback = function(value)
@@ -528,7 +589,6 @@ tab1:CreateToggle({
 
 local autoFeedEnabled = false
 
--- បង្កើត Toggle សម្រាប់បញ្ជាការ Feed
 local feedToggle = tab1:CreateToggle({
     name = "អោយពីសាច់កង្កែបសុី(Feed Monsters)",
     flag = "AutoFeed",
@@ -538,7 +598,6 @@ local feedToggle = tab1:CreateToggle({
     end,
 })
 
--- កូដដំណើរការរៀងរាល់ 0.5 វិនាទី
 task.spawn(function()
     while true do
         if autoFeedEnabled then
@@ -564,9 +623,6 @@ task.spawn(function()
         task.wait(0.5)
     end
 end)
-
-
-
 
 -- ==========================================
 -- ៨. ប្រព័ន្ធ Bypass & Startup Tween
@@ -614,7 +670,6 @@ task.spawn(function()
     local areas = objects and objects:FindFirstChild("Areas")
     local guardAreas = areas and areas:FindFirstChild("GuardAreas")
     
-    -- កែប្រែ CFrame ពេលចាប់ផ្តើមថ្មីតាមសំណូមពរ
     local targetCFrame = CFrame.new(538.479553, 70.8011246, -409.704681, 0.730235636, 8.46091197e-08, -0.683195353, -5.78969193e-08, 1, 6.19599163e-08, 0.683195353, -5.69043168e-09, 0.730235636)
 
     local function getGuardAreaGroundY(currentPos)
@@ -658,7 +713,7 @@ task.spawn(function()
     task.wait(1)
     window:Notify({
         title = "---ការនែនាំ---",
-        content = "កុំExecute​ Script​ ពីរដងជាប់គ្នារ\nចុចតែម្តងបានហើយមិនចឹងទេវាទាញចុះឡើងដំណើរការមិនស្រួស\nប្រសិនជួបករណីនឹងClear​ Gameចូលម្តងទៀត",
+        content = "កុំExecute Script ពីរដងជាប់គ្នារ\nចុចតែម្តងបានហើយមិនចឹងទេវាទាញចុះឡើងដំណើរការមិនស្រួស\nប្រសិនជួបករណីនឹងClear Gameចូលម្តងទៀត",
         duration = 5,
     })
 end)
