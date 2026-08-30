@@ -313,7 +313,7 @@ task.spawn(function()
     local objects = Workspace:WaitForChild("__OBJECTS", 5)
     local areas = objects and objects:WaitForChild("Areas", 5)
     local guardAreas = areas and areas:WaitForChild("GuardAreas", 5)
-    local SPEED = 800
+    local SPEED = 630
     local FLY_OFFSET_HEIGHT = 3
     local HEIGHT_OFFSET = 1.5
     local MAX_PROXIMITY_DIST = 2
