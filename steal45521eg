@@ -1,12 +1,39 @@
+-- Services
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Lighting = game:GetService("Lighting")
+
 local player = Players.LocalPlayer
 local camera = Workspace.CurrentCamera
 camera.CameraType = Enum.CameraType.Scriptable
+
+-- Optimization Function
+local function optimizeObject(v)
+    local character = player.Character
+    if character and v:IsDescendantOf(character) then
+        return
+    end
+
+    if v:IsA("BasePart") then
+        v.Material = Enum.Material.SmoothPlastic
+        v.CastShadow = false
+        v.Reflectance = 0
+        v.TopSurface = Enum.SurfaceType.Smooth
+        v.BottomSurface = Enum.SurfaceType.Smooth
+    elseif v:IsA("Decal") or v:IsA("Texture") then
+        if v.Parent and not v.Parent:FindFirstChildOfClass("Humanoid") then
+            v:Destroy()
+        end
+    elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
+        v.Enabled = false
+    elseif v:IsA("PointLight") or v:IsA("SpotLight") or v:IsA("SurfaceLight") then
+        v.Enabled = false
+    end
+end
 
 -- Global States
 getgenv().AutoInteract = false
@@ -19,23 +46,19 @@ getgenv().AutoMonsterEgg = false
 local COLOR_BIGGEST = Color3.fromRGB(255, 0, 128)
 local COLOR_NORMAL  = Color3.fromRGB(0, 255, 128)
 local MIN_PARTS_COUNT = 20
-local allAreaNames = {"Titan Temple", "Cherry Blossom", "Cosmic", "Prehistoric", "Abyss Ocean", "Desert", "Jungle", "Lake", "Snow", "Volcano" }
-local selectedModules = {"Titan Temple" }
-
--- Key Words សម្រាប់ Detect Rainbow / Special Eggs
+local allAreaNames = {"Titan Temple", "Cherry Blossom", "Cosmic", "Prehistoric", "Abyss Ocean", "Desert", "Jungle", "Lake", "Snow", "Volcano"}
+local selectedModules = {"Titan Temple"}
 local RAINBOW_KEYWORDS = {"rainbow", "glow", "radicalhalo"}
 
--- Safe Character Getter Helper
+-- Helper: Get Character Root Part safely
 local function getHRP()
     local char = player.Character or player.CharacterAdded:Wait()
     return char:WaitForChild("HumanoidRootPart", 5)
 end
 
--- ==========================================
--- មុខងារពិនិត្យមើលថា Reset Countdown ចប់ ឬជញ្ជាំងទម្លាក់ចុះហើយ (Can Farm)
--- ==========================================
+-- Helper: Wall/Reset Check
 local function isWallOpenOrCountdownFinished()
-    local playerGui = player:FindFirstChild("PlayerGui") or CoreGui
+    local playerGui = player:FindFirstChild("PlayerGui") or game:GetService("CoreGui")
     local resetTimerGui = playerGui:FindFirstChild("ResetStartTimer") or Workspace:FindFirstChild("ResetStartTimer")
     
     if resetTimerGui and resetTimerGui.Enabled then
@@ -59,25 +82,24 @@ local function isWallOpenOrCountdownFinished()
     return true
 end
 
--- ==========================================
--- មុខងារឆែកមើលថា Egg នោះជា Rainbow / Special Egg (Rainbow, Glow, RadicalHalo)
--- ==========================================
+-- Helper: Rainbow/Special Egg Check
 local function isRainbowEgg(slot)
+    if not slot or not slot.Name then return false end
     local slotNameLower = string.lower(slot.Name)
     
-    -- ១. ឆែកឈ្មោះ Slot
     for _, keyword in ipairs(RAINBOW_KEYWORDS) do
         if string.find(slotNameLower, keyword) then
             return true
         end
     end
 
-    -- ២. ឆែកមើល រាល់ Childs & Descendants ទាំងអស់នៅក្នុង Slot
     for _, item in ipairs(slot:GetDescendants()) do
-        local itemNameLower = string.lower(item.Name)
-        for _, keyword in ipairs(RAINBOW_KEYWORDS) do
-            if string.find(itemNameLower, keyword) then
-                return true
+        if item and item.Name then
+            local itemNameLower = string.lower(item.Name)
+            for _, keyword in ipairs(RAINBOW_KEYWORDS) do
+                if string.find(itemNameLower, keyword) then
+                    return true
+                end
             end
         end
     end
@@ -85,9 +107,7 @@ local function isRainbowEgg(slot)
     return false
 end
 
--- ==========================================
--- ១. កូដបញ្ជាកាមេរ៉ា (Camera System Support PC & Mobile)
--- ==========================================
+-- 1. Camera Control System
 local distance = 12
 local angleX = 0
 local angleY = 15
@@ -137,9 +157,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ==========================================
--- ២. កូដ Fly & Noclip
--- ==========================================
+-- 2. Fly & Noclip Loops
 local bodyVelocity = nil
 local bodyGyro = nil
 
@@ -167,9 +185,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- ==========================================
--- ៣. ប្រព័ន្ធ ESP មើលឃើញស៊ុតដើម (Volume ESP)
--- ==========================================
+-- 3. Volume ESP System
 local function getEggSize(slot)
     local targetPart = slot:FindFirstChild("Hitbox", true) or (slot:IsA("BasePart") and slot or slot:FindFirstChildWhichIsA("BasePart", true))
     if targetPart then
@@ -214,7 +230,7 @@ local function updateEggESP()
                 textLabel.Parent = billboard
                 billboard.Parent = slot
             end
-            if billboard then
+            if billboard and billboard:FindFirstChild("Label") then
                 local isBiggest = (slot == biggestSlot)
                 local textLabel = billboard.Label
                 if isBiggest then
@@ -238,9 +254,7 @@ task.spawn(function()
     end
 end)
 
--- ==========================================
--- ៤. ប្រព័ន្ធ ESP តាមចំនួន Parts >= 20
--- ==========================================
+-- 4. Multi-Part ESP System
 local function countParts(object)
     local count = object:IsA("BasePart") and 1 or 0
     for _, descendant in ipairs(object:GetDescendants()) do
@@ -305,9 +319,7 @@ task.spawn(function()
     end
 end)
 
--- ==========================================
--- ៥. ប្រព័ន្ធ Auto-Farm តាមលំដាប់អាទិភាព
--- ==========================================
+-- 5. Priority Auto-Farm System
 task.spawn(function()
     local areaEggSlotsClient = Workspace:WaitForChild("AreaEggSlotsClient")
     local objects = Workspace:WaitForChild("__OBJECTS", 5)
@@ -436,7 +448,6 @@ task.spawn(function()
     local function getTargetEgg()
         local slots = areaEggSlotsClient:GetChildren()
 
-        -- ១. ពិនិត្យរកស៊ុត Monster Parasite
         if getgenv().AutoMonsterEgg then
             for _, slot in ipairs(slots) do
                 local hasMonster = slot:FindFirstChild("MonsterParasiteVisual", true)
@@ -446,7 +457,6 @@ task.spawn(function()
             end
         end
 
-        -- ២. ពិនិត្យរក Rainbow Egg (ឆែករក Rainbow, Glow, ឬ RadicalHalo)
         if getgenv().AutoRainbowEgg then
             for _, slot in ipairs(slots) do
                 if isRainbowEgg(slot) then
@@ -455,7 +465,6 @@ task.spawn(function()
             end
         end
 
-        -- ៣. ពិនិត្យរក Part Farm Egg
         if getgenv().AutoPartFarm then
             local bestPartEgg = nil
             local maxParts = -1
@@ -469,7 +478,6 @@ task.spawn(function()
             if bestPartEgg then return bestPartEgg end
         end
 
-        -- ៤. ពិនិត្យរក Big Egg
         if getgenv().AutoBigEgg then
             local bestBigEgg = nil
             local maxVolume = -1
@@ -483,7 +491,6 @@ task.spawn(function()
             if bestBigEgg then return bestBigEgg end
         end
 
-        -- ៥. ពិនិត្យ Auto Farm តាម Area
         if getgenv().AutoInteract then
             for _, slot in ipairs(slots) do
                 local hitbox = slot:FindFirstChild("Hitbox", true)
@@ -514,19 +521,17 @@ task.spawn(function()
     end
 end)
 
--- ==========================================
--- ៦. បង្កើត Rayfield UI (Rayfield 2022)
--- ==========================================
+-- 6. Rayfield UI Initialization
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local window = Rayfield:CreateWindow({
     Name = "[STEAL AN EGG] ToaToa Hub - By 2BK2 ",
     LoadingTitle = "Welcome to (ToaToa Hub) ",
     LoadingSubtitle = "by 2BK2",
     ConfigurationSaving = {
-      Enabled = true,
-      FolderName = "RayfieldTestConfig", -- ឈ្មោះ Folder សម្រាប់រក្សាទុក Config
-      FileName = "PlayerSettings" -- ឈ្មោះ File Config
-   },
+        Enabled = true,
+        FolderName = "RayfieldTestConfig",
+        FileName = "PlayerSettings"
+    },
     Discord = {
         Enabled = false,
         Invite = "noinvite",
@@ -546,8 +551,7 @@ Rayfield:Notify({
     Actions = {
         Ignored = {
             Name = "យល់ព្រម!",
-            Callback = function()
-            end
+            Callback = function() end
         },
     },
 })
@@ -599,6 +603,35 @@ tab:CreateToggle({
     end,
 })
 
+tab:CreateToggle({
+    Name = '<font size="24"><b>ធ្វើអោយស្មូតជាងមុន</b></font>(Boost FPS)',
+    CurrentValue = false,
+    Flag = "OptimizationToggle",
+    Callback = function(Value)
+        if Value then
+            for _, v in ipairs(Workspace:GetDescendants()) do
+                pcall(optimizeObject, v)
+            end
+
+            Workspace.DescendantAdded:Connect(optimizeObject)
+
+            Lighting.GlobalShadows = false
+            Lighting.FogEnd = 9e9
+            Lighting.Brightness = 1
+
+            local targetsToDelete = { "ClientRenderedAssets", "PlacedEggRenders" }
+            for _, name in ipairs(targetsToDelete) do
+                local target = Workspace:FindFirstChild(name)
+                if target then
+                    pcall(function() target:Destroy() end)
+                end
+            end
+            
+            print("🚀 FPS boosted and workspace optimized.")
+        end
+    end,
+})
+
 tab1:CreateToggle({
     Name = '<font size="24"><b>លួចស៊ុតដែរមានពីងពាង</b></font>(Spider Egg)',
     CurrentValue = false,
@@ -610,7 +643,7 @@ tab1:CreateToggle({
 
 local autoFeedEnabled = false
 
-local feedToggle = tab1:CreateToggle({
+tab1:CreateToggle({
     Name = '<font size="24"><b>អោយពីសាច់កង្កែបសុី</b></font>(Feed Monsters)',
     CurrentValue = false,
     Flag = "AutoFeed",
@@ -645,9 +678,7 @@ task.spawn(function()
     end
 end)
 
--- ==========================================
--- ៨. ប្រព័ន្ធ Bypass & Startup Tween
--- ==========================================
+-- 7. Bypass & Startup Sequence
 local playerScripts = player:WaitForChild("PlayerScripts")
 local gameFolder = playerScripts:WaitForChild("Game", 5)
 local obbyStages = gameFolder and gameFolder:WaitForChild("ObbyStages", 5)
@@ -740,5 +771,6 @@ task.spawn(function()
         Image = 4483362458,
     })
 end)
+
 task.wait(3)
 Rayfield:LoadConfiguration()
