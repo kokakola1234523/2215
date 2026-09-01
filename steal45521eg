@@ -515,74 +515,95 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- ៦. បង្កើត Rayfield UI (Gen 2)
+-- ៦. បង្កើត Rayfield UI (Rayfield 2022)
 -- ==========================================
-local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local window = Rayfield:CreateWindow({
-    name = "Steal an Egg",
-    subtitle = "Toa Toa Hub   -   by 2BK2",
+    Name = "[STEAL AN EGG] ToaToa Hub - By 2BK2 ",
+    LoadingTitle = "Welcome to (ToaToa Hub) ",
+    LoadingSubtitle = "by 2BK2",
+    ConfigurationSaving = {
+      Enabled = true,
+      FolderName = "RayfieldTestConfig", -- ឈ្មោះ Folder សម្រាប់រក្សាទុក Config
+      FileName = "PlayerSettings" -- ឈ្មោះ File Config
+   },
+    Discord = {
+        Enabled = false,
+        Invite = "noinvite",
+        RememberJoins = true
+    },
+    KeySystem = false,
 })
 
-local tab = window:CreateTab({ name = "Farm"})
-local tab1 = window:CreateTab({ name = "Event"})
+local tab = window:CreateTab("Farm", 4483362458)
+local tab1 = window:CreateTab("Event", 4483362458)
 
-window:Notify({
-    title = "----ហាមចុចបើកអីទាំងអស់----\n!រង់ចាំបន្តិចសិន!",
-    content = "មិនទាន់លេងបានទេចាំអោយប្រព័ន្ធដំណើរការចប់សិន\nហាមចុចបើកមុខងារអីទាំងអស់",
-    duration = 10,
+Rayfield:Notify({
+    Title = "----ហាមចុចបើកអីទាំងអស់----\n!រង់ចាំបន្តិចសិន!",
+    Content = "មិនទាន់លេងបានទេចាំអោយប្រព័ន្ធដំណើរការចប់សិន\nហាមចុចបើកមុខងារអីទាំងអស់",
+    Duration = 10,
+    Image = 4483362458,
+    Actions = {
+        Ignored = {
+            Name = "យល់ព្រម!",
+            Callback = function()
+            end
+        },
+    },
 })
 
 tab:CreateDropdown({
-    name = "ជ្រើសរើសទីតាំង(Select Areas)",
-    multiSelect = true,
-    options = allAreaNames,
-    value = selectedModules,
-    callback = function(selected)
+    Name = '<font size="24"><b>ជ្រើសរើសទីតាំង</b></font>(Select Areas)',
+    Options = allAreaNames,
+    CurrentOption = selectedModules,
+    MultipleOptions = true,
+    Flag = "AreaDropdown",
+    Callback = function(selected)
         selectedModules = selected
     end,
 })
 
 tab:CreateToggle({
-    name = "លួចតែស៊ុតនៅទីតាំងដែរបានជ្រើសរើស(Select)",
-    flag = "steal_dropdown",
-    value = false,
-    callback = function(value)
+    Name = '<font size="24"><b>លួចតែស៊ុតនៅទីតាំងដែរបានជ្រើសរើស</b></font>(Select)',
+    CurrentValue = false,
+    Flag = "steal_dropdown",
+    Callback = function(value)
         getgenv().AutoInteract = value
     end,
 })
 
 tab:CreateToggle({
-    name = "លួចតែស៊ុតធំៗ(Steal Big Egg)",
-    flag = "steal_bigeggs",
-    value = false,
-    callback = function(value)
+    Name = '<font size="24"><b>លួចតែស៊ុតធំៗ</b></font>(Steal Big Egg)',
+    CurrentValue = false,
+    Flag = "steal_bigeggs",
+    Callback = function(value)
         getgenv().AutoBigEgg = value
     end,
 })
 
 tab:CreateToggle({
-    name = "លួចស៊ុត៧ពណ៏(Rainbow / Glow / Halo)",
-    flag = "auto_rainbow_egg",
-    value = false,
-    callback = function(value)
+    Name = '<font size="24"><b>លួចស៊ុត៧ពណ៏</b></font>(Rainbow, Devine)',
+    CurrentValue = false,
+    Flag = "auto_rainbow_egg",
+    Callback = function(value)
         getgenv().AutoRainbowEgg = value
     end,
 })
 
 tab:CreateToggle({
-    name = "លួចស៊ុតដែលមានស្លាប(MASSIVE EGGS)",
-    flag = "auto_part_farm",
-    value = false,
-    callback = function(value)
+    Name = '<font size="24"><b>លួចស៊ុតដែលមានស្លាប</b></font>(MASSIVE EGGS)',
+    CurrentValue = false,
+    Flag = "auto_part_farm",
+    Callback = function(value)
         getgenv().AutoPartFarm = value
     end,
 })
 
 tab1:CreateToggle({
-    name = "លួចស៊ុតដែរមានពីងពាងនៅលើEgg",
-    flag = "auto_monster_egg",
-    value = false,
-    callback = function(value)
+    Name = '<font size="24"><b>លួចស៊ុតដែរមានពីងពាង</b></font>(Spider Egg)',
+    CurrentValue = false,
+    Flag = "auto_monster_egg",
+    Callback = function(value)
         getgenv().AutoMonsterEgg = value
     end,
 })
@@ -590,10 +611,10 @@ tab1:CreateToggle({
 local autoFeedEnabled = false
 
 local feedToggle = tab1:CreateToggle({
-    name = "អោយពីសាច់កង្កែបសុី(Feed Monsters)",
-    flag = "AutoFeed",
-    value = false,
-    callback = function(value)
+    Name = '<font size="24"><b>អោយពីសាច់កង្កែបសុី</b></font>(Feed Monsters)',
+    CurrentValue = false,
+    Flag = "AutoFeed",
+    Callback = function(value)
         autoFeedEnabled = value
     end,
 })
@@ -704,16 +725,20 @@ task.spawn(function()
     local tweenToTarget = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
     tweenToTarget:Play()
 
-    window:Notify({
-        title = "---ប្រព័ន្ធដំណើរការហើយ---",
-        content = "អាចប្រើប្រាស់បានហើយ",
-        duration = 5,
+    Rayfield:Notify({
+        Title = "---ប្រព័ន្ធដំណើរការហើយ---",
+        Content = "អាចប្រើប្រាស់បានហើយ",
+        Duration = 5,
+        Image = 4483362458,
     })
 
     task.wait(1)
-    window:Notify({
-        title = "---ការនែនាំ---",
-        content = "កុំExecute Script ពីរដងជាប់គ្នារ\nចុចតែម្តងបានហើយមិនចឹងទេវាទាញចុះឡើងដំណើរការមិនស្រួស\nប្រសិនជួបករណីនឹងClear Gameចូលម្តងទៀត",
-        duration = 5,
+    Rayfield:Notify({
+        Title = "---ការនែនាំ---",
+        Content = "កុំExecute Script ពីរដងជាប់គ្នារ\nចុចតែម្តងបានហើយមិនចឹងទេវាទាញចុះឡើងដំណើរការមិនស្រួស\nប្រសិនជួបករណីនឹងClear Gameចូលម្តងទៀត",
+        Duration = 5,
+        Image = 4483362458,
     })
 end)
+task.wait(3)
+Rayfield:LoadConfiguration()
