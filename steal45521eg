@@ -1,4 +1,4 @@
-loadstring(game:HttpGet("https://zeroinhub.com/api/script"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/miirandahub/loader/refs/heads/main/stealaeggs"))()
 
 task.wait(1)
 
