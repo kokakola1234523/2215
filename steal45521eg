@@ -67,7 +67,7 @@ local function tweenToCheckpointFirst(hrp, speed)
     local tweenInfo = TweenInfo.new(math.max(duration, 0.1), Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
     
     -- ហោះឡើងលើបន្តិចមុននឹងទៅ (ដើម្បីកុំឲ្យបុក)
-    local highStartCF = CFrame.new(hrp.Position.X, hrp.Position.Y + 60, hrp.Position.Z) * hrp.CFrame.Rotation
+    local highStartCF = CFrame.new(hrp.Position.X, hrp.Position.Y + 0, hrp.Position.Z) * hrp.CFrame.Rotation
     local tweenUp = TweenService:Create(hrp, TweenInfo.new(1, Enum.EasingStyle.Linear), {CFrame = highStartCF})
     tweenUp:Play()
     tweenUp.Completed:Wait()
@@ -349,7 +349,7 @@ task.spawn(function()
     local areas = objects and objects:WaitForChild("Areas", 5)
     local guardAreas = areas and areas:WaitForChild("GuardAreas", 5)
     
-    local SPEED = 500
+    local SPEED = 600
     local FLY_OFFSET_HEIGHT = 3
     local HEIGHT_OFFSET = 1.5
     local MAX_PROXIMITY_DIST = 2
@@ -612,7 +612,7 @@ task.spawn(function()
                 tween.Completed:Wait()
                 
                 -- Anchor ពេលទៅដល់ម៉ាស៊ីនរត់
-                hrp.Anchored = true
+                hrp.Anchored = false
             end
         end
     end
