@@ -11,6 +11,22 @@ local player = Players.LocalPlayer
 local camera = Workspace.CurrentCamera
 camera.CameraType = Enum.CameraType.Scriptable
 
+-- Anti-AFK (Support ទាំង PC និង Phone 100%)
+local player = game:GetService("Players").LocalPlayer
+local VirtualUser = game:GetService("VirtualUser")
+
+player.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
+end)
+
+-- កាត់ផ្ដាច់មុខងារទាត់ចេញ (Kick) របស់ Roblox នៅពេលទុកចោលយូរ
+pcall(function()
+    for _, connection in pairs(getconnections(player.Idled)) do
+        connection:Disable()
+    end
+end)
+
 -- Optimization Function
 local function optimizeObject(v)
     local character = player.Character
