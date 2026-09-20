@@ -693,7 +693,7 @@ tab:CreateDropdown({
 -- ===== បន្ថែមមុខងារ Slider សារ៉េល្បឿននៅទីនេះ =====
 tab:CreateSlider({
     Name = '<font size="24"><b>កំណត់ល្បឿនហោះ</b></font>(Fly Speed)',
-    Range = {600, 1000},
+    Range = {600, 800},
     Increment = 10,
     Suffix = " Speed",
     CurrentValue = 600,
