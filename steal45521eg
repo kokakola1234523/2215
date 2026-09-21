@@ -43,8 +43,8 @@ getgenv().AutoTreadmill = false
 getgenv().AutoESP = false 
 getgenv().FlySpeed = 600
 
-local allAreaNames = {"Titan Temple", "Cherry Blossom", "Cosmic", "Prehistoric", "Abyss Ocean", "Desert", "Jungle", "Lake", "Snow", "Volcano"}
-local selectedModules = {"Titan Temple"}
+local allAreaNames = {"Light Dark", "Titan Temple", "Cherry Blossom", "Cosmic", "Prehistoric", "Abyss Ocean", "Desert", "Jungle", "Lake", "Snow", "Volcano"}
+local selectedModules = {"Light Dark"}
 local RAINBOW_KEYWORDS = {"rainbow", "glow", "radicalhalo"}
 
 local originalCFrame = CFrame.new(538.479553, 70.8011246, -409.704681, 0.730235636, 8.46091197e-08, -0.683195353, -5.78969193e-08, 1, 6.19599163e-08, 0.683195353, -5.69043168e-09, 0.730235636)
@@ -515,24 +515,6 @@ task.spawn(function()
     local areas = objects and objects:WaitForChild("Areas", 5)
     local guardAreas = areas and areas:WaitForChild("GuardAreas", 5)
 
-    local function getGroundYForPosition(targetPosition)
-        local closestY = targetPosition.Y
-        local shortestDistance = math.huge
-        if guardAreas then
-            for _, part in ipairs(guardAreas:GetChildren()) do
-                local basePart = part:IsA("BasePart") and part or (part.PrimaryPart or part:FindFirstChildWhichIsA("BasePart", true))
-                if basePart then
-                    local dist = (Vector2.new(basePart.Position.X, basePart.Position.Z) - Vector2.new(targetPosition.X, targetPosition.Z)).Magnitude
-                    if dist < shortestDistance then
-                        shortestDistance = dist
-                        closestY = basePart.Position.Y + (basePart.Size.Y / 2)
-                    end
-                end
-            end
-        end
-        return closestY
-    end
-
     local function isHitboxInAllowedArea(hitbox)
         if not hitbox then return false end
         local hitboxPos = hitbox.Position
@@ -573,53 +555,95 @@ task.spawn(function()
         end
     end
 
-    local function stealEggAtLocation(hitbox)
+
+        local function stealEggAtLocation(hitbox)
         local hrp = getHRP()
         if not hrp or not hitbox then return end
+
         hrp.Anchored = false
         hrp.AssemblyLinearVelocity = Vector3.zero
 
-        tweenToCheckpointFirst(hrp, getgenv().FlySpeed)
+        -- ១. Tween ទៅទីតាំង Nests (មិនឲ្យចូលដី គឺនៅកម្ពស់ស្មើពេលយក Egg)
+        local nestsFolder = workspace:FindFirstChild("__OBJECTS")
+            and workspace.__OBJECTS:FindFirstChild("Areas")
+            and workspace.__OBJECTS.Areas:FindFirstChild("GuardAreas")
+            and workspace.__OBJECTS.Areas.GuardAreas:FindFirstChild("Lake")
+            and workspace.__OBJECTS.Areas.GuardAreas.Lake:FindFirstChild("Nests")
 
-        local targetPos = hitbox.Position
-        local groundY = getGroundYForPosition(targetPos)
-        local flyY = groundY + Config.Farm.FlyOffsetHeight
-        local collectTargetCF = CFrame.new(targetPos.X, targetPos.Y + Config.Farm.HeightOffset, targetPos.Z) * hitbox.CFrame.Rotation
-        local highTargetCF = CFrame.new(targetPos.X, flyY, targetPos.Z) * hitbox.CFrame.Rotation
+        if nestsFolder then
+            local nestPart = nestsFolder:IsA("BasePart") and nestsFolder or nestsFolder.PrimaryPart or nestsFolder:FindFirstChildWhichIsA("BasePart", true)
+            if nestPart then
+                -- [កែប្រែថ្មី] លើកកម្ពស់ឡើងកុំឲ្យកប់ដី
+                local nestPos = nestPart.Position
+                local nestTargetCF = CFrame.new(nestPos.X, nestPos.Y + Config.Farm.HeightOffset, nestPos.Z) * nestPart.CFrame.Rotation
+                
+                local tween1 = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, nestTargetCF), {CFrame = nestTargetCF})
+                tween1:Play()
+                tween1.Completed:Wait()
 
-        local success, _ = pcall(function()
-            local tweenFlyTo = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, highTargetCF), {CFrame = highTargetCF})
-            tweenFlyTo:Play()
-            tweenFlyTo.Completed:Wait()
+                -- ២. ចុច Fire ProximityPrompt ក្នុងចម្ងាយ 20 ពីខ្លួន (ចុច ២ ដង)
+                task.wait(0.5)
+                local function firePromptsInRadius(radius)
+                    local currentPos = hrp.Position
+                    for _, prompt in ipairs(Workspace:GetDescendants()) do
+                        if prompt:IsA("ProximityPrompt") and prompt.Enabled then
+                            local parentPart = prompt.Parent
+                            if parentPart and parentPart:IsA("BasePart") then
+                                if (parentPart.Position - currentPos).Magnitude <= radius then
+                                    safeFirePrompt(prompt)
+                                end
+                            end
+                        end
+                    end
+                end
 
-            local tweenDownToEgg = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, collectTargetCF), {CFrame = collectTargetCF})
-            tweenDownToEgg:Play()
-            tweenDownToEgg.Completed:Wait()
-        end)
-
-        if not success then
-            hrp.Anchored = false
-            tweenToCheckpointFirst(hrp, getgenv().FlySpeed)
-            return
+                firePromptsInRadius(20) -- ចុចលើកទី ១
+                task.wait(0.5)
+                firePromptsInRadius(20) -- ចុចលើកទី ២
+                task.wait(0)
+            end
         end
 
-        hrp.Anchored = true
-        hrp.CFrame = collectTargetCF
+        -- ៣. Tween ទៅប៉ះ Guard Model 
+        local guardModel = workspace:FindFirstChild("__OBJECTS")
+            and workspace.__OBJECTS:FindFirstChild("Areas")
+            and workspace.__OBJECTS.Areas:FindFirstChild("GuardAreas")
+            and workspace.__OBJECTS.Areas.GuardAreas:FindFirstChild("Lake")
+            and workspace.__OBJECTS.Areas.GuardAreas.Lake:FindFirstChild("Guard")
+            and workspace.__OBJECTS.Areas.GuardAreas.Lake.Guard:FindFirstChild("Model")
+
+        if guardModel then
+            local guardPart = guardModel:IsA("BasePart") and guardModel or guardModel.PrimaryPart or guardModel:FindFirstChildWhichIsA("BasePart", true)
+            if guardPart then
+                -- [កែប្រែថ្មី] លើកកម្ពស់ឡើងកុំឲ្យកប់ដីដូចគ្នា
+                local guardPos = guardPart.Position
+                local guardTargetCF = CFrame.new(guardPos.X, guardPos.Y + Config.Farm.HeightOffset, guardPos.Z) * guardPart.CFrame.Rotation
+
+                local tween2 = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, guardTargetCF), {CFrame = guardTargetCF})
+                tween2:Play()
+                tween2.Completed:Wait()
+                task.wait(0.2)
+            end
+        end
+
+        -- ៤. Tween ទៅយក Egg ដែលជា Target (ប្រើពេល Exactly ៣ វិនាទី)
+        local targetPos = hitbox.Position
+        local collectTargetCF = CFrame.new(targetPos.X, targetPos.Y + Config.Farm.HeightOffset, targetPos.Z) * hitbox.CFrame.Rotation
+
+        local tweenEggInfo = TweenInfo.new(5, Enum.EasingStyle.Linear)
+        local tweenToEgg = TweenService:Create(hrp, tweenEggInfo, {CFrame = collectTargetCF})
+        tweenToEgg:Play()
+        tweenToEgg.Completed:Wait()
+
+        -- បញ្ឈប់តួអង្គហើយចុចយក
+        hrp.Anchored = false
         task.wait(0.5)
         interactNearbyPrompts()
-        task.wait(5)
-        interactNearbyPrompts()
-        task.wait(0.4)
-
-        hrp = getHRP()
-        if not hrp then return end
+        task.wait(0.2) 
         hrp.Anchored = false
 
+        -- ៥. ត្រឡប់មក Base (originalCFrame) វិញ
         pcall(function()
-            local tweenBackUp = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, highTargetCF), {CFrame = highTargetCF})
-            tweenBackUp:Play()
-            tweenBackUp.Completed:Wait()
-
             local tweenFlyBack = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, originalCFrame), {CFrame = originalCFrame})
             tweenFlyBack:Play()
             tweenFlyBack.Completed:Wait()
@@ -627,6 +651,8 @@ task.spawn(function()
         
         task.wait(Config.Farm.WaitAtBase)
     end
+
+    
 
     local function getTargetEgg()
         local slots = areaEggSlotsClient:GetChildren()
