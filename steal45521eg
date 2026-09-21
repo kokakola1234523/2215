@@ -745,7 +745,26 @@ task.spawn(function()
     end
 
     -- Main Loop
+    -- ==========================================
+    -- Main Loop ថ្មី (បញ្ជា Event, Auto Steal, និង Treadmill)
+    -- ==========================================
     while true do
+        -- ឆែកមើល Event
+        local isEventActive = Workspace:GetAttribute("ScrambleOutbreakActive") == true
+
+        if getgenv().AutoFarmEvent and isEventActive then
+            -- ពេលមាន Event: បញ្ឈប់ការរត់ម៉ាស៊ីន ហើយទុកឱ្យ Auto Event ធ្វើការ
+            restoreHumanoid()
+            if isCurrentlyOnTreadmill then
+                leaveTreadmill()
+                isCurrentlyOnTreadmill = false
+                task.wait(0.5)
+            end
+            task.wait(0.2)
+            continue -- រំលងកូដលួចស៊ុតខាងក្រោមសិន ដើម្បីទៅវ៉ៃ Event
+        end
+
+        -- ពេលគ្មាន Event: ដំណើរការ Auto Steal និង Auto Treadmill ជាធម្មតា
         if isWallOpenOrCountdownFinished() then
             local targetSlot = getTargetEgg()
             if targetSlot then
@@ -762,7 +781,6 @@ task.spawn(function()
             else
                 restoreHumanoid()
                 if getgenv().AutoTreadmill then
-                    -- ឆែកមើលបើផ្លាត ឬលោតចេញឆ្ងាយពីម៉ាស៊ីនរត់
                     local hrp = getHRP()
                     if isCurrentlyOnTreadmill and hrp and lastTreadmillTargetCF then
                         local dist = (hrp.Position - lastTreadmillTargetCF.Position).Magnitude
