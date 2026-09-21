@@ -366,6 +366,121 @@ task.spawn(function()
     end
 end)
 
+
+
+-- ==========================================
+-- [កូដបន្ថែម] Auto Farm Event (Patrol & Attack - Auto Equip)
+-- ==========================================
+getgenv().AutoFarmEvent = false
+
+task.spawn(function()
+    local PatrolPoint1 = CFrame.new(537.947266, 70.2762833, -366.412292, 0.0744361952, 9.28907724e-08, -0.997225761, 3.06048484e-08, 1, 9.54336343e-08, 0.997225761, -3.76236606e-08, 0.0744361952)
+    local PatrolPoint2 = CFrame.new(5140.71826, 70.2762833, -352.817719, 0.0405417159, 8.03723523e-08, 0.999177873, 2.09652775e-08, 1, -8.12891514e-08, -0.999177873, 2.42436435e-08, 0.0405417159)
+    local targetPatrolPoint = 1 
+    local lastTargetPart = nil 
+
+    while true do
+        task.wait(0.1)
+        
+        -- ដំណើរការតែពេលបើកមុខងារនេះប៉ុណ្ណោះ
+        if getgenv().AutoFarmEvent then
+            local char = player.Character
+            if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") and char.Humanoid.Health > 0 then
+                
+                local hum = char.Humanoid
+                local root = char.HumanoidRootPart
+                
+                -- 1. Auto Equip Weapon (ទាញអាវុធទី១ ដែលមានក្នុងកាតាបមកកាន់ដោយស្វ័យប្រវត្តិ)
+                local equippedTool = char:FindFirstChildOfClass("Tool")
+                if not equippedTool then
+                    local backpack = player:FindFirstChild("Backpack")
+                    if backpack then
+                        local tool = backpack:FindFirstChildOfClass("Tool")
+                        if tool then
+                            hum:EquipTool(tool)
+                            equippedTool = tool
+                        end
+                    end
+                end
+                
+                -- 2. ស្វែងរក Hitbox និង ឆែក Event
+                local VisualsFolder = Workspace:FindFirstChild("ScrambleLocalVisuals")
+                local isEventActive = Workspace:GetAttribute("ScrambleOutbreakActive") == true
+                
+                local closestPart = nil
+                local shortestDistance = math.huge
+
+                if VisualsFolder then
+                    for _, object in ipairs(VisualsFolder:GetDescendants()) do
+                        if object:IsA("BasePart") then
+                            local objName = object.Name:lower()
+                            if string.find(objName, "hitbox") or string.find(objName, "rootpart") then
+                                local distance = (root.Position - object.Position).Magnitude
+                                if distance < shortestDistance then
+                                    shortestDistance = distance
+                                    closestPart = object
+                                end
+                            end
+                        end
+                    end
+                end
+                
+                -- 3. លក្ខខណ្ឌទី ១៖ មាន Hitbox -> Tween ទៅវ៉ៃ
+                if closestPart then
+                    if lastTargetPart ~= closestPart then
+                        lastTargetPart = closestPart 
+                        hum:MoveTo(root.Position) -- បញ្ឈប់ការដើរ
+                        
+                        local targetPos = closestPart.Position
+                        local distance = (root.Position - targetPos).Magnitude
+                        
+                        -- Tween ទៅជិត (ចម្ងាយឈប់ = 3)
+                        if distance > 3 then 
+                            root.Anchored = true
+                            local direction = (targetPos - root.Position).Unit
+                            local goalPosition = targetPos - (direction * 3)
+                            
+                            local tweenInfo = TweenInfo.new(distance / 150, Enum.EasingStyle.Linear)
+                            local tween = TweenService:Create(root, tweenInfo, {CFrame = CFrame.new(goalPosition, targetPos)})
+                            tween:Play()
+                            tween.Completed:Wait()
+                            root.Anchored = false
+                        end
+                    end
+                    
+                    -- Script សម្រាប់វាយ (Attack) ដោយអាវុធដែលកំពុងកាន់ក្នុងដៃ
+                    if equippedTool then
+                        equippedTool:Activate()
+                    end
+                    
+                -- លក្ខខណ្ឌទី ២៖ Event ដំណើរការ តែអត់ទាន់ឃើញ Hitbox -> ដើរ Patrol
+                elseif isEventActive then
+                    lastTargetPart = nil 
+                    root.Anchored = false 
+                    
+                    local currentGoal = (targetPatrolPoint == 1) and PatrolPoint1 or PatrolPoint2
+                    local distanceToGoal = (root.Position - currentGoal.Position).Magnitude
+                    
+                    if distanceToGoal < 5 then
+                        targetPatrolPoint = (targetPatrolPoint == 1) and 2 or 1
+                    else
+                        hum:MoveTo(currentGoal.Position)
+                    end
+                
+                -- លក្ខខណ្ឌទី ៣៖ គ្មាន Event
+                else
+                    lastTargetPart = nil
+                    root.Anchored = false
+                    targetPatrolPoint = 1 
+                    hum:MoveTo(root.Position)
+                end
+            end
+        end
+    end
+end)
+
+
+
 -- ==========================================
 -- 5. Auto-Farm & Treadmill System
 -- ==========================================
@@ -765,6 +880,16 @@ tabFarm:CreateToggle({
     CurrentValue = false,
     Flag = "auto_treadmill",
     Callback = function(value) getgenv().AutoTreadmill = value end,
+})
+
+-- ប៊ូតុង បើក/បិទ Auto Farm Event
+tabFarm:CreateToggle({
+    Name = '<font size="24"><b>លេង Event ស្វ័យប្រវត្តិ</b></font>(Auto Farm Event)',
+    CurrentValue = false,
+    Flag = "auto_farm_event_toggle",
+    Callback = function(value)
+        getgenv().AutoFarmEvent = value
+    end,
 })
 
 tabVisuals:CreateToggle({
