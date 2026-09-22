@@ -524,7 +524,7 @@ task.spawn(function()
                 local areaPart = areaObj:IsA("BasePart") and areaObj or (areaObj.PrimaryPart or areaObj:FindFirstChildWhichIsA("BasePart", true))
                 if areaPart then
                     local dist = (Vector2.new(hitboxPos.X, hitboxPos.Z) - Vector2.new(areaPart.Position.X, areaPart.Position.Z)).Magnitude
-                    if dist <= 250 then return true end
+                    if dist <= 500 then return true end
                 end
             end
         end
@@ -697,54 +697,51 @@ task.spawn(function()
     end
 
 
-    local cachedMyPlot = nil -- បង្កើតកន្លែងផ្ទុក (ចងចាំទីតាំងដី)
 
-    local function findMyPlot()
-        -- ១. បើធ្លាប់រកឃើញដីហើយ ហើយដីនោះនៅទីនោះដដែល យកវាទៅប្រើតែម្ដង (ចំណាយពេល 0 វិនាទី)
-        if cachedMyPlot and cachedMyPlot.Parent then
-            return cachedMyPlot
-        end
+    local cachedMyPlot = nil
 
-        -- ២. បើទើបតែចូលហ្គេម មិនទាន់ស្គាល់ដី ទើបវាចាប់ផ្តើមកាយរក
-        local plotsFolder = workspace:FindFirstChild("Plots")
-        if not plotsFolder then return nil end
-
-        for _, plot in ipairs(plotsFolder:GetChildren()) do
-            -- ឆែកឈ្មោះផ្ទាល់ជាមុន
-            if plot.Name == player.Name or plot.Name == tostring(player.UserId) then
-                cachedMyPlot = plot -- ចងចាំទុក
-                return plot
-            end
-            
-            -- កាយរកតាមផ្លាកឈ្មោះ ឬ Value ផ្សេងៗ
-            for _, descendant in ipairs(plot:GetDescendants()) do
-                if (descendant:IsA("TextLabel") or descendant:IsA("TextButton")) and string.find(descendant.Text, player.Name) then
-                    cachedMyPlot = plot -- ចងចាំទុក
-                    return plot
-                elseif descendant:IsA("StringValue") and descendant.Value == player.Name then
-                    cachedMyPlot = plot -- ចងចាំទុក
-                    return plot
-                elseif descendant:IsA("ObjectValue") and descendant.Value == player then
-                    cachedMyPlot = plot -- ចងចាំទុក
-                    return plot
-                elseif (descendant:IsA("IntValue") or descendant:IsA("NumberValue")) and descendant.Value == player.UserId then
-                    cachedMyPlot = plot -- ចងចាំទុក
-                    return plot
-                end
-            end
-        end
-        return nil
+local function findMyPlot()
+    if cachedMyPlot and cachedMyPlot.Parent then
+        return cachedMyPlot
     end
 
+    local plotsFolder = workspace:FindFirstChild("Plots")
+    if not plotsFolder then return nil end
 
+    for _, plot in ipairs(plotsFolder:GetChildren()) do
+        if plot.Name == player.Name or plot.Name == tostring(player.UserId) then
+            cachedMyPlot = plot
+            return plot
+        end
 
-    
+        for attrName, attrValue in pairs(plot:GetAttributes()) do
+            local strVal = tostring(attrValue)
+            if strVal == player.Name or strVal == player.DisplayName or strVal == tostring(player.UserId) then
+                cachedMyPlot = plot
+                return plot
+            end
+        end
 
+        for _, descendant in ipairs(plot:GetDescendants()) do
+            if (descendant:IsA("TextLabel") or descendant:IsA("TextButton")) and (string.find(descendant.Text, player.Name) or string.find(descendant.Text, player.DisplayName)) then
+                cachedMyPlot = plot
+                return plot
+            elseif descendant:IsA("StringValue") and (descendant.Value == player.Name or descendant.Value == player.DisplayName) then
+                cachedMyPlot = plot
+                return plot
+            elseif descendant:IsA("ObjectValue") and descendant.Value == player then
+                cachedMyPlot = plot
+                return plot
+            elseif (descendant:IsA("IntValue") or descendant:IsA("NumberValue")) and descendant.Value == player.UserId then
+                cachedMyPlot = plot
+                return plot
+            end
+        end
+    end
+    return nil
+end
 
-
-    --tweentreadmill
-
-    local function tweenToTreadmillRoot()
+local function tweenToTreadmillRoot()
     local myPlot = findMyPlot()
     if not myPlot then return false end
 
@@ -765,14 +762,16 @@ task.spawn(function()
         if targetCFrame then
             local hrp = getHRP()
             if not hrp then return false end
-            
-            -- [កូដថ្មីបន្ថែម] ស្វែងរក Humanoid និងបើក PlatformStand
+
             local char = player.Character
             local hum = char and char:FindFirstChildOfClass("Humanoid")
+            
+            -- បើក PlatformStand ដើម្បីឱ្យ Humanoid មិនប្រជែងចលនា Tween
             if hum then
-                hum.PlatformStand = true -- បិទ Physics បណ្ដោះអាសន្នពេល Tween
+                hum.PlatformStand = true
             end
 
+            -- រក្សា Anchored = false ដូច Script ចាស់របស់អ្នក ដើម្បីឱ្យ Tween រត់ស្មើដីធម្មតា
             hrp.Anchored = false
             tweenToCheckpointFirst(hrp, Config.Farm.TreadmillTweenSpeed)
             
@@ -783,22 +782,22 @@ task.spawn(function()
             local duration = distance / Config.Farm.TreadmillTweenSpeed
             local tweenInfo = TweenInfo.new(math.max(duration, 0.1), Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
             local tween = TweenService:Create(hrp, tweenInfo, {CFrame = finalCFrame})
+            
             tween:Play()
             tween.Completed:Wait()
             
             hrp.Anchored = false
             
-            -- [កូដថ្មីបន្ថែម] បិទ PlatformStand វិញពេលដល់ម៉ាស៊ីនរត់
+            -- បិទ PlatformStand វិញពេលដល់ទីតាំង
             if hum then
                 hum.PlatformStand = false
             end
-            
+
             return true
         end
     end
     return false
 end
-
 
 
     local function leaveTreadmill()
@@ -906,7 +905,7 @@ end)
 -- ==========================================
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local window = Rayfield:CreateWindow({
-    Name = "[STEAL AN EGG] ToaToa Hub - By 2BK2",
+    Name = "[STEAL AN EGG] ToaToa Hub - Optimized",
     LoadingTitle = "Welcome to (ToaToa Hub)",
     LoadingSubtitle = "by 2BK2",
     ConfigurationSaving = {Enabled = true, FolderName = "RayfieldTestConfig", FileName = "PlayerSettings"},
@@ -1004,7 +1003,7 @@ tabSettings:CreateButton({
 
 tabSettings:CreateSlider({
     Name = '<font size="24"><b>កំណត់ល្បឿនហោះ</b></font>(Fly Speed)',
-    Range = {600, 1000},
+    Range = {600, 800},
     Increment = 10,
     Suffix = " Speed",
     CurrentValue = 600,
