@@ -524,7 +524,7 @@ task.spawn(function()
                 local areaPart = areaObj:IsA("BasePart") and areaObj or (areaObj.PrimaryPart or areaObj:FindFirstChildWhichIsA("BasePart", true))
                 if areaPart then
                     local dist = (Vector2.new(hitboxPos.X, hitboxPos.Z) - Vector2.new(areaPart.Position.X, areaPart.Position.Z)).Magnitude
-                    if dist <= 500 then return true end
+                    if dist <= 250 then return true end
                 end
             end
         end
@@ -696,21 +696,39 @@ task.spawn(function()
         return nil
     end
 
+
+    local cachedMyPlot = nil -- បង្កើតកន្លែងផ្ទុក (ចងចាំទីតាំងដី)
+
     local function findMyPlot()
+        -- ១. បើធ្លាប់រកឃើញដីហើយ ហើយដីនោះនៅទីនោះដដែល យកវាទៅប្រើតែម្ដង (ចំណាយពេល 0 វិនាទី)
+        if cachedMyPlot and cachedMyPlot.Parent then
+            return cachedMyPlot
+        end
+
+        -- ២. បើទើបតែចូលហ្គេម មិនទាន់ស្គាល់ដី ទើបវាចាប់ផ្តើមកាយរក
         local plotsFolder = workspace:FindFirstChild("Plots")
         if not plotsFolder then return nil end
+
         for _, plot in ipairs(plotsFolder:GetChildren()) do
+            -- ឆែកឈ្មោះផ្ទាល់ជាមុន
             if plot.Name == player.Name or plot.Name == tostring(player.UserId) then
+                cachedMyPlot = plot -- ចងចាំទុក
                 return plot
             end
+            
+            -- កាយរកតាមផ្លាកឈ្មោះ ឬ Value ផ្សេងៗ
             for _, descendant in ipairs(plot:GetDescendants()) do
                 if (descendant:IsA("TextLabel") or descendant:IsA("TextButton")) and string.find(descendant.Text, player.Name) then
+                    cachedMyPlot = plot -- ចងចាំទុក
                     return plot
                 elseif descendant:IsA("StringValue") and descendant.Value == player.Name then
+                    cachedMyPlot = plot -- ចងចាំទុក
                     return plot
                 elseif descendant:IsA("ObjectValue") and descendant.Value == player then
+                    cachedMyPlot = plot -- ចងចាំទុក
                     return plot
                 elseif (descendant:IsA("IntValue") or descendant:IsA("NumberValue")) and descendant.Value == player.UserId then
+                    cachedMyPlot = plot -- ចងចាំទុក
                     return plot
                 end
             end
@@ -718,45 +736,70 @@ task.spawn(function()
         return nil
     end
 
+
+
+    
+
+
+
+    --tweentreadmill
+
     local function tweenToTreadmillRoot()
-        local myPlot = findMyPlot()
-        if not myPlot then return false end
+    local myPlot = findMyPlot()
+    if not myPlot then return false end
 
-        local plotNumber = string.match(myPlot.Name, "%d+")
-        local treadmillFolder = workspace:FindFirstChild("__ClientTreadmillRenders")
-        if not plotNumber or not treadmillFolder then return false end
+    local plotNumber = string.match(myPlot.Name, "%d+")
+    local treadmillFolder = workspace:FindFirstChild("__ClientTreadmillRenders")
+    if not plotNumber or not treadmillFolder then return false end
 
-        local myTreadmill = treadmillFolder:FindFirstChild("TreadmillRender_" .. plotNumber)
-        if myTreadmill then
-            local rootPart = myTreadmill:FindFirstChild("Root", true)
-            local targetCFrame
-            if rootPart and rootPart:IsA("BasePart") then
-                targetCFrame = rootPart.CFrame
-            else
-                targetCFrame = myTreadmill:IsA("Model") and myTreadmill:GetPivot() or (myTreadmill:IsA("BasePart") and myTreadmill.CFrame)
+    local myTreadmill = treadmillFolder:FindFirstChild("TreadmillRender_" .. plotNumber)
+    if myTreadmill then
+        local rootPart = myTreadmill:FindFirstChild("Root", true)
+        local targetCFrame
+        if rootPart and rootPart:IsA("BasePart") then
+            targetCFrame = rootPart.CFrame
+        else
+            targetCFrame = myTreadmill:IsA("Model") and myTreadmill:GetPivot() or (myTreadmill:IsA("BasePart") and myTreadmill.CFrame)
+        end
+        
+        if targetCFrame then
+            local hrp = getHRP()
+            if not hrp then return false end
+            
+            -- [កូដថ្មីបន្ថែម] ស្វែងរក Humanoid និងបើក PlatformStand
+            local char = player.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.PlatformStand = true -- បិទ Physics បណ្ដោះអាសន្នពេល Tween
+            end
+
+            hrp.Anchored = false
+            tweenToCheckpointFirst(hrp, Config.Farm.TreadmillTweenSpeed)
+            
+            local finalCFrame = targetCFrame * CFrame.new(0, Config.Farm.TreadmillHipOffset, 0)
+            lastTreadmillTargetCF = finalCFrame
+
+            local distance = (hrp.Position - finalCFrame.Position).Magnitude
+            local duration = distance / Config.Farm.TreadmillTweenSpeed
+            local tweenInfo = TweenInfo.new(math.max(duration, 0.1), Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+            local tween = TweenService:Create(hrp, tweenInfo, {CFrame = finalCFrame})
+            tween:Play()
+            tween.Completed:Wait()
+            
+            hrp.Anchored = false
+            
+            -- [កូដថ្មីបន្ថែម] បិទ PlatformStand វិញពេលដល់ម៉ាស៊ីនរត់
+            if hum then
+                hum.PlatformStand = false
             end
             
-            if targetCFrame then
-                local hrp = getHRP()
-                if not hrp then return false end
-                hrp.Anchored = false
-                tweenToCheckpointFirst(hrp, Config.Farm.TreadmillTweenSpeed)
-                
-                local finalCFrame = targetCFrame * CFrame.new(0, Config.Farm.TreadmillHipOffset, 0)
-                lastTreadmillTargetCF = finalCFrame
-
-                local distance = (hrp.Position - finalCFrame.Position).Magnitude
-                local duration = distance / Config.Farm.TreadmillTweenSpeed
-                local tweenInfo = TweenInfo.new(math.max(duration, 0.1), Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
-                local tween = TweenService:Create(hrp, tweenInfo, {CFrame = finalCFrame})
-                tween:Play()
-                tween.Completed:Wait()
-                hrp.Anchored = false
-                return true
-            end
+            return true
         end
-        return false
     end
+    return false
+end
+
+
 
     local function leaveTreadmill()
         local askDoffRemote = nil
@@ -863,7 +906,7 @@ end)
 -- ==========================================
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local window = Rayfield:CreateWindow({
-    Name = "[STEAL AN EGG] ToaToa Hub - Optimized",
+    Name = "[STEAL AN EGG] ToaToa Hub - By 2BK2",
     LoadingTitle = "Welcome to (ToaToa Hub)",
     LoadingSubtitle = "by 2BK2",
     ConfigurationSaving = {Enabled = true, FolderName = "RayfieldTestConfig", FileName = "PlayerSettings"},
@@ -961,7 +1004,7 @@ tabSettings:CreateButton({
 
 tabSettings:CreateSlider({
     Name = '<font size="24"><b>កំណត់ល្បឿនហោះ</b></font>(Fly Speed)',
-    Range = {600, 800},
+    Range = {600, 1000},
     Increment = 10,
     Suffix = " Speed",
     CurrentValue = 600,
