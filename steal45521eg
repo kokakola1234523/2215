@@ -529,6 +529,10 @@ task.spawn(function()
     -- ទីតាំងពីលើស៊ុត (កម្ពស់ 30)
     local highEggCF = CFrame.new(targetPos.X, targetPos.Y + flyHeightOffset, targetPos.Z) * hitbox.CFrame.Rotation
 
+    local tweenFlyBack = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, originalCFrame, speed), {CFrame = originalCFrame})
+        tweenFlyBack:Play()
+        tweenFlyBack.Completed:Wait()
+
     -- ==========================================
     -- វគ្គទី ១៖ ទៅយកស៊ុត
     -- ==========================================
