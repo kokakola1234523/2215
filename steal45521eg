@@ -666,10 +666,11 @@ end
                 task.wait(timeLeft)
             end
         end
-        hrp.Anchored = false
+        
         
         -- រង់ចាំ ០.៥ វិនាទី ឲ្យហ្គេម Load Prompt សិន
         task.wait(1)
+        hrp.Anchored = true
         
         -- [កែសម្រួលថ្មី] ហៅ Function ដើមមកប្រើក្នុងចម្ងាយ ២០
         -- យើងនៅតែឲ្យវាព្យាយាម ៣ ដង ដើម្បីឲ្យប្រាកដ ១០០% ថាប្រមូលបានជោគជ័យ
