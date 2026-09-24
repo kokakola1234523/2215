@@ -26,11 +26,11 @@ local Config = {
     Farm = {
         MinPartsCount = 20,
         FlyOffsetHeight = 3,
-        HeightOffset = 1.5,
+        HeightOffset = 1,
         MaxProximityDist = 1,
         WaitAtBase = 1,
         TreadmillTweenSpeed = 100,
-        TreadmillHipOffset = 3,
+        TreadmillHipOffset = 1,
         TreadmillMaxDistance = 10 -- ឆែកមើលបើលោត ឬផ្លាតចេញឆ្ងាយជាង 10 studs វានឹង Tween ចូលវិញ
     }
 }
@@ -525,7 +525,7 @@ task.spawn(function()
                 local areaPart = areaObj:IsA("BasePart") and areaObj or (areaObj.PrimaryPart or areaObj:FindFirstChildWhichIsA("BasePart", true))
                 if areaPart then
                     local dist = (Vector2.new(hitboxPos.X, hitboxPos.Z) - Vector2.new(areaPart.Position.X, areaPart.Position.Z)).Magnitude
-                    if dist <= 500 then return true end
+                    if dist <= 200 then return true end
                 end
             end
         end
@@ -559,113 +559,54 @@ task.spawn(function()
 
 
     local function stealEggAtLocation(hitbox)
-        local hrp = getHRP()
-        if not hrp or not hitbox then return end
+    local hrp = getHRP()
+    if not hrp or not hitbox then return end
 
-        hrp.Anchored = false
-        hrp.AssemblyLinearVelocity = Vector3.zero
+    hrp.Anchored = false
+    hrp.AssemblyLinearVelocity = Vector3.zero
 
-        -- កំណត់ Folder និង Area ដោយស្វ័យប្រវត្តិ (Auto-Detect)
-        local rootFolder = workspace:FindFirstChild("World") or workspace:FindFirstChild("__OBJECTS")
-        local targetArea = "Lake"
+    -- ហោះត្រឡប់ទៅ Base ដើមសិនមុននឹងទៅយកស៊ុត (ដើម្បីកុំឱ្យគាំងទាក់ជាមួយជញ្ជាំង)
+    pcall(function()
+        local tweenFlyBack = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, originalCFrame), {CFrame = originalCFrame})
+        tweenFlyBack:Play()
+        tweenFlyBack.Completed:Wait()
+    end)
 
-        pcall(function()
-            local tweenFlyBack = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, originalCFrame), {CFrame = originalCFrame})
-            tweenFlyBack:Play()
-            tweenFlyBack.Completed:Wait()
-        end)
+    -- [បានកាត់ចោល] លុបការហោះទៅ Nests និង Guard ចោល ដើម្បីកុំឱ្យខាតពេល
 
-        -- ១. Tween ទៅទីតាំង Nests តាម Area ដែលបានរើស
-        local nestsFolder = rootFolder
-            and rootFolder:FindFirstChild("Areas")
-            and rootFolder.Areas:FindFirstChild("GuardAreas")
-            and rootFolder.Areas.GuardAreas:FindFirstChild(targetArea)
-            and rootFolder.Areas.GuardAreas[targetArea]:FindFirstChild("Nests")
+    -- ៤. Tween ត្រង់ទៅយក Egg ដែលជា Target តែម្តង
+    local targetPos = hitbox.Position
+    local collectTargetCF = CFrame.new(targetPos.X, targetPos.Y + Config.Farm.HeightOffset, targetPos.Z) * hitbox.CFrame.Rotation
+    
+    local speed = 600 -- ល្បឿនហោះទៅយកស៊ុត (អាចកែបាន)
+    local dist = (hrp.Position - collectTargetCF.Position).Magnitude
+    local duration = math.max(dist / speed, 0.1)
+    
+    local tweenEggInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+    local tweenToEgg = TweenService:Create(hrp, tweenEggInfo, {CFrame = collectTargetCF})
+    tweenToEgg:Play()
+    tweenToEgg.Completed:Wait()
 
-        if nestsFolder then
-            local nestPart = nestsFolder:IsA("BasePart") and nestsFolder or nestsFolder.PrimaryPart or nestsFolder:FindFirstChildWhichIsA("BasePart", true)
-            if nestPart then
-                local nestPos = nestPart.Position
-                local nestTargetCF = CFrame.new(nestPos.X, nestPos.Y + Config.Farm.HeightOffset, nestPos.Z) * nestPart.CFrame.Rotation
-                
-                local tween1 = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, nestTargetCF), {CFrame = nestTargetCF})
-                tween1:Play()
-                tween1.Completed:Wait()
+    hrp.Anchored = false
+    task.wait(0.2)
+    interactNearbyPrompts()
+    task.wait(0.2)
+    interactNearbyPrompts()
+    hrp.Anchored = true
+    task.wait(4.5) -- រង់ចាំបន្តិចដើម្បីឱ្យវា Interact យកស៊ុត
+    interactNearbyPrompts()
+    task.wait(0.1) 
+    hrp.Anchored = false
 
-                task.wait(0.5)
-                local function firePromptsInRadius(radius)
-                    local currentPos = hrp.Position
-                    for _, prompt in ipairs(Workspace:GetDescendants()) do
-                        if prompt:IsA("ProximityPrompt") and prompt.Enabled then
-                            local parentPart = prompt.Parent
-                            if parentPart and parentPart:IsA("BasePart") then
-                                if (parentPart.Position - currentPos).Magnitude <= radius then
-                                    safeFirePrompt(prompt)
-                                end
-                            end
-                        end
-                    end
-                end
-
-                firePromptsInRadius(20)
-                task.wait(0.5)
-                firePromptsInRadius(20)
-                task.wait(0)
-            end
-        end
-
-        -- ៣. Tween ទៅប៉ះ Guard Model តាម Area ដែលបានរើស
-        local guardModel = rootFolder
-            and rootFolder:FindFirstChild("Areas")
-            and rootFolder.Areas:FindFirstChild("GuardAreas")
-            and rootFolder.Areas.GuardAreas:FindFirstChild(targetArea)
-            and rootFolder.Areas.GuardAreas[targetArea]:FindFirstChild("Guard")
-            and rootFolder.Areas.GuardAreas[targetArea].Guard:FindFirstChild("Model")
-
-        if guardModel then
-            local guardPart = guardModel:IsA("BasePart") and guardModel or guardModel.PrimaryPart or guardModel:FindFirstChildWhichIsA("BasePart", true)
-            if guardPart then
-                local guardPos = guardPart.Position
-                local guardTargetCF = CFrame.new(guardPos.X, guardPos.Y + Config.Farm.HeightOffset, guardPos.Z) * guardPart.CFrame.Rotation
-
-                local tween2 = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, guardTargetCF), {CFrame = guardTargetCF})
-                tween2:Play()
-                tween2.Completed:Wait()
-                task.wait(0.2)
-            end
-        end
-
-        -- ៤. Tween ទៅយក Egg ដែលជា Target
-        local targetPos = hitbox.Position
-        local collectTargetCF = CFrame.new(targetPos.X, targetPos.Y + Config.Farm.HeightOffset, targetPos.Z) * hitbox.CFrame.Rotation
-        
-        local speed = 900
-        local dist = (hrp.Position - collectTargetCF.Position).Magnitude
-        local duration = math.max(dist / speed, 0.1)
-        
-        local tweenEggInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
-        local tweenToEgg = TweenService:Create(hrp, tweenEggInfo, {CFrame = collectTargetCF})
-        tweenToEgg:Play()
-        tweenToEgg.Completed:Wait()
-
-        hrp.Anchored = false
-        task.wait(2)
-        interactNearbyPrompts()
-        task.wait(0.5) 
-        hrp.Anchored = false
-
-        -- ៥. ត្រឡប់មក Base វិញ
-        pcall(function()
-            local tweenFlyBack = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, originalCFrame), {CFrame = originalCFrame})
-            tweenFlyBack:Play()
-            tweenFlyBack.Completed:Wait()
-        end)
-        
-        task.wait(Config.Farm.WaitAtBase)
-    end
-
-
-        
+    -- ៥. ត្រឡប់មក Base វិញ
+    pcall(function()
+        local tweenFlyBack = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, originalCFrame), {CFrame = originalCFrame})
+        tweenFlyBack:Play()
+        tweenFlyBack.Completed:Wait()
+    end)
+    
+    task.wait(Config.Farm.WaitAtBase)
+end
 
     
 
@@ -1064,9 +1005,7 @@ task.wait(1)
 
 -- Anti-AFK (Disable Idled Signal)
 
-local LocalPlayer = Players.LocalPlayer
 
-local get_connections = getconnections or get_signal_cons
 
 if get_connections then
     for _, connection in pairs(get_connections(LocalPlayer.Idled)) do
