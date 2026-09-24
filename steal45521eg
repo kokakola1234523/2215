@@ -661,7 +661,7 @@ end
         -- ឆែកមើល Cooldown ៥ វិនាទី (គិតចាប់ពីពេលប៉ះ Guard)
         if hitGuardTime > 0 then
             local timePassed = tick() - hitGuardTime
-            local timeLeft = 5 - timePassed
+            local timeLeft = 8 - timePassed
             if timeLeft > 0 then
                 task.wait(timeLeft)
             end
