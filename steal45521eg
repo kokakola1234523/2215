@@ -5,15 +5,13 @@
 -- Services
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Lighting = game:GetService("Lighting")
 
 local player = Players.LocalPlayer
-local camera = Workspace.CurrentCamera
-camera.CameraType = Enum.CameraType.Scriptable
+
 
 -- ==========================================
 -- 1. Configuration & Global States
@@ -137,52 +135,9 @@ end
 -- ==========================================
 -- 3. Camera & Fly System
 -- ==========================================
-local distance = 12
-local angleX, angleY = 0, 15
-local isRightMouseDown = false
-local touchOrigin = nil
 
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        isRightMouseDown = true
-        UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
-    elseif input.UserInputType == Enum.UserInputType.Touch then
-        touchOrigin = input.Position
-    end
-end)
 
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        isRightMouseDown = false
-        UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-    elseif input.UserInputType == Enum.UserInputType.Touch then
-        touchOrigin = nil
-    end
-end)
 
-UserInputService.InputChanged:Connect(function(input, gameProcessed)
-    if isRightMouseDown and input.UserInputType == Enum.UserInputType.MouseMovement then
-        angleX = angleX - input.Delta.X * 0.4
-        angleY = math.clamp(angleY - input.Delta.Y * 0.4, -60, 80)
-    elseif input.UserInputType == Enum.UserInputType.Touch and not gameProcessed then
-        if touchOrigin then
-            local delta = input.Position - touchOrigin
-            touchOrigin = input.Position
-            angleX = angleX - delta.X * 0.3
-            angleY = math.clamp(angleY - delta.Y * 0.3, -60, 80)
-        end
-    end
-end)
-
-RunService.RenderStepped:Connect(function()
-    local char = player.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        local rootPos = char.HumanoidRootPart.Position + Vector3.new(0, 2.5, 0)
-        local rotation = CFrame.Angles(0, math.rad(angleX), 0) * CFrame.Angles(math.rad(angleY), 0, 0)
-        camera.CFrame = CFrame.new(rootPos + rotation * Vector3.new(0, 0, distance), rootPos)
-    end
-end)
 
 local bodyVelocity, bodyGyro = nil, nil
 RunService.Stepped:Connect(function()
@@ -191,9 +146,7 @@ RunService.Stepped:Connect(function()
         local hrp = char.HumanoidRootPart
         local hum = char:FindFirstChild("Humanoid")
         if not hum then
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") and part.CanCollide then part.CanCollide = false end
-            end
+            
             if not bodyVelocity or bodyVelocity.Parent ~= hrp then
                 bodyVelocity = Instance.new("BodyVelocity")
                 bodyVelocity.Velocity = Vector3.zero
@@ -496,6 +449,9 @@ local function removeHumanoid()
             hum:UnequipTools()
             storedHumanoid = hum
             hum.Parent = nil
+            
+            -- បន្ថែមជួរនេះ ដើម្បីឱ្យកាមេរ៉ាដើមចាប់តាម HumanoidRootPart ជំនួសវិញ
+            workspace.CurrentCamera.CameraSubject = char:FindFirstChild("HumanoidRootPart")
         end
     end
 end
@@ -883,9 +839,9 @@ end)
 -- ==========================================
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local window = Rayfield:CreateWindow({
-    Name = "[STEAL AN EGG] ToaToa Hub - Optimized",
+    Name = "[STEAL AN EGG] ToaToa Hub - By 2BK2",
     LoadingTitle = "Welcome to (ToaToa Hub)",
-    LoadingSubtitle = "by 2BK2",
+    LoadingSubtitle = "អគុណដែរបានគាំទ្រ",
     ConfigurationSaving = {Enabled = true, FolderName = "RayfieldTestConfig", FileName = "PlayerSettings"},
     Discord = {Enabled = false},
     KeySystem = false,
@@ -926,7 +882,7 @@ tabFarm:CreateToggle({
 })
 
 tabFarm:CreateToggle({
-    Name = '<font size="24"><b>លួចស៊ុត៧ពណ៏</b></font>(Rainbow, Devine)',
+    Name = '<font size="24"><b>លួចស៊ុត៧ពណ៏</b></font>(Devine, Eternal, Secret )',
     CurrentValue = false,
     Flag = "auto_rainbow_egg",
     Callback = function(value) getgenv().AutoRainbowEgg = value end,
