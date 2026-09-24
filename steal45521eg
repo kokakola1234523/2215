@@ -647,7 +647,7 @@ end
         local targetPos = hitbox.Position
         local collectTargetCF = CFrame.new(targetPos.X, targetPos.Y + Config.Farm.HeightOffset, targetPos.Z) * hitbox.CFrame.Rotation
         
-        local speed = 900
+        local speed = 800
         local dist = (hrp.Position - collectTargetCF.Position).Magnitude
         local duration = math.max(dist / speed, 0.1)
         
