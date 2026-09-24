@@ -578,7 +578,7 @@ task.spawn(function()
     local targetPos = hitbox.Position
     local collectTargetCF = CFrame.new(targetPos.X, targetPos.Y + Config.Farm.HeightOffset, targetPos.Z) * hitbox.CFrame.Rotation
     
-    local speed = 600 -- ល្បឿនហោះទៅយកស៊ុត (អាចកែបាន)
+    local speed = 500 -- ល្បឿនហោះទៅយកស៊ុត (អាចកែបាន)
     local dist = (hrp.Position - collectTargetCF.Position).Magnitude
     local duration = math.max(dist / speed, 0.1)
     
