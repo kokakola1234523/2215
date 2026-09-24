@@ -561,53 +561,75 @@ task.spawn(function()
     local function stealEggAtLocation(hitbox)
     local hrp = getHRP()
     if not hrp or not hitbox then return end
-
     hrp.Anchored = false
     hrp.AssemblyLinearVelocity = Vector3.zero
 
-    -- ហោះត្រឡប់ទៅ Base ដើមសិនមុននឹងទៅយកស៊ុត (ដើម្បីកុំឱ្យគាំងទាក់ជាមួយជញ្ជាំង)
+    local speed = 550-- ល្បឿនអាចកែប្រែបាន
+    local flyHeightOffset = 30 -- កម្ពស់ 30 ថេរពីដីដែលអ្នកចង់បាន
+
+    local targetPos = hitbox.Position
+    -- ទីតាំងស៊ុតពិតប្រាកដ (សម្រាប់ចុះមកយក)
+    local finalEggCF = CFrame.new(targetPos.X, targetPos.Y + Config.Farm.HeightOffset, targetPos.Z) * hitbox.CFrame.Rotation
+    -- ទីតាំងពីលើស៊ុត (កម្ពស់ 30)
+    local highEggCF = CFrame.new(targetPos.X, targetPos.Y + flyHeightOffset, targetPos.Z) * hitbox.CFrame.Rotation
+
+    -- ==========================================
+    -- វគ្គទី ១៖ ទៅយកស៊ុត
+    -- ==========================================
     pcall(function()
-        local tweenFlyBack = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, originalCFrame), {CFrame = originalCFrame})
-        tweenFlyBack:Play()
-        tweenFlyBack.Completed:Wait()
+        -- ១. Tween ឡើងលើកម្ពស់ 30 ពីទីតាំងបច្ចុប្បន្នសិន
+        local currentHighCF = CFrame.new(hrp.Position.X, hrp.Position.Y + flyHeightOffset, hrp.Position.Z) * hrp.CFrame.Rotation
+        local tweenUp1 = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, currentHighCF, speed), {CFrame = currentHighCF})
+        tweenUp1:Play()
+        tweenUp1.Completed:Wait()
+
+        -- ២. Tween ទៅកាន់ទីតាំងពីលើស៊ុត (រក្សាកម្ពស់ 30)
+        local tweenToHighEgg = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, highEggCF, speed), {CFrame = highEggCF})
+        tweenToHighEgg:Play()
+        tweenToHighEgg.Completed:Wait()
+
+        -- ៣. Tween ចុះមកក្រោមដើម្បីយកស៊ុត
+        local tweenDownToEgg = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, finalEggCF, speed), {CFrame = finalEggCF})
+        tweenDownToEgg:Play()
+        tweenDownToEgg.Completed:Wait()
     end)
 
-    -- [បានកាត់ចោល] លុបការហោះទៅ Nests និង Guard ចោល ដើម្បីកុំឱ្យខាតពេល
-
-    -- ៤. Tween ត្រង់ទៅយក Egg ដែលជា Target តែម្តង
-    local targetPos = hitbox.Position
-    local collectTargetCF = CFrame.new(targetPos.X, targetPos.Y + Config.Farm.HeightOffset, targetPos.Z) * hitbox.CFrame.Rotation
-    
-    local speed = 500 -- ល្បឿនហោះទៅយកស៊ុត (អាចកែបាន)
-    local dist = (hrp.Position - collectTargetCF.Position).Magnitude
-    local duration = math.max(dist / speed, 0.1)
-    
-    local tweenEggInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
-    local tweenToEgg = TweenService:Create(hrp, tweenEggInfo, {CFrame = collectTargetCF})
-    tweenToEgg:Play()
-    tweenToEgg.Completed:Wait()
-
+    -- [ដំណើរការ Interact យកស៊ុត]
     hrp.Anchored = false
     task.wait(0.2)
     interactNearbyPrompts()
     task.wait(0.2)
     interactNearbyPrompts()
     hrp.Anchored = true
-    task.wait(4.5) -- រង់ចាំបន្តិចដើម្បីឱ្យវា Interact យកស៊ុត
+    task.wait(4.5)
     interactNearbyPrompts()
-    task.wait(0.1) 
+    task.wait(0.1)
     hrp.Anchored = false
 
-    -- ៥. ត្រឡប់មក Base វិញ
+    -- ==========================================
+    -- វគ្គទី ២៖ ត្រឡប់មក Base វិញ
+    -- ==========================================
     pcall(function()
-        local tweenFlyBack = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, originalCFrame), {CFrame = originalCFrame})
+        -- ៤. Tween ឡើងលើកម្ពស់ 30 វិញ ពីទីតាំងស៊ុត
+        local returnHighCF = CFrame.new(hrp.Position.X, hrp.Position.Y + flyHeightOffset, hrp.Position.Z) * hrp.CFrame.Rotation
+        local tweenUp2 = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, returnHighCF, speed), {CFrame = returnHighCF})
+        tweenUp2:Play()
+        tweenUp2.Completed:Wait()
+
+        -- ៥. Tween ទៅពីលើ Base (រក្សាកម្ពស់ 30)
+        local baseHighCF = CFrame.new(originalCFrame.Position.X, originalCFrame.Position.Y + flyHeightOffset, originalCFrame.Position.Z) * originalCFrame.Rotation
+        local tweenToBaseHigh = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, baseHighCF, speed), {CFrame = baseHighCF})
+        tweenToBaseHigh:Play()
+        tweenToBaseHigh.Completed:Wait()
+
+        -- ៦. Tween ចុះមកទីតាំង Base ដើមវិញ
+        local tweenFlyBack = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, originalCFrame, speed), {CFrame = originalCFrame})
         tweenFlyBack:Play()
         tweenFlyBack.Completed:Wait()
     end)
-    
+
     task.wait(Config.Farm.WaitAtBase)
 end
-
     
 
     local function getTargetEgg()
