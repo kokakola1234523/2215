@@ -27,8 +27,8 @@ local Config = {
         FlyOffsetHeight = 3,
         HeightOffset = 1.5,
         MaxProximityDist = 1,
-        WaitAtBase = 1,
-        TreadmillTweenSpeed = 100,
+        WaitAtBase = 0.5,
+        TreadmillTweenSpeed = 1000,
         TreadmillHipOffset = 3,
         TreadmillMaxDistance = 10 -- ឆែកមើលបើលោត ឬផ្លាតចេញឆ្ងាយជាង 10 studs វានឹង Tween ចូលវិញ
     }
@@ -46,7 +46,7 @@ local allAreaNames = {"Light Dark", "Titan Temple", "Cherry Blossom", "Cosmic", 
 local selectedModules = {"Light Dark"}
 local RAINBOW_KEYWORDS = {"rainbow", "glow", "radicalhalo"}
 
-local originalCFrame = CFrame.new(538.479553, 70.8011246, -409.704681, 0.730235636, 8.46091197e-08, -0.683195353, -5.78969193e-08, 1, 6.19599163e-08, 0.683195353, -5.69043168e-09, 0.730235636)
+local originalCFrame = CFrame.new(519.258118, 70.2762833, -366.21521, 0.021357337, 2.41917171e-08, -0.999771893, 2.44288478e-09, 1, 2.42494202e-08, 0.999771893, -2.96023073e-09, 0.021357337)
 
 -- ==========================================
 -- 2. Helper Functions
@@ -83,20 +83,6 @@ local function getTweenInfo(startCF, targetCF, speed)
     return TweenInfo.new(math.max(duration, 0.1), Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
 end
 
-local function tweenToCheckpointFirst(hrp, speed)
-    if not hrp then return end
-    local dist = (hrp.Position - originalCFrame.Position).Magnitude
-    if dist < 10 then return end
-    
-    local highStartCF = CFrame.new(hrp.Position.X, hrp.Position.Y + 0, hrp.Position.Z) * hrp.CFrame.Rotation
-    local tweenUp = TweenService:Create(hrp, TweenInfo.new(1, Enum.EasingStyle.Linear), {CFrame = highStartCF})
-    tweenUp:Play()
-    tweenUp.Completed:Wait()
-
-    local tweenToOriginal = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, originalCFrame, speed), {CFrame = originalCFrame})
-    tweenToOriginal:Play()
-    tweenToOriginal.Completed:Wait()
-end
 
 local function isWallOpenOrCountdownFinished()
     local playerGui = player:FindFirstChild("PlayerGui") or game:GetService("CoreGui")
@@ -392,7 +378,7 @@ task.spawn(function()
                             local direction = (targetPos - root.Position).Unit
                             local goalPosition = targetPos - (direction * 3)
                             
-                            local tweenInfo = TweenInfo.new(distance / 150, Enum.EasingStyle.Linear)
+                            local tweenInfo = TweenInfo.new(distance / 90, Enum.EasingStyle.Linear)
                             local tween = TweenService:Create(root, tweenInfo, {CFrame = CFrame.new(goalPosition, targetPos)})
                             tween:Play()
                             tween.Completed:Wait()
@@ -480,7 +466,7 @@ task.spawn(function()
                 local areaPart = areaObj:IsA("BasePart") and areaObj or (areaObj.PrimaryPart or areaObj:FindFirstChildWhichIsA("BasePart", true))
                 if areaPart then
                     local dist = (Vector2.new(hitboxPos.X, hitboxPos.Z) - Vector2.new(areaPart.Position.X, areaPart.Position.Z)).Magnitude
-                    if dist <= 500 then return true end
+                    if dist <= 250 then return true end
                 end
             end
         end
@@ -529,6 +515,7 @@ end
         -- កំណត់ Folder និង Area ដោយស្វ័យប្រវត្តិ (Auto-Detect)
         local rootFolder = workspace:FindFirstChild("World") or workspace:FindFirstChild("__OBJECTS")
         local targetArea = "Lake"
+
 
         pcall(function()
             local tweenFlyBack = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, originalCFrame), {CFrame = originalCFrame})
@@ -593,21 +580,25 @@ end
             local dist = (hrp.Position - collectTargetCF.Position).Magnitude
             local duration = math.max(dist / speed, 0.1)
             
+            
             local tweenEggInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
             local tweenToEgg = TweenService:Create(hrp, tweenEggInfo, {CFrame = collectTargetCF})
             tweenToEgg:Play()
             tweenToEgg.Completed:Wait()
             
             hrp.Anchored = false
+
             
             -- ឆែកមើល Cooldown ៥ វិនាទី (គិតចាប់ពីពេលប៉ះ Guard)
             if hitGuardTime > 0 then
                 local timePassed = tick() - hitGuardTime
-                local timeLeft = 2 - timePassed
+                local timeLeft = 2.5 - timePassed
                 if timeLeft > 0 then
                     task.wait(timeLeft)
                 end
             end
+            hrp.Anchored = true
+            
 
             -- រង់ចាំ ០.៥ វិនាទី ឲ្យហ្គេម Load Prompt សិន
             task.wait(1)
@@ -757,7 +748,8 @@ local function tweenToTreadmillRoot()
 
             -- រក្សា Anchored = false ដូច Script ចាស់របស់អ្នក ដើម្បីឱ្យ Tween រត់ស្មើដីធម្មតា
             hrp.Anchored = false
-            tweenToCheckpointFirst(hrp, Config.Farm.TreadmillTweenSpeed)
+            
+            -- បានលុបការហៅទៅកាន់ Base (tweenToCheckpointFirst) ចេញពីទីនេះ
             
             local finalCFrame = targetCFrame * CFrame.new(0, Config.Farm.TreadmillHipOffset, 0)
             lastTreadmillTargetCF = finalCFrame
@@ -821,15 +813,29 @@ end
             local targetSlot = getTargetEgg()
             if targetSlot then
                 local hitbox = targetSlot:FindFirstChild("Hitbox", true) or (targetSlot:IsA("BasePart") and targetSlot) or targetSlot:FindFirstChildWhichIsA("BasePart", true)
+
                 if hitbox then
+                    -- បើកំពុងរត់ម៉ាស៊ីន ត្រូវចុះមកឈរលើដីអោយស្រួលបួលសិន
                     if isCurrentlyOnTreadmill then
                         leaveTreadmill()
                         isCurrentlyOnTreadmill = false
-                        task.wait(0.5)
+                        
+                        restoreHumanoid() -- ហៅ Humanoid មកវិញដើម្បីបញ្ឈប់ Animation រត់
+                        
+                        local hrp = getHRP()
+                        if hrp then
+                            hrp.Anchored = false 
+                            hrp.AssemblyLinearVelocity = Vector3.zero
+                        end
+                        
+                        task.wait(0.5) -- រង់ចាំកន្លះវិនាទី អោយជើងជាន់ដីស្ងៀមល្អ
                     end
+                    
+                    -- ពេលឈរស្ងៀមហើយ ទើបលុប Humanoid រួចហោះទៅយក Egg
                     removeHumanoid()
                     stealEggAtLocation(hitbox)
                 end
+                
             else
                 restoreHumanoid()
                 if getgenv().AutoTreadmill then
