@@ -585,6 +585,8 @@ end
             local tweenToEgg = TweenService:Create(hrp, tweenEggInfo, {CFrame = collectTargetCF})
             tweenToEgg:Play()
             tweenToEgg.Completed:Wait()
+    
+    -- [កូដបន្តបន្ទាប់របស់អ្នក]...
             
             hrp.Anchored = false
 
@@ -592,7 +594,7 @@ end
             -- ឆែកមើល Cooldown ៥ វិនាទី (គិតចាប់ពីពេលប៉ះ Guard)
             if hitGuardTime > 0 then
                 local timePassed = tick() - hitGuardTime
-                local timeLeft = 2.5 - timePassed
+                local timeLeft = 1.5 - timePassed
                 if timeLeft > 0 then
                     task.wait(timeLeft)
                 end
@@ -601,7 +603,7 @@ end
             
 
             -- រង់ចាំ ០.៥ វិនាទី ឲ្យហ្គេម Load Prompt សិន
-            task.wait(1)
+            task.wait(0.5)
             hrp.Anchored = false
             
             -- [កែសម្រួលថ្មី] ហៅ Function ដើមមកប្រើក្នុងចម្ងាយ ២០
