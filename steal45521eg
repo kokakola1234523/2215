@@ -495,39 +495,74 @@ local function firePromptsInRadius(radius)
     end
 end
 
--- Function ជំនួយសម្រាប់រត់ទៅឲ្យចំទីតាំងច្បាស់លាស់
-local function runToExactPosition(hum, hrp, targetPos, timeoutDuration)
-    local startTime = os.clock()
+local RunService = game:GetService("RunService")
+
+local function runToExactPosition(hum, hrp, target)
+    local lastPos = hrp.Position
+    local lastMoveTime = os.clock()
+    local lastMoveToCall = 0 
+    local lastTargetPos = nil 
     
-    while (os.clock() - startTime) < timeoutDuration do
-        -- យកតែអ័ក្ស X និង Z ដើម្បីគណនាចម្ងាយ (មិនខ្វល់ពីកម្ពស់ Y ទេ)
+    -- អញ្ញាតិសម្រាប់បោកបញ្ឆោត Roblox 
+    local toggleOffset = false 
+
+    while true do
+        if typeof(target) ~= "Vector3" and not target.Parent then
+            break
+        end
+
+        local targetPos = typeof(target) == "Vector3" and target or target.Position
+        
         local hrpFlat = Vector3.new(hrp.Position.X, 0, hrp.Position.Z)
         local targetFlat = Vector3.new(targetPos.X, 0, targetPos.Z)
         local dist = (hrpFlat - targetFlat).Magnitude
         
-        if dist > 1.5 then
-            -- បើនៅឆ្ងាយ បន្តរត់
-            hum:MoveTo(targetPos)
+        if dist > 1.2 then
+            
+            -- រៀងរាល់ ៣ វិនាទី យើងអាប់ដេតទីតាំងម្ដង ដើម្បីការពារកុំឲ្យ Roblox បញ្ឈប់តួអង្គ
+            if not lastTargetPos or (lastTargetPos - targetPos).Magnitude > 1 or (os.clock() - lastMoveToCall) > 1 then
+                
+                -- បូក/ដក 0.01 Studs តិចៗ ដើម្បីឲ្យ Roblox គិតថាជាគោលដៅថ្មី (ទើបវាអត់ឈប់រត់កណ្តាលផ្លូវ)
+                toggleOffset = not toggleOffset
+                local microOffset = toggleOffset and 0.01 or -0.01
+                local trickedTarget = targetPos + Vector3.new(microOffset, 0, microOffset)
+                
+                hum:MoveTo(trickedTarget)
+                lastTargetPos = targetPos
+                lastMoveToCall = os.clock()
+            end
+            
+            -- ប្រព័ន្ធ Anti-Stuck 
+            if (hrp.Position - lastPos).Magnitude < 0.5 then
+                if (os.clock() - lastMoveTime) > 0.5 then
+                    hum.Jump = true 
+                    lastMoveTime = os.clock() 
+                end
+            else
+                lastPos = hrp.Position
+                lastMoveTime = os.clock()
+            end
+            
         else
-            -- ១. ឈប់រត់
-            hum:MoveTo(hrp.Position)
+            -- === ដល់គោលដៅ (ឈប់ចំកន្លែងម៉ង ដូចដែលអ្នកចង់បាន) ===
+            hum:MoveTo(hrp.Position) 
             
-            -- ២. បញ្ឈប់សន្ទុះ (ការពារកុំឲ្យរអិលហួសគោលដៅ)
-            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
             
-            -- ៣. Snap ឲ្យចំកណ្តាលគោលដៅច្បាស់ (ស្រដៀង Tween) ប៉ុន្តែរក្សាកម្ពស់ដើម (Y)
-            hrp.CFrame = CFrame.new(targetPos.X, hrp.Position.Y, targetPos.Z)
+            local exactPosition = Vector3.new(targetPos.X, hrp.Position.Y, targetPos.Z)
+            hrp.CFrame = CFrame.new(exactPosition) * hrp.CFrame.Rotation
             
-            return true -- ទៅដល់គោលដៅជោគជ័យ
+            return true 
         end
         
-        task.wait() -- Run លឿនបំផុតរៀងរាល់ Frame ដើម្បីឲ្យការឈប់មានភាពសុក្រឹត
+        RunService.Heartbeat:Wait()
     end
     
-    return false -- បរាជ័យ (អស់ Timeout មុនពេលទៅដល់)
+    return false 
 end
 
--- Function គោលរបស់អ្នក
+-- Function គោល
 local function stealEggAtLocation(hitbox)
     restoreHumanoid()
     task.wait(0.1)
@@ -541,30 +576,22 @@ local function stealEggAtLocation(hitbox)
     hrp.Anchored = false
     hum.PlatformStand = false
 
-    local timeout = 50
-    local targetPos = hitbox.Position
-
-    -- ១. រត់ទៅទីតាំង Egg ឲ្យចំច្បាស់
-    local reachedEgg = runToExactPosition(hum, hrp, targetPos, timeout)
+    local reached = runToExactPosition(hum, hrp, hitbox)
     
-    if reachedEgg then
-        -- បើទៅដល់ចំកន្លែងហើយ ទើបហៅ Prompts
+    if reached then
         local fireCount = 0
-        while hitbox and hitbox.Parent and fireCount < 5 do -- ព្យាយាមយក 5 ដង
-            firePromptsInRadius(10)
-            task.wait(0.3) -- Delay កុំឲ្យ spam ពេក
+        while hitbox and hitbox.Parent and fireCount < 6 do 
+            firePromptsInRadius(1)
+            task.wait(0.1) 
             fireCount = fireCount + 1
         end
     end
 
-    -- ២. រត់ត្រឡប់មក Base វិញឲ្យចំកណ្តាលច្បាស់
     local basePos = originalCFrame.Position
-    runToExactPosition(hum, hrp, basePos, timeout)
+    runToExactPosition(hum, hrp, basePos)
     
     task.wait(Config.Farm.WaitAtBase)
 end
-
-
         
     
 
