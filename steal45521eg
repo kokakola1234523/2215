@@ -570,6 +570,9 @@ local function stealEggAtLocation(hitbox)
     local char = player.Character
     local hum = char and char:FindFirstChild("Humanoid")
     local hrp = getHRP()
+
+    local basePos = originalCFrame.Position
+    runToExactPosition(hum, hrp, basePos)
     
     if not hrp or not hitbox or not hum then return end
 
@@ -587,7 +590,6 @@ local function stealEggAtLocation(hitbox)
         end
     end
 
-    local basePos = originalCFrame.Position
     runToExactPosition(hum, hrp, basePos)
     
     task.wait(Config.Farm.WaitAtBase)
