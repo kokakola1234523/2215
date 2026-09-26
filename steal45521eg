@@ -599,7 +599,7 @@ end
                     task.wait(timeLeft)
                 end
             end
-            hrp.Anchored = true
+            hrp.Anchored = false
             
 
             -- រង់ចាំ ០.៥ វិនាទី ឲ្យហ្គេម Load Prompt សិន
@@ -610,12 +610,9 @@ end
             -- យើងនៅតែឲ្យវាព្យាយាម ៣ ដង ដើម្បីឲ្យប្រាកដ ១០០% ថាប្រមូលបានជោគជ័យ
             for i = 1, 3 do
                 firePromptsInRadius(1)
-                task.wait(0.1)
+                task.wait(0.05)
             end
-            
-            task.wait(0.2)
-            hrp.Anchored = false
-        end -- បញ្ចប់ការ Loop ពេល Egg បាត់
+        end
 
         -- ៥. ត្រឡប់មក Base វិញ
         pcall(function()
