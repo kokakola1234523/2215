@@ -76,12 +76,6 @@ local function getHRP()
     return char:WaitForChild("HumanoidRootPart", 5)
 end
 
-local function getTweenInfo(startCF, targetCF, speed)
-    speed = speed or getgenv().FlySpeed
-    local dist = (startCF.Position - targetCF.Position).Magnitude
-    local duration = dist / speed
-    return TweenInfo.new(math.max(duration, 0.1), Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
-end
 
 
 local function isWallOpenOrCountdownFinished()
@@ -473,17 +467,18 @@ task.spawn(function()
         return false
     end
 
-    local function safeFirePrompt(prompt)
-        if typeof(fireproximityprompt) == "function" then
-            fireproximityprompt(prompt)
-        elseif prompt and prompt:FindFirstChildOfClass("RemoteEvent") then
-            prompt:FindFirstChildOfClass("RemoteEvent"):FireServer()
-        end
-    end
 
     
                 
-    local function firePromptsInRadius(radius)
+    local function safeFirePrompt(prompt)
+    if typeof(fireproximityprompt) == "function" then
+        fireproximityprompt(prompt)
+    elseif prompt and prompt:FindFirstChildOfClass("RemoteEvent") then
+        prompt:FindFirstChildOfClass("RemoteEvent"):FireServer()
+    end
+end
+
+local function firePromptsInRadius(radius)
     local hrp = getHRP()
     if not hrp then return end
     local currentPos = hrp.Position
@@ -492,7 +487,6 @@ task.spawn(function()
         if prompt:IsA("ProximityPrompt") and prompt.Enabled then
             local parentPart = prompt.Parent
             if parentPart and parentPart:IsA("BasePart") then
-                -- ឆែកមើលបើទីតាំង Egg នោះនៅចម្ងាយតិចជាង ឬស្មើដែលកំណត់ (10)
                 if (parentPart.Position - currentPos).Magnitude <= radius then
                     safeFirePrompt(prompt)
                 end
@@ -501,128 +495,74 @@ task.spawn(function()
     end
 end
 
-
-
-
-
-    local function stealEggAtLocation(hitbox)
-        local hrp = getHRP()
-        if not hrp or not hitbox then return end
-
-        hrp.Anchored = false
-        hrp.AssemblyLinearVelocity = Vector3.zero
-
-        -- កំណត់ Folder និង Area ដោយស្វ័យប្រវត្តិ (Auto-Detect)
-        local rootFolder = workspace:FindFirstChild("World") or workspace:FindFirstChild("__OBJECTS")
-        local targetArea = "Lake"
-
-
-        pcall(function()
-            local tweenFlyBack = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, originalCFrame), {CFrame = originalCFrame})
-            tweenFlyBack:Play()
-            tweenFlyBack.Completed:Wait()
-        end)
-
-        -- ១. Tween ទៅទីតាំង Nests តាម Area ដែលបានរើស
-        local nestsFolder = rootFolder
-            and rootFolder:FindFirstChild("Areas")
-            and rootFolder.Areas:FindFirstChild("GuardAreas")
-            and rootFolder.Areas.GuardAreas:FindFirstChild(targetArea)
-            and rootFolder.Areas.GuardAreas[targetArea]:FindFirstChild("Nests")
-
-        if nestsFolder then
-            local nestPart = nestsFolder:IsA("BasePart") and nestsFolder or nestsFolder.PrimaryPart or nestsFolder:FindFirstChildWhichIsA("BasePart", true)
-            if nestPart then
-                local nestPos = nestPart.Position
-                local nestTargetCF = CFrame.new(nestPos.X, nestPos.Y + Config.Farm.HeightOffset, nestPos.Z) * nestPart.CFrame.Rotation
-
-                
-                local tween1 = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, nestTargetCF), {CFrame = nestTargetCF})
-                tween1:Play()
-                tween1.Completed:Wait()
-                task.wait(0.5)
-
-                
-                firePromptsInRadius(20)
-                task.wait(0.2)
-                firePromptsInRadius(20)
-                task.wait(0.5)
-            end
-        end
-
-        -- ៣. Tween ទៅប៉ះ Guard Model តាម Area ដែលបានរើស
-        local guardModel = rootFolder and rootFolder:FindFirstChild("Areas") and rootFolder.Areas:FindFirstChild("GuardAreas") and rootFolder.Areas.GuardAreas:FindFirstChild(targetArea) and rootFolder.Areas.GuardAreas[targetArea]:FindFirstChild("Guard") and rootFolder.Areas.GuardAreas[targetArea].Guard:FindFirstChild("Model")
-        
-        local hitGuardTime = 0 -- បង្កើតអថេរសម្រាប់កត់ត្រាពេលប៉ះ Guard
-
-        if guardModel then
-            local guardPart = guardModel:IsA("BasePart") and guardModel or guardModel.PrimaryPart or guardModel:FindFirstChildWhichIsA("BasePart", true)
-            if guardPart then
-                local guardPos = guardPart.Position
-                local guardTargetCF = CFrame.new(guardPos.X, guardPos.Y + Config.Farm.HeightOffset, guardPos.Z) * guardPart.CFrame.Rotation
-                local tween2 = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, guardTargetCF), {CFrame = guardTargetCF})
-                tween2:Play()
-                tween2.Completed:Wait()
-                
-                -- កត់ត្រាពេលវេលាភ្លាមៗ បន្ទាប់ពីប៉ះ Guard រួច
-                hitGuardTime = tick() 
-            end
-        end
-        task.wait(0.3)
-
-        -- ដាក់ Loop ឱ្យវានៅតែ Tween និងព្យាយាមប្រមូល រហូតទាល់តែ Egg លែងមាន
-        while hitbox and hitbox.Parent do
-            local targetPos = hitbox.Position
-            local collectTargetCF = CFrame.new(targetPos.X, targetPos.Y + Config.Farm.HeightOffset, targetPos.Z) * hitbox.CFrame.Rotation
-            hrp.Anchored = false
-            
-            local speed = 4000
-            local dist = (hrp.Position - collectTargetCF.Position).Magnitude
-            local duration = math.max(dist / speed, 0.1)
-            
-            
-            local tweenEggInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
-            local tweenToEgg = TweenService:Create(hrp, tweenEggInfo, {CFrame = collectTargetCF})
-            tweenToEgg:Play()
-            tweenToEgg.Completed:Wait()
+-- Function ជំនួយសម្រាប់រត់ទៅឲ្យចំទីតាំងច្បាស់លាស់
+local function runToExactPosition(hum, hrp, targetPos, timeoutDuration)
+    local startTime = os.clock()
     
-    -- [កូដបន្តបន្ទាប់របស់អ្នក]...
-            
-            hrp.Anchored = true
-
-            
-            -- ឆែកមើល Cooldown ៥ វិនាទី (គិតចាប់ពីពេលប៉ះ Guard)
-            if hitGuardTime > 0 then
-                local timePassed = tick() - hitGuardTime
-                local timeLeft = 2 - timePassed
-                if timeLeft > 0 then
-                    task.wait(timeLeft)
-                end
-            end
-            hrp.Anchored = false
-            
-
-            -- រង់ចាំ ០.៥ វិនាទី ឲ្យហ្គេម Load Prompt សិន
-            task.wait(0.05)
-            hrp.Anchored = false
-            
-            -- [កែសម្រួលថ្មី] ហៅ Function ដើមមកប្រើក្នុងចម្ងាយ ២០
-            -- យើងនៅតែឲ្យវាព្យាយាម ៣ ដង ដើម្បីឲ្យប្រាកដ ១០០% ថាប្រមូលបានជោគជ័យ
-            for i = 1, 3 do
-                firePromptsInRadius(1)
-                task.wait(0.05)
-            end
-        end
-
-        -- ៥. ត្រឡប់មក Base វិញ
-        pcall(function()
-            local tweenFlyBack = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, originalCFrame), {CFrame = originalCFrame})
-            tweenFlyBack:Play()
-            tweenFlyBack.Completed:Wait()
-        end)
+    while (os.clock() - startTime) < timeoutDuration do
+        -- យកតែអ័ក្ស X និង Z ដើម្បីគណនាចម្ងាយ (មិនខ្វល់ពីកម្ពស់ Y ទេ)
+        local hrpFlat = Vector3.new(hrp.Position.X, 0, hrp.Position.Z)
+        local targetFlat = Vector3.new(targetPos.X, 0, targetPos.Z)
+        local dist = (hrpFlat - targetFlat).Magnitude
         
-        task.wait(Config.Farm.WaitAtBase)
+        if dist > 1.5 then
+            -- បើនៅឆ្ងាយ បន្តរត់
+            hum:MoveTo(targetPos)
+        else
+            -- ១. ឈប់រត់
+            hum:MoveTo(hrp.Position)
+            
+            -- ២. បញ្ឈប់សន្ទុះ (ការពារកុំឲ្យរអិលហួសគោលដៅ)
+            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            
+            -- ៣. Snap ឲ្យចំកណ្តាលគោលដៅច្បាស់ (ស្រដៀង Tween) ប៉ុន្តែរក្សាកម្ពស់ដើម (Y)
+            hrp.CFrame = CFrame.new(targetPos.X, hrp.Position.Y, targetPos.Z)
+            
+            return true -- ទៅដល់គោលដៅជោគជ័យ
         end
+        
+        task.wait() -- Run លឿនបំផុតរៀងរាល់ Frame ដើម្បីឲ្យការឈប់មានភាពសុក្រឹត
+    end
+    
+    return false -- បរាជ័យ (អស់ Timeout មុនពេលទៅដល់)
+end
+
+-- Function គោលរបស់អ្នក
+local function stealEggAtLocation(hitbox)
+    restoreHumanoid()
+    task.wait(0.1)
+    
+    local char = player.Character
+    local hum = char and char:FindFirstChild("Humanoid")
+    local hrp = getHRP()
+    
+    if not hrp or not hitbox or not hum then return end
+
+    hrp.Anchored = false
+    hum.PlatformStand = false
+
+    local timeout = 50
+    local targetPos = hitbox.Position
+
+    -- ១. រត់ទៅទីតាំង Egg ឲ្យចំច្បាស់
+    local reachedEgg = runToExactPosition(hum, hrp, targetPos, timeout)
+    
+    if reachedEgg then
+        -- បើទៅដល់ចំកន្លែងហើយ ទើបហៅ Prompts
+        local fireCount = 0
+        while hitbox and hitbox.Parent and fireCount < 5 do -- ព្យាយាមយក 5 ដង
+            firePromptsInRadius(10)
+            task.wait(0.3) -- Delay កុំឲ្យ spam ពេក
+            fireCount = fireCount + 1
+        end
+    end
+
+    -- ២. រត់ត្រឡប់មក Base វិញឲ្យចំកណ្តាលច្បាស់
+    local basePos = originalCFrame.Position
+    runToExactPosition(hum, hrp, basePos, timeout)
+    
+    task.wait(Config.Farm.WaitAtBase)
+end
 
 
         
@@ -959,7 +899,7 @@ tabFarm:CreateToggle({
 
 -- ប៊ូតុង បើក/បិទ Auto Farm Event
 tabFarm:CreateToggle({
-    Name = '<font size="24"><b>លេង Event ស្វ័យប្រវត្តិ</b></font>(Auto Farm Event)',
+    Name = '<font size="24"><b>លេង Event ស្វ័យប្រវត្តិ</b></font>(កំពុងជួសជុលមិនទាន់អាចប្រើបានទេ)',
     CurrentValue = false,
     Flag = "auto_farm_event_toggle",
     Callback = function(value)
