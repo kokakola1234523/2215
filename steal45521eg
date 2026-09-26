@@ -40,7 +40,7 @@ getgenv().AutoPartFarm = false
 getgenv().AutoRainbowEgg = false
 getgenv().AutoTreadmill = false
 getgenv().AutoESP = false 
-getgenv().FlySpeed = 600
+getgenv().FlySpeed = 450
 
 local allAreaNames = {"Light Dark", "Titan Temple", "Cherry Blossom", "Cosmic", "Prehistoric", "Abyss Ocean", "Desert", "Jungle",  "Snow", "Volcano","Lake"}
 local selectedModules = {"Light Dark"}
@@ -610,7 +610,7 @@ end
             -- យើងនៅតែឲ្យវាព្យាយាម ៣ ដង ដើម្បីឲ្យប្រាកដ ១០០% ថាប្រមូលបានជោគជ័យ
             for i = 1, 3 do
                 firePromptsInRadius(1)
-                task.wait(0.05)
+                task.wait(0.1)
             end
             
             task.wait(0.2)
@@ -995,10 +995,10 @@ tabSettings:CreateButton({
 
 tabSettings:CreateSlider({
     Name = '<font size="24"><b>កំណត់ល្បឿនហោះ</b></font>(Fly Speed)',
-    Range = {600, 800},
+    Range = {450, 600},
     Increment = 10,
     Suffix = " Speed",
-    CurrentValue = 600,
+    CurrentValue = 450,
     Flag = "FlySpeedSlider",
     Callback = function(Value) getgenv().FlySpeed = Value end,
 })
