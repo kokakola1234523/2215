@@ -416,33 +416,10 @@ end)
 -- ==========================================
 -- 5. Auto-Farm & Treadmill System
 -- ==========================================
-local storedHumanoid = nil
+
 local isCurrentlyOnTreadmill = false
 local lastTreadmillTargetCF = nil
 
-local function removeHumanoid()
-    local char = player.Character
-    if char then
-        local hum = char:FindFirstChild("Humanoid")
-        if hum then
-            hum:UnequipTools()
-            storedHumanoid = hum
-            hum.Parent = nil
-            
-            -- បន្ថែមជួរនេះ ដើម្បីឱ្យកាមេរ៉ាដើមចាប់តាម HumanoidRootPart ជំនួសវិញ
-            workspace.CurrentCamera.CameraSubject = char:FindFirstChild("HumanoidRootPart")
-        end
-    end
-end
-
-local function restoreHumanoid()
-    local char = player.Character
-    if char and not char:FindFirstChild("Humanoid") and storedHumanoid then
-        storedHumanoid.Parent = char
-        workspace.CurrentCamera.CameraSubject = storedHumanoid
-        storedHumanoid = nil
-    end
-end
 
 task.spawn(function()
 
@@ -498,74 +475,58 @@ end
 local RunService = game:GetService("RunService")
 
 local function runToExactPosition(hum, hrp, target)
-    local lastPos = hrp.Position
-    local lastMoveTime = os.clock()
-    local lastMoveToCall = 0 
-    local lastTargetPos = nil 
+    if not hrp or not hum then return false end
     
-    -- អញ្ញាតិសម្រាប់បោកបញ្ឆោត Roblox 
-    local toggleOffset = false 
-
-    while true do
-        if typeof(target) ~= "Vector3" and not target.Parent then
-            break
-        end
-
-        local targetPos = typeof(target) == "Vector3" and target or target.Position
-        
-        local hrpFlat = Vector3.new(hrp.Position.X, 0, hrp.Position.Z)
-        local targetFlat = Vector3.new(targetPos.X, 0, targetPos.Z)
-        local dist = (hrpFlat - targetFlat).Magnitude
-        
-        if dist > 1.2 then
-            
-            -- រៀងរាល់ ៣ វិនាទី យើងអាប់ដេតទីតាំងម្ដង ដើម្បីការពារកុំឲ្យ Roblox បញ្ឈប់តួអង្គ
-            if not lastTargetPos or (lastTargetPos - targetPos).Magnitude > 1 or (os.clock() - lastMoveToCall) > 1 then
-                
-                -- បូក/ដក 0.01 Studs តិចៗ ដើម្បីឲ្យ Roblox គិតថាជាគោលដៅថ្មី (ទើបវាអត់ឈប់រត់កណ្តាលផ្លូវ)
-                toggleOffset = not toggleOffset
-                local microOffset = toggleOffset and 0.01 or -0.01
-                local trickedTarget = targetPos + Vector3.new(microOffset, 0, microOffset)
-                
-                hum:MoveTo(trickedTarget)
-                lastTargetPos = targetPos
-                lastMoveToCall = os.clock()
-            end
-            
-            -- ប្រព័ន្ធ Anti-Stuck 
-            if (hrp.Position - lastPos).Magnitude < 0.5 then
-                if (os.clock() - lastMoveTime) > 0.5 then
-                    hum.Jump = true 
-                    lastMoveTime = os.clock() 
-                end
-            else
-                lastPos = hrp.Position
-                lastMoveTime = os.clock()
-            end
-            
-        else
-            -- === ដល់គោលដៅ (ឈប់ចំកន្លែងម៉ង ដូចដែលអ្នកចង់បាន) ===
-            hum:MoveTo(hrp.Position) 
-            
-            hrp.AssemblyLinearVelocity = Vector3.zero
-            hrp.AssemblyAngularVelocity = Vector3.zero
-            
-            local exactPosition = Vector3.new(targetPos.X, hrp.Position.Y, targetPos.Z)
-            hrp.CFrame = CFrame.new(exactPosition) * hrp.CFrame.Rotation
-            
-            return true 
-        end
-        
-        RunService.Heartbeat:Wait()
+    local targetPos = typeof(target) == "Vector3" and target or target.Position
+    local exactPos = Vector3.new(targetPos.X, hrp.Position.Y, targetPos.Z)
+    
+    local distance = (hrp.Position - exactPos).Magnitude
+    
+    -- បើនៅកៀកស្រាប់ មិនបាច់រត់ទេ (Snap ចូលតែម្ដង)
+    if distance < 0.5 then
+        hrp.CFrame = CFrame.new(exactPos) * hrp.CFrame.Rotation
+        return true 
     end
     
-    return false 
+    local walkSpeed = (hum.WalkSpeed and hum.WalkSpeed > 0) and hum.WalkSpeed or 25
+    local duration = distance / walkSpeed
+    
+    -- បែរមុខតួអង្គទៅរកគោលដៅភ្លាមៗ
+    local lookCFrame = CFrame.lookAt(hrp.Position, exactPos)
+    hrp.CFrame = lookCFrame
+    local targetCFrame = CFrame.new(exactPos) * lookCFrame.Rotation
+    
+    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
+    
+    -- ទាញទិសដៅដើម្បីបន្លំល្បឿន
+    local direction = (exactPos - hrp.Position).Unit
+    
+    -- Loop នេះជាអ្នកបន្លំ System អំឡុងពេល Tween កំពុងដើរ
+    local animConn = RunService.Heartbeat:Connect(function()
+        -- ១. ប្រាប់ Humanoid ឱ្យបញ្ជាការដើរ
+        hum:Move(direction)
+        -- ២. បន្លំល្បឿន (Velocity) របស់កាយវិការ ឱ្យហ្គេមគិតថាយើងកំពុងប្រើកម្លាំងរត់ពិតមែន
+        hrp.AssemblyLinearVelocity = direction * walkSpeed
+    end)
+    
+    tween:Play()
+    tween.Completed:Wait()
+    
+    -- បិទការបន្លំវិញ ពេលរត់ដល់គោលដៅ
+    animConn:Disconnect()
+    hum:Move(Vector3.zero)
+    hrp.AssemblyLinearVelocity = Vector3.zero
+    hrp.AssemblyAngularVelocity = Vector3.zero
+    
+    -- ទាញឱ្យចំកណ្ដាល 100% 
+    hrp.CFrame = targetCFrame 
+    
+    return true 
 end
 
 -- Function គោល
 local function stealEggAtLocation(hitbox)
-    restoreHumanoid()
-    task.wait(0.1)
     
     local char = player.Character
     local hum = char and char:FindFirstChild("Humanoid")
@@ -756,25 +717,24 @@ end
         if hrp then hrp.Anchored = false end
     end
 
-    -- Main Loop
-    -- ==========================================
-    -- Main Loop ថ្មី (បញ្ជា Event, Auto Steal, និង Treadmill)
-    -- ==========================================
-    while true do
-        -- ឆែកមើល Event
-        local isEventActive = Workspace:GetAttribute("ScrambleOutbreakActive") == true
 
-        if getgenv().AutoFarmEvent and isEventActive then
-            -- ពេលមាន Event: បញ្ឈប់ការរត់ម៉ាស៊ីន ហើយទុកឱ្យ Auto Event ធ្វើការ
-            restoreHumanoid()
-            if isCurrentlyOnTreadmill then
-                leaveTreadmill()
-                isCurrentlyOnTreadmill = false
-                task.wait(0.5)
-            end
-            task.wait(0.2)
-            continue -- រំលងកូដលួចស៊ុតខាងក្រោមសិន ដើម្បីទៅវ៉ៃ Event
+    -- Main Loop
+    while true do
+    -- ឆែកមើល Event
+    local isEventActive = Workspace:GetAttribute("ScrambleOutbreakActive") == true
+
+    if getgenv().AutoFarmEvent and isEventActive then
+        -- ពេលមាន Event: បញ្ឈប់ការរត់ម៉ាស៊ីន ហើយទុកឱ្យ Auto Event ធ្វើការ
+        -- លុប restoreHumanoid() នៅទីនេះចេញ
+        if isCurrentlyOnTreadmill then
+            leaveTreadmill()
+            isCurrentlyOnTreadmill = false
+            task.wait(0.5)
         end
+        task.wait(0.2)
+        continue
+    end
+    -- ... (កូដខាងក្រោមរក្សាទុកដដែល)
 
         -- ពេលគ្មាន Event: ដំណើរការ Auto Steal និង Auto Treadmill ជាធម្មតា
         if isWallOpenOrCountdownFinished() then
@@ -788,7 +748,7 @@ end
                         leaveTreadmill()
                         isCurrentlyOnTreadmill = false
                         
-                        restoreHumanoid() -- ហៅ Humanoid មកវិញដើម្បីបញ្ឈប់ Animation រត់
+                         -- ហៅ Humanoid មកវិញដើម្បីបញ្ឈប់ Animation រត់
                         
                         local hrp = getHRP()
                         if hrp then
@@ -800,12 +760,11 @@ end
                     end
                     
                     -- ពេលឈរស្ងៀមហើយ ទើបលុប Humanoid រួចហោះទៅយក Egg
-                    removeHumanoid()
+                    
                     stealEggAtLocation(hitbox)
                 end
                 
             else
-                restoreHumanoid()
                 if getgenv().AutoTreadmill then
                     local hrp = getHRP()
                     if isCurrentlyOnTreadmill and hrp and lastTreadmillTargetCF then
@@ -830,7 +789,7 @@ end
                 task.wait(0.5)
             end
         else
-            restoreHumanoid()
+
             if getgenv().AutoTreadmill then
                 local hrp = getHRP()
                 if isCurrentlyOnTreadmill and hrp and lastTreadmillTargetCF then
