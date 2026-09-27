@@ -581,7 +581,7 @@ local function stealEggAtLocation(hitbox)
                 
                 -- កំណត់លក្ខខណ្ឌ៖ តើយើងពិតជាកំពុងកាន់វា ឬវាជ្រុះបាត់ហើយ?
                 -- បើវាស្ថិតក្នុង Character ឬនៅកៀកខ្លួនខ្លាំង (តិចជាងឬស្មើ ២.៥) = កំពុងកាន់
-                if eggInChar or distToEgg <= 2.5 then
+                if eggInChar or distToEgg <= 9 then
                     local distToBase = (hrp.Position - basePos).Magnitude
                     if distToBase > 3 then
                         -- បន្តរត់មក Base វិញ
