@@ -535,6 +535,7 @@ local function stealEggAtLocation(hitbox)
 
     hrp.Anchored = false
     hum.PlatformStand = false
+    runToExactPosition(hum, hrp, basePos)
     
     -- ១. ចាប់យកឈ្មោះពិត (ID) របស់ Egg 
     local eggName = hitbox.Parent.Name
