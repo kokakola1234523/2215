@@ -28,9 +28,9 @@ local Config = {
         HeightOffset = 1.5,
         MaxProximityDist = 1,
         WaitAtBase = 0.5,
-        TreadmillTweenSpeed = 250,
+        TreadmillTweenSpeed = 1000,
         TreadmillHipOffset = 3,
-        TreadmillMaxDistance = 5 -- ឆែកមើលបើលោត ឬផ្លាតចេញឆ្ងាយជាង 10 studs វានឹង Tween ចូលវិញ
+        TreadmillMaxDistance = 10 -- ឆែកមើលបើលោត ឬផ្លាតចេញឆ្ងាយជាង 10 studs វានឹង Tween ចូលវិញ
     }
 }
 
@@ -46,7 +46,7 @@ local allAreaNames = {"Light Dark", "Titan Temple", "Cherry Blossom", "Cosmic", 
 local selectedModules = {"Light Dark"}
 local RAINBOW_KEYWORDS = {"rainbow", "glow", "radicalhalo"}
 
-local originalCFrame = CFrame.new(519.258118, 70.2762833, -366.21521, 0.021357337, 2.41917171e-08, -0.999771893, 2.44288478e-09, 1, 2.42494202e-08, 0.999771893, -2.96023073e-09, 0.021357337)
+local originalCFrame = CFrame.new(543.27948, 70.2762833, -312.907349, -0.34852469, -6.52030208e-09, 0.937299609, -3.49374503e-08, 1, -6.03463546e-09, -0.937299609, -3.48500748e-08, -0.34852469)
 
 -- ==========================================
 -- 2. Helper Functions
@@ -80,23 +80,20 @@ end
 
 local function isWallOpenOrCountdownFinished()
     local playerGui = player:FindFirstChild("PlayerGui") or game:GetService("CoreGui")
-    local resetTimerGui = playerGui:FindFirstChild("ResetStartTimer")
-    
-    -- ១. ឆែកមើល GUI៖ ឲ្យតែ ResetStartTimer.Enabled = true មានន័យថាស្ថិតក្នុងវគ្គយប់
+    local resetTimerGui = playerGui:FindFirstChild("ResetStartTimer") or Workspace:FindFirstChild("ResetStartTimer")
     if resetTimerGui and resetTimerGui.Enabled then
-        return false -- យប់ (ជញ្ជាំងបិទ)
+        local frame = resetTimerGui:FindFirstChild("Frame")
+        if frame then
+            local textLabel = frame:FindFirstChild("TextLabel")
+            if textLabel and textLabel.Visible and textLabel.Text ~= "" then return false end
+        end
     end
-    
-    -- ២. ឆែកមើលជញ្ជាំងក្នុង Workspace បន្ថែម
     local resetWall = Workspace:FindFirstChild("AreaEggResetWall") or Workspace:FindFirstChild("EggResetWall")
     if resetWall then
         local wallPart = resetWall:IsA("BasePart") and resetWall or resetWall:FindFirstChildWhichIsA("BasePart", true)
-        if wallPart and wallPart.Transparency < 1 and wallPart.CanCollide then
-            return false -- យប់ (ជញ្ជាំងបិទ)
-        end
+        if wallPart and wallPart.Transparency < 1 and wallPart.CanCollide then return false end
     end
-    
-    return true -- ថ្ងៃ (ជញ្ជាំងបើក អាចលួចបាន)
+    return true
 end
 
 local function isRainbowEgg(slot)
@@ -475,54 +472,58 @@ local function firePromptsInRadius(radius)
     end
 end
 
+local RunService = game:GetService("RunService")
 
 local function runToExactPosition(hum, hrp, target)
     if not hrp or not hum then return false end
     
     local targetPos = typeof(target) == "Vector3" and target or target.Position
     local exactPos = Vector3.new(targetPos.X, hrp.Position.Y, targetPos.Z)
+    
     local distance = (hrp.Position - exactPos).Magnitude
-
-    -- [ការកែប្រែទី១] បើនៅកៀកស្រាប់ (ចម្ងាយ < 1.5) គ្រាន់តែបញ្ឈប់ចលនា មិនបាច់ទាញ CFrame ចូលទេ
-    if distance < 1.5 then
-        hum:Move(Vector3.zero)
-        hrp.AssemblyLinearVelocity = Vector3.zero
-        hrp.AssemblyAngularVelocity = Vector3.zero
-        return true
+    
+    -- បើនៅកៀកស្រាប់ មិនបាច់រត់ទេ (Snap ចូលតែម្ដង)
+    if distance < 0.5 then
+        hrp.CFrame = CFrame.new(exactPos) * hrp.CFrame.Rotation
+        return true 
     end
-
+    
     local walkSpeed = (hum.WalkSpeed and hum.WalkSpeed > 0) and hum.WalkSpeed or 25
     local duration = distance / walkSpeed
-
-    -- បែរមុខតួអង្គទៅរកគោលដៅ
+    
+    -- បែរមុខតួអង្គទៅរកគោលដៅភ្លាមៗ
     local lookCFrame = CFrame.lookAt(hrp.Position, exactPos)
     hrp.CFrame = lookCFrame
     local targetCFrame = CFrame.new(exactPos) * lookCFrame.Rotation
-
+    
     local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
     local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
-
+    
+    -- ទាញទិសដៅដើម្បីបន្លំល្បឿន
     local direction = (exactPos - hrp.Position).Unit
-
+    
+    -- Loop នេះជាអ្នកបន្លំ System អំឡុងពេល Tween កំពុងដើរ
     local animConn = RunService.Heartbeat:Connect(function()
+        -- ១. ប្រាប់ Humanoid ឱ្យបញ្ជាការដើរ
         hum:Move(direction)
+        -- ២. បន្លំល្បឿន (Velocity) របស់កាយវិការ ឱ្យហ្គេមគិតថាយើងកំពុងប្រើកម្លាំងរត់ពិតមែន
         hrp.AssemblyLinearVelocity = direction * walkSpeed
     end)
-
+    
     tween:Play()
     tween.Completed:Wait()
-
-    -- ពេល Tween ដើរចប់ ត្រូវបិទវាវិញ
+    
+    -- បិទការបន្លំវិញ ពេលរត់ដល់គោលដៅ
     animConn:Disconnect()
     hum:Move(Vector3.zero)
     hrp.AssemblyLinearVelocity = Vector3.zero
     hrp.AssemblyAngularVelocity = Vector3.zero
     
-    -- [ការកែប្រែទី២] លុបកូដ "hrp.CFrame = targetCFrame" ចេញ ដើម្បីកុំឱ្យមានការអូសទាញកន្ត្រាក់នៅពេលបញ្ចប់
+    -- ទាញឱ្យចំកណ្ដាល 100% 
+    hrp.CFrame = targetCFrame 
     
-    return true
+    return true 
 end
-
 
 local function stealEggAtLocation(hitbox)
     local char = player.Character
@@ -536,42 +537,42 @@ local function stealEggAtLocation(hitbox)
     hum.PlatformStand = false
     runToExactPosition(hum, hrp, basePos)
     
+    -- ១. ចាប់យកឈ្មោះពិត (ID) របស់ Egg 
     local eggName = hitbox.Parent.Name
     if eggName == "AreaEggSlotsClient" or eggName == "Workspace" then
         eggName = hitbox.Name
     end
 
+    -- រត់ទៅទីតាំងស៊ុតដំបូងដើម្បីយក
     runToExactPosition(hum, hrp, hitbox)
     
     local loopCount = 0
-    local maxTime = 150 
+    local maxTime = 150 -- Timeout ការពារគាំង
 
     while loopCount < maxTime do
-        task.wait(0.5)
+        task.wait(0.1)
         loopCount = loopCount + 1
-        
-        -- [បន្ថែម] បើចូលដល់ពេលយប់កណ្តាលផ្លូវ ផ្តាច់ការលួចភ្លាមៗ!
-        if not isWallOpenOrCountdownFinished() then
-            break 
-        end
         
         local eggInArea = Workspace:FindFirstChild("AreaEggSlotsClient") and Workspace.AreaEggSlotsClient:FindFirstChild(eggName)
         local eggInWorkspace = Workspace:FindFirstChild(eggName)
         local eggInChar = char:FindFirstChild(eggName, true)
         
+        -- លក្ខខណ្ឌជោគជ័យ៖ បាត់ឈ្មោះស៊ុតនេះពីហ្គេមទាំងស្រុង
         if not eggInArea and not eggInWorkspace and not eggInChar then
             break 
         end
         
+        -- ករណីទី ១៖ ស៊ុតនៅកន្លែងដើម (មិនទាន់យកបាន)
         if eggInArea then
             local targetPart = eggInArea:IsA("BasePart") and eggInArea or eggInArea:FindFirstChild("Hitbox", true) or eggInArea:FindFirstChildWhichIsA("BasePart", true)
             if targetPart then
                 if (hrp.Position - targetPart.Position).Magnitude > 3 then
                     runToExactPosition(hum, hrp, targetPart)
                 end
-                firePromptsInRadius(1)
+                firePromptsInRadius(3)
             end
 
+        -- ករណីទី ២៖ ស៊ុតលោតមក Workspace (ជ្រុះ) ឬ តោងជាប់ខ្លួន (យកបាន)
         elseif eggInWorkspace or eggInChar then
             local actualEgg = eggInChar or eggInWorkspace
             local targetPart = actualEgg:IsA("BasePart") and actualEgg or actualEgg:FindFirstChild("Hitbox", true) or actualEgg:FindFirstChildWhichIsA("BasePart", true)
@@ -579,28 +580,35 @@ local function stealEggAtLocation(hitbox)
             if targetPart then
                 local distToEgg = (hrp.Position - targetPart.Position).Magnitude
                 
-                if eggInChar or distToEgg <= 6 then
+                -- កំណត់លក្ខខណ្ឌ៖ តើយើងពិតជាកំពុងកាន់វា ឬវាជ្រុះបាត់ហើយ?
+                -- បើវាស្ថិតក្នុង Character ឬនៅកៀកខ្លួនខ្លាំង (តិចជាងឬស្មើ ២.៥) = កំពុងកាន់
+                if eggInChar or distToEgg <= 9 then
                     local distToBase = (hrp.Position - basePos).Magnitude
                     if distToBase > 3 then
+                        -- បន្តរត់មក Base វិញ
                         runToExactPosition(hum, hrp, basePos)
                     else
-                    task.wait(0.5)
-                        firePromptsInRadius(1)
+                        -- ដល់ Base ហើយ ចុច FirePrompt ដើម្បីទម្លាក់/បញ្ជូនវា
+                        firePromptsInRadius(3)
                     end
                 else
+                    -- វាជ្រុះកណ្តាលផ្លូវហើយ! (ចម្ងាយ > 2.5 Studs)
+                    -- បញ្ជាឲ្យរត់ត្រលប់ទៅរកស៊ុតដែលជ្រុះនោះវិញ ហើយរើសវា
                     runToExactPosition(hum, hrp, targetPart)
                     task.wait(1)
-                    firePromptsInRadius(1)
+                    firePromptsInRadius(3)
                 end
             else
+                -- បើរាវរក Part មិនឃើញ (Error) រត់មកផ្ទះសិន
                 runToExactPosition(hum, hrp, basePos)
             end
         end
     end
 
+    -- ពេលធ្វើរួចរាល់ ត្រលប់មកឈរស្ងៀមនៅ Base វិញ
     runToExactPosition(hum, hrp, basePos)
     task.wait(Config.Farm.WaitAtBase)
-end
+end 
     
 
     local function getTargetEgg()
@@ -763,44 +771,52 @@ end
     end
 
 
--- Main Loop
+    -- Main Loop
     while true do
-        -- ១. ឆែកមើល Event
-        local isEventActive = Workspace:GetAttribute("ScrambleOutbreakActive") == true
+    -- ឆែកមើល Event
+    local isEventActive = Workspace:GetAttribute("ScrambleOutbreakActive") == true
 
-        if getgenv().AutoFarmEvent and isEventActive then
-            if isCurrentlyOnTreadmill then
-                leaveTreadmill()
-                isCurrentlyOnTreadmill = false
-                task.wait(0.5)
-            end
-            task.wait(0.2)
-            continue
+    if getgenv().AutoFarmEvent and isEventActive then
+        -- ពេលមាន Event: បញ្ឈប់ការរត់ម៉ាស៊ីន ហើយទុកឱ្យ Auto Event ធ្វើការ
+        -- លុប restoreHumanoid() នៅទីនេះចេញ
+        if isCurrentlyOnTreadmill then
+            leaveTreadmill()
+            isCurrentlyOnTreadmill = false
+            task.wait(0.5)
         end
+        task.wait(0.2)
+        continue
+    end
+    -- ... (កូដខាងក្រោមរក្សាទុកដដែល)
 
-        -- ២. ឆែកមើលស្ថានភាពថ្ងៃ/យប់
+        -- ពេលគ្មាន Event: ដំណើរការ Auto Steal និង Auto Treadmill ជាធម្មតា
         if isWallOpenOrCountdownFinished() then
-            -- ==========================================
-            -- [ពេលថ្ងៃ - ជញ្ជាំងបើក] ដំណើរការ Auto Steal និង Treadmill
-            -- ==========================================
             local targetSlot = getTargetEgg()
             if targetSlot then
                 local hitbox = targetSlot:FindFirstChild("Hitbox", true) or (targetSlot:IsA("BasePart") and targetSlot) or targetSlot:FindFirstChildWhichIsA("BasePart", true)
 
                 if hitbox then
+                    -- បើកំពុងរត់ម៉ាស៊ីន ត្រូវចុះមកឈរលើដីអោយស្រួលបួលសិន
                     if isCurrentlyOnTreadmill then
                         leaveTreadmill()
                         isCurrentlyOnTreadmill = false
+                        
+                         -- ហៅ Humanoid មកវិញដើម្បីបញ្ឈប់ Animation រត់
+                        
                         local hrp = getHRP()
                         if hrp then
                             hrp.Anchored = false 
                             hrp.AssemblyLinearVelocity = Vector3.zero
                         end
-                        task.wait(0.5)
+                        
+                        task.wait(0.5) -- រង់ចាំកន្លះវិនាទី អោយជើងជាន់ដីស្ងៀមល្អ
                     end
+                    
+                    -- ពេលឈរស្ងៀមហើយ ទើបលុប Humanoid រួចហោះទៅយក Egg
                     
                     stealEggAtLocation(hitbox)
                 end
+                
             else
                 if getgenv().AutoTreadmill then
                     local hrp = getHRP()
@@ -826,35 +842,29 @@ end
                 task.wait(0.5)
             end
         else
-            -- ==========================================
-            -- [ពេលយប់ - ជញ្ជាំងបិទ] ចុះពី Treadmill ហើយរត់មកឈរចាំនៅ Base
-            -- ==========================================
-            if isCurrentlyOnTreadmill then
-                leaveTreadmill()
-                isCurrentlyOnTreadmill = false
-                task.wait(0.5)
-            end
-            
-            local hrp = getHRP()
-            local char = player.Character
-            local hum = char and char:FindFirstChild("Humanoid")
-            
-            if hrp and hum then
-                hum:Move(Vector3.zero)
-                hrp.AssemblyLinearVelocity = Vector3.zero
-                hrp.AssemblyAngularVelocity = Vector3.zero
-                
-                local basePos = originalCFrame.Position
-                local distToBase = (hrp.Position - basePos).Magnitude
-                
-                if distToBase > 3 then
-                    runToExactPosition(hum, hrp, basePos)
-                else
-                    hrp.CFrame = originalCFrame
+
+            if getgenv().AutoTreadmill then
+                local hrp = getHRP()
+                if isCurrentlyOnTreadmill and hrp and lastTreadmillTargetCF then
+                    local dist = (hrp.Position - lastTreadmillTargetCF.Position).Magnitude
+                    if dist > Config.Farm.TreadmillMaxDistance then
+                        isCurrentlyOnTreadmill = false
+                    end
+                end
+
+                if not isCurrentlyOnTreadmill then
+                    local success = tweenToTreadmillRoot()
+                    if success then
+                        isCurrentlyOnTreadmill = true
+                    end
+                end
+            else
+                if isCurrentlyOnTreadmill then
+                    leaveTreadmill()
+                    isCurrentlyOnTreadmill = false
                 end
             end
-            
-            task.wait(0.5)
+            task.wait(0.2)
         end
         task.wait(0.1)
     end
