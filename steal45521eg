@@ -525,37 +525,89 @@ local function runToExactPosition(hum, hrp, target)
     return true 
 end
 
--- Function គោល
 local function stealEggAtLocation(hitbox)
-    
     local char = player.Character
     local hum = char and char:FindFirstChild("Humanoid")
     local hrp = getHRP()
-
     local basePos = originalCFrame.Position
-    runToExactPosition(hum, hrp, basePos)
-    
+
     if not hrp or not hitbox or not hum then return end
 
     hrp.Anchored = false
     hum.PlatformStand = false
-
-    local reached = runToExactPosition(hum, hrp, hitbox)
     
-    if reached then
-        local fireCount = 0
-        while hitbox and hitbox.Parent and fireCount < 6 do 
-            firePromptsInRadius(1)
-            task.wait(0.1) 
-            fireCount = fireCount + 1
+    -- ១. ចាប់យកឈ្មោះពិត (ID) របស់ Egg 
+    local eggName = hitbox.Parent.Name
+    if eggName == "AreaEggSlotsClient" or eggName == "Workspace" then
+        eggName = hitbox.Name
+    end
+
+    -- រត់ទៅទីតាំងស៊ុតដំបូងដើម្បីយក
+    runToExactPosition(hum, hrp, hitbox)
+    
+    local loopCount = 0
+    local maxTime = 150 -- Timeout ការពារគាំង
+
+    while loopCount < maxTime do
+        task.wait(0.1)
+        loopCount = loopCount + 1
+        
+        local eggInArea = Workspace:FindFirstChild("AreaEggSlotsClient") and Workspace.AreaEggSlotsClient:FindFirstChild(eggName)
+        local eggInWorkspace = Workspace:FindFirstChild(eggName)
+        local eggInChar = char:FindFirstChild(eggName, true)
+        
+        -- លក្ខខណ្ឌជោគជ័យ៖ បាត់ឈ្មោះស៊ុតនេះពីហ្គេមទាំងស្រុង
+        if not eggInArea and not eggInWorkspace and not eggInChar then
+            break 
+        end
+        
+        -- ករណីទី ១៖ ស៊ុតនៅកន្លែងដើម (មិនទាន់យកបាន)
+        if eggInArea then
+            local targetPart = eggInArea:IsA("BasePart") and eggInArea or eggInArea:FindFirstChild("Hitbox", true) or eggInArea:FindFirstChildWhichIsA("BasePart", true)
+            if targetPart then
+                if (hrp.Position - targetPart.Position).Magnitude > 3 then
+                    runToExactPosition(hum, hrp, targetPart)
+                end
+                firePromptsInRadius(3)
+            end
+
+        -- ករណីទី ២៖ ស៊ុតលោតមក Workspace (ជ្រុះ) ឬ តោងជាប់ខ្លួន (យកបាន)
+        elseif eggInWorkspace or eggInChar then
+            local actualEgg = eggInChar or eggInWorkspace
+            local targetPart = actualEgg:IsA("BasePart") and actualEgg or actualEgg:FindFirstChild("Hitbox", true) or actualEgg:FindFirstChildWhichIsA("BasePart", true)
+            
+            if targetPart then
+                local distToEgg = (hrp.Position - targetPart.Position).Magnitude
+                
+                -- កំណត់លក្ខខណ្ឌ៖ តើយើងពិតជាកំពុងកាន់វា ឬវាជ្រុះបាត់ហើយ?
+                -- បើវាស្ថិតក្នុង Character ឬនៅកៀកខ្លួនខ្លាំង (តិចជាងឬស្មើ ២.៥) = កំពុងកាន់
+                if eggInChar or distToEgg <= 2.5 then
+                    local distToBase = (hrp.Position - basePos).Magnitude
+                    if distToBase > 3 then
+                        -- បន្តរត់មក Base វិញ
+                        runToExactPosition(hum, hrp, basePos)
+                    else
+                        -- ដល់ Base ហើយ ចុច FirePrompt ដើម្បីទម្លាក់/បញ្ជូនវា
+                        firePromptsInRadius(3)
+                    end
+                else
+                    -- វាជ្រុះកណ្តាលផ្លូវហើយ! (ចម្ងាយ > 2.5 Studs)
+                    -- បញ្ជាឲ្យរត់ត្រលប់ទៅរកស៊ុតដែលជ្រុះនោះវិញ ហើយរើសវា
+                    runToExactPosition(hum, hrp, targetPart)
+                    task.wait(1)
+                    firePromptsInRadius(3)
+                end
+            else
+                -- បើរាវរក Part មិនឃើញ (Error) រត់មកផ្ទះសិន
+                runToExactPosition(hum, hrp, basePos)
+            end
         end
     end
 
+    -- ពេលធ្វើរួចរាល់ ត្រលប់មកឈរស្ងៀមនៅ Base វិញ
     runToExactPosition(hum, hrp, basePos)
-    
     task.wait(Config.Farm.WaitAtBase)
-end
-        
+end 
     
 
     local function getTargetEgg()
