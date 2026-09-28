@@ -305,11 +305,11 @@ end)
 -- ==========================================
 -- [កូដបន្ថែម] Auto Farm Event (Portal, Patrol & Attack - Auto Equip)
 -- ==========================================
-getgenv().AutoFarmEvent = false 
-local TWEEN_SPEED = 200 
-local hasTouchedPortal = false
+getgenv().AutoFarmEvent = false
 
--- Function ស្វែងរកគោលដៅចេញពី TutorialBeam
+local TOOL_NAME = "Bat [X1]"
+local PORTAL_COOLDOWN = 5 -- រយៈពេលរង់ចាំ (វិនាទី) មុនពេល Teleport ទៅ Portal ម្តងទៀត
+
 local function getBeamTarget()
     local beam = workspace:FindFirstChild("TutorialBeam", true)
     if beam then
@@ -326,20 +326,16 @@ local function getBeamTarget()
     return nil
 end
 
--- Function សម្រាប់បិទការប៉ះទង្គិចជញ្ជាំង (Noclip) ពេលកំពុងហោះ
-local function applyNoclip(character)
-    for _, part in ipairs(character:GetDescendants()) do
-        if part:IsA("BasePart") and part.CanCollide then
-            part.CanCollide = false
-        end
-    end
-end
-
 task.spawn(function()
+    local lastPortalTeleport = 0
+
     while task.wait(0.05) do 
-        -- ប្រើប្រាស់ AutoFarmEvent ដែលមានស្រាប់
+        -- ១. ឆែក Toggle បើមិនបានបើក ឱ្យរង់ចាំ
         if not getgenv().AutoFarmEvent then continue end
         
+        -- ២. ឆែកមើលជញ្ជាំង (បើជញ្ជាំងបិទ/ពេលយប់ ឱ្យរង់ចាំ រហូតដល់ជញ្ជាំងបើកទើបដំណើរការ)
+        if not isWallOpenOrCountdownFinished() then continue end
+
         local character = player.Character
         if not character then continue end
         
@@ -348,11 +344,8 @@ task.spawn(function()
         
         if humanoid and hrp and humanoid.Health > 0 then
             
-            -- រកមើល Portal និង Target
-            local portal = workspace:FindFirstChild("ScrambleArenaPortal")
+            -- ១. រកមើលទីតាំងគោលដៅ (Target)
             local target = getBeamTarget()
-            
-            -- បើគ្មាន Beam ទេ ប្រើប្រព័ន្ធចាស់ស្វែងរក មេ ឬ បាល់
             if not target then
                 local arena = workspace:FindFirstChild("ScrambleArena")
                 if arena then
@@ -366,94 +359,56 @@ task.spawn(function()
                 end
             end
 
-            -- ដំណាក់កាលទី ១៖ បើមាន Portal ហើយមិនទាន់បានបុក -> ទៅបុកវាសិន
-            if portal and not hasTouchedPortal then
-                local portalCFrame = portal:IsA("Model") and portal:GetPivot() or (portal:IsA("BasePart") and portal.CFrame)
-                
-                if portalCFrame then
-                    local distance = (hrp.Position - portalCFrame.Position).Magnitude
-                    
-                    if distance > 3 then
-                        local tweenInfo = TweenInfo.new(distance / TWEEN_SPEED, Enum.EasingStyle.Linear)
-                        local tween = TweenService:Create(hrp, tweenInfo, {CFrame = portalCFrame})
-                        tween:Play()
-                        
-                        -- រង់ចាំឱ្យហោះទៅដល់
-                        while portal.Parent and hrp and humanoid.Health > 0 and getgenv().AutoFarmEvent do
-                            local currentDist = (hrp.Position - portalCFrame.Position).Magnitude
-                            if currentDist <= 3 then 
-                                hasTouchedPortal = true 
-                                break 
-                            end 
-                            applyNoclip(character) -- ប្រើ Noclip កុំឱ្យទាក់ជញ្ជាំង
-                            hrp.Velocity = Vector3.zero
-                            task.wait(0.05)
-                        end
-                        tween:Cancel()
-                    else
-                        hrp.CFrame = portalCFrame
-                        hasTouchedPortal = true
-                    end
+            -- កំណត់ CFrame Target
+            local targetCFrame = target and (target:IsA("Model") and target:GetPivot() or (target:IsA("BasePart") and target.CFrame))
+            
+            -- ២. ឆែកមើលថាតើយើងនៅក្បែរ ឬនៅក្នុង Arena ហើយឬនៅ
+            local inArena = false
+            if targetCFrame then
+                local distance = (hrp.Position - targetCFrame.Position).Magnitude
+                if distance < 500 then 
+                    inArena = true
                 end
-                
-            -- ដំណាក់កាលទី ២៖ បើមាន Target (ទោះបុក Portal ហើយឬនៅក៏ដោយ) -> ទៅវាយមេ
-            elseif target then
-                -- Reset ការចំណាំ Portal ត្រៀមទុកសម្រាប់វគ្គក្រោយ បើ Portal នោះរលាយបាត់ហើយ
-                if not portal then hasTouchedPortal = false end
-                
-                local targetCFrame = target:IsA("Model") and target:GetPivot() or (target:IsA("BasePart") and target.CFrame)
-                
-                if targetCFrame then
-                    local finalCFrame = targetCFrame * CFrame.new(0, 0, 3)
-                    local distance = (hrp.Position - finalCFrame.Position).Magnitude
-                    
-                    -- បើនៅឆ្ងាយពីមេ ហោះទៅរកមេ
-                    if distance > 15 then
-                        local tweenInfo = TweenInfo.new(distance / TWEEN_SPEED, Enum.EasingStyle.Linear)
-                        local tween = TweenService:Create(hrp, tweenInfo, {CFrame = finalCFrame})
-                        tween:Play()
-                        
-                        while target.Parent and hrp and humanoid.Health > 0 and getgenv().AutoFarmEvent do
-                            local currentTargetCFrame = target:IsA("Model") and target:GetPivot() or (target:IsA("BasePart") and target.CFrame)
-                            local currentDist = (hrp.Position - (currentTargetCFrame * CFrame.new(0, 0, 3)).Position).Magnitude
-                            if currentDist <= 15 then break end 
-                            
-                            applyNoclip(character) -- ប្រើ Noclip កុំឱ្យទាក់ជញ្ជាំង
-                            hrp.Velocity = Vector3.zero
-                            task.wait(0.05)
-                        end
-                        tween:Cancel()
-                    else
-                        -- ពេលនៅជិត តោងវាយមេ
-                        hrp.CFrame = finalCFrame
-                        hrp.Velocity = Vector3.zero
-                        hrp.RotVelocity = Vector3.zero
-                        
-                        -- ស្វែងរកអាវុធដែលកំពុងកាន់ក្នុងដៃស្រាប់
-                        local tool = character:FindFirstChildOfClass("Tool")
+            end
 
-                        -- បើអត់មានកាន់អីទេ ចូលទៅទាញអាវុធទី១ ពីក្នុងកាតាបមកកាន់
-                        if not tool then
-                            local backpack = player:FindFirstChild("Backpack")
-                            if backpack then
-                                local firstTool = backpack:FindFirstChildOfClass("Tool")
-                                if firstTool then
-                                    humanoid:EquipTool(firstTool)
-                                    tool = firstTool
-                                end
-                            end
-                        end
-                        
-                        if tool then
-                            tool:Activate()
+            local portal = workspace:FindFirstChild("ScrambleArenaPortal")
+            local portalCFrame = portal and (portal:IsA("Model") and portal:GetPivot() or (portal:IsA("BasePart") and portal.CFrame))
+
+            -- ៣. ដំណើរការ Teleport ឬហោះទៅវាយ Target
+            if portalCFrame and not inArena then
+                if tick() - lastPortalTeleport >= PORTAL_COOLDOWN then
+                    hrp.CFrame = portalCFrame
+                    if hrp:IsA("BasePart") then
+                        hrp.AssemblyLinearVelocity = Vector3.zero
+                        hrp.AssemblyAngularVelocity = Vector3.zero
+                    end
+                    lastPortalTeleport = tick()
+                end
+                
+            elseif targetCFrame then
+                -- ចូលដល់ Arena -> ហោះទៅក្បែរ Target ភ្លាមៗ
+                hrp.CFrame = targetCFrame * CFrame.new(0, 0, 3)
+                if hrp:IsA("BasePart") then
+                    hrp.AssemblyLinearVelocity = Vector3.zero
+                    hrp.AssemblyAngularVelocity = Vector3.zero
+                end
+                
+                -- កាន់អាវុធ (រកតាមឈ្មោះ Bat [X1] មុន បើគ្មានទេទាញអាវុធដែលមានស្រាប់មកប្រើ)
+                local tool = character:FindFirstChild(TOOL_NAME) or character:FindFirstChildOfClass("Tool")
+                if not tool then
+                    local backpack = player:FindFirstChild("Backpack")
+                    if backpack then
+                        local specificTool = backpack:FindFirstChild(TOOL_NAME) or backpack:FindFirstChildOfClass("Tool")
+                        if specificTool then
+                            humanoid:EquipTool(specificTool)
+                            tool = specificTool
                         end
                     end
                 end
                 
-            -- ដំណាក់កាលទី ៣៖ បើអត់មាន Portal និងអត់មានមេ -> ឈរស្ងៀមរង់ចាំ (Idle)
-            else
-                if not portal then
-                    hasTouchedPortal = false -- Reset ចោលបើគ្មាន Portal
+                -- វាយប្រហារ (Attack)
+                if tool then
+                    tool:Activate()
                 end
             end
             
@@ -622,17 +577,17 @@ local function stealEggAtLocation(hitbox)
             if targetPart then
                 local distToEgg = (hrp.Position - targetPart.Position).Magnitude
                 
-                if eggInChar or distToEgg <= 6 then
+                if eggInChar or distToEgg <= 9 then
                     local distToBase = (hrp.Position - basePos).Magnitude
                     if distToBase > 3 then
                         runToExactPosition(hum, hrp, basePos)
                     else
-                    task.wait(0.5)
+                    task.wait(0.3)
                         firePromptsInRadius(1)
                     end
                 else
                     runToExactPosition(hum, hrp, targetPart)
-                    task.wait(1)
+                    task.wait(0.3)
                     firePromptsInRadius(1)
                 end
             else
