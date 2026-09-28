@@ -342,6 +342,7 @@ local function isMechAttacking(arena)
     local mech = arena:FindFirstChild("Mech")
     if mech then
         for _, obj in ipairs(mech:GetDescendants()) do
+            -- រក Highlight ពណ៌ក្រហម តែហាមយកអាវមួយណាដែលឈ្មោះ "HitFlash" ដាច់ខាត!
             if obj:IsA("Highlight") and obj.Name ~= "HitFlash" and obj.Enabled then
                 local r = math.floor(obj.OutlineColor.R * 255 + 0.5)
                 local g = math.floor(obj.OutlineColor.G * 255 + 0.5)
@@ -354,6 +355,7 @@ local function isMechAttacking(arena)
         end
     end
     
+    -- ការពារក្រែងលោវាចេញរង្វង់ក្រហមលើដី
     local badParts = {"Warning", "Attack", "Danger", "AttackArea"}
     for _, name in ipairs(badParts) do
         if arena:FindFirstChild(name) then return true end
@@ -362,13 +364,13 @@ local function isMechAttacking(arena)
     return false
 end
 
--- ៣. Loop សម្រាប់ Event (ចាប់ផ្តើមតែពេលជញ្ជាំងបើក!)
+-- ៣. Loop សម្រាប់ Event ដើរតួជា Priority ទី ២
 task.spawn(function()
     local lastPortalTeleport = 0 
     
     while task.wait(0.05) do 
-        -- 🔴 បើមិនបានបើក Event, កំពុងរវល់លួចស៊ុត, ឬ ជញ្ជាំងបិទ(ពេលយប់) គឺឲ្យ Event ផ្អាកសិន!
-        -- វានឹងចាប់ផ្តើមធ្វើការវិញដោយស្វ័យប្រវត្តិ នៅពេលជញ្ជាំងបើក ហើយលួចអស់ស៊ុត!
+
+        -- 🔴 បើមិនបានបើក Event ឬក៏ កំពុងរវល់លួចស៊ុត (Priority 1) គឺឲ្យ Event ផ្អាកសិន មិនដណ្តើមទាញតួអង្គទេ!
         if not getgenv().AutoFarmEvent or getgenv().IsDoingEgg or not isWallOpenOrCountdownFinished() then 
             continue 
         end
@@ -393,7 +395,7 @@ task.spawn(function()
             if not target and arena then
                 local mech = arena:FindFirstChild("Mech")
                 if mech then 
-                    -- អាទិភាពវ៉ៃចំ Hitbox > Torso > RootPart > Pilot
+                    -- ប្រើប្រាស់ Path ពិតប្រាកដ! អាទិភាពវ៉ៃចំ Hitbox > Torso > RootPart > Pilot
                     target = mech:FindFirstChild("Hitbox") or mech:FindFirstChild("Torso") or mech:FindFirstChild("RootPart") or mech:FindFirstChild("PilotView") or mech
                 else 
                     target = arena:FindFirstChild("Ball") 
@@ -435,7 +437,7 @@ task.spawn(function()
                 local currentlyAttacking = isMechAttacking(arena)
                 
                 if currentlyAttacking then
-                    -- 🔴 [គេច] មេបញ្ចេញ Highlight ក្រហម ហោះគេចឡើងលើ
+                    -- 🔴 [គេច] ពេលមាន Highlight ក្រហមលេចចេញមក វានឹងហោះគេច ៣០ ម៉ែត្រឡើងលើ!
                     hrp.CFrame = CFrame.lookAt(targetPos + Vector3.new(0, 30, 0), targetPos)
                 else
                     -- 🟢 [វាយប្រហារ] ចូលវ៉ៃចំកណ្តាល Hitbox របស់ Mech
@@ -456,7 +458,6 @@ task.spawn(function()
                     tool:Activate()
                 end
             else
-                -- បើមេងាប់ ឈរអណ្តែតចាំនៅកណ្តាល Arena មិនមក Base ទេព្រោះជញ្ជាំងកំពុងបើក
                 if arenaPos then
                     hrp.CFrame = CFrame.new(arenaPos + Vector3.new(0, 5, 0))
                     if hrp:IsA("BasePart") then
@@ -468,7 +469,6 @@ task.spawn(function()
         end)
     end
 end)
-
 
 
 local isCurrentlyOnTreadmill = false
