@@ -74,8 +74,19 @@ local function optimizeObject(v)
 end
 
 local function getHRP()
-    local char = player.Character or player.CharacterAdded:Wait()
-    return char:WaitForChild("HumanoidRootPart", 5)
+    local char = player.Character
+    local hum = char and char:FindFirstChild("Humanoid")
+    
+    -- បើគ្មានតួអង្គ ឬតួអង្គងាប់ហើយ គឺត្រូវរង់ចាំឲ្យវាកើតថ្មីសិន
+    if not char or not hum or hum.Health <= 0 then
+        char = player.CharacterAdded:Wait()
+        hum = char:WaitForChild("Humanoid", 5)
+    end
+    
+    if char then
+        return char:WaitForChild("HumanoidRootPart", 5)
+    end
+    return nil
 end
 
 
@@ -303,120 +314,156 @@ task.spawn(function()
     end
 end)
 
-
 getgenv().AutoFarmEvent = false
+getgenv().IsDoingEgg = false 
+local PORTAL_COOLDOWN = 3 
 
-local player = game:GetService("Players").LocalPlayer
-local TOOL_NAME = "Bat [X1]"
-local PORTAL_COOLDOWN = 5 -- រយៈពេលរង់ចាំ (វិនាទី) មុនពេល Teleport ទៅ Portal ម្តងទៀត
-
-local function getBeamTarget()
-    local beam = workspace:FindFirstChild("TutorialBeam", true)
-    if beam then
-        if beam:IsA("Beam") then
-            if beam.Attachment1 and beam.Attachment1.Parent then
-                return beam.Attachment1.Parent
-            elseif beam.Attachment0 and beam.Attachment0.Parent then
-                return beam.Attachment0.Parent
-            end
-        elseif beam:IsA("BasePart") or beam:IsA("Model") then
-            return beam
+-- ១. មុខងារទាញយកអាវុធដោយឆ្លាតវៃ
+local function getBestTool(player, character)
+    local backpack = player:FindFirstChild("Backpack")
+    if not character then return nil end
+    for _, item in ipairs(character:GetChildren()) do
+        if item:IsA("Tool") and item:FindFirstChild("Controller") then return item end
+    end
+    if backpack then
+        for _, item in ipairs(backpack:GetChildren()) do
+            if item:IsA("Tool") and item:FindFirstChild("Controller") then return item end
         end
     end
-    return nil
+    local fallback = character:FindFirstChild("Bat [X1]") or (backpack and backpack:FindFirstChild("Bat [X1]"))
+    if fallback then return fallback end
+    return character:FindFirstChildOfClass("Tool") or (backpack and backpack:FindFirstChildOfClass("Tool"))
 end
 
-task.spawn(function()
-    local lastPortalTeleport = 0
-
-    while task.wait(0.05) do 
-        -- ១. ឆែក Toggle បើមិនបានបើក ឱ្យរង់ចាំ
-        if not getgenv().AutoFarmEvent then continue end
-
-        -- ប្រើ pcall ដើម្បីការពារកូដគាំង (Crash) ពេលតួអង្គងាប់ ឬ Respawn
-        pcall(function()
-            -- ២. ឆែកមើលជញ្ជាំង (បើជញ្ជាំងបិទ/ពេលយប់ ឱ្យរង់ចាំ)
-            if typeof(isWallOpenOrCountdownFinished) == "function" and not isWallOpenOrCountdownFinished() then 
-                return 
+-- ២. មុខងារឆែកមើលការវាយប្រហារ (រំលង HitFlash ហើយស្កែនរក Highlight ពណ៌ 255, 45, 45 ជំនួសវិញ)
+local function isMechAttacking(arena)
+    if not arena then return false end
+    
+    local mech = arena:FindFirstChild("Mech")
+    if mech then
+        for _, obj in ipairs(mech:GetDescendants()) do
+            if obj:IsA("Highlight") and obj.Name ~= "HitFlash" and obj.Enabled then
+                local r = math.floor(obj.OutlineColor.R * 255 + 0.5)
+                local g = math.floor(obj.OutlineColor.G * 255 + 0.5)
+                local b = math.floor(obj.OutlineColor.B * 255 + 0.5)
+                
+                if r == 255 and g == 45 and b == 45 then
+                    return true
+                end
             end
+        end
+    end
+    
+    local badParts = {"Warning", "Attack", "Danger", "AttackArea"}
+    for _, name in ipairs(badParts) do
+        if arena:FindFirstChild(name) then return true end
+    end
+    
+    return false
+end
 
+-- ៣. Loop សម្រាប់ Event (ចាប់ផ្តើមតែពេលជញ្ជាំងបើក!)
+task.spawn(function()
+    local lastPortalTeleport = 0 
+    
+    while task.wait(0.05) do 
+        -- 🔴 បើមិនបានបើក Event, កំពុងរវល់លួចស៊ុត, ឬ ជញ្ជាំងបិទ(ពេលយប់) គឺឲ្យ Event ផ្អាកសិន!
+        -- វានឹងចាប់ផ្តើមធ្វើការវិញដោយស្វ័យប្រវត្តិ នៅពេលជញ្ជាំងបើក ហើយលួចអស់ស៊ុត!
+        if not getgenv().AutoFarmEvent or getgenv().IsDoingEgg or not isWallOpenOrCountdownFinished() then 
+            continue 
+        end
+
+        pcall(function()
             local character = player.Character
             if not character then return end
             
             local humanoid = character:FindFirstChildOfClass("Humanoid")
             local hrp = character:FindFirstChild("HumanoidRootPart")
             
-            -- ឆែកថាតើតួអង្គនៅរស់ និងមាន HumanoidRootPart ឬនៅ
-            if humanoid and hrp and humanoid.Health > 0 then
+            if not humanoid or not hrp or humanoid.Health <= 0 then return end
                 
-                -- ១. រកមើលទីតាំងគោលដៅ (Target)
-                local target = getBeamTarget()
-                if not target then
-                    local arena = workspace:FindFirstChild("ScrambleArena")
-                    if arena then
-                        local mech = arena:FindFirstChild("Mech")
-                        local ball = arena:FindFirstChild("Ball")
-                        if mech then
-                            target = mech:FindFirstChild("PilotView") or mech:FindFirstChild("Pilot") or mech
-                        else
-                            target = ball
-                        end
-                    end
+            local arena = workspace:FindFirstChild("ScrambleArena")
+            local portal = workspace:FindFirstChild("ScrambleArenaPortal")
+            
+            local target = nil
+            local beam = workspace:FindFirstChild("TutorialBeam", true)
+            if beam and beam:IsA("Beam") then target = (beam.Attachment1 and beam.Attachment1.Parent) or (beam.Attachment0 and beam.Attachment0.Parent)
+            elseif beam and (beam:IsA("BasePart") or beam:IsA("Model")) then target = beam end
+            
+            if not target and arena then
+                local mech = arena:FindFirstChild("Mech")
+                if mech then 
+                    -- អាទិភាពវ៉ៃចំ Hitbox > Torso > RootPart > Pilot
+                    target = mech:FindFirstChild("Hitbox") or mech:FindFirstChild("Torso") or mech:FindFirstChild("RootPart") or mech:FindFirstChild("PilotView") or mech
+                else 
+                    target = arena:FindFirstChild("Ball") 
                 end
+            end
 
-                -- កំណត់ CFrame Target
-                local targetCFrame = target and (target:IsA("Model") and target:GetPivot() or (target:IsA("BasePart") and target.CFrame))
-                
-                -- ២. ឆែកមើលថាតើយើងនៅក្បែរ ឬនៅក្នុង Arena ហើយឬនៅ
-                local inArena = false
-                if targetCFrame then
-                    local distance = (hrp.Position - targetCFrame.Position).Magnitude
-                    if distance < 500 then 
-                        inArena = true
-                    end
-                end
+            local targetPos = nil
+            if target then
+                if target:IsA("Model") then targetPos = target:GetPivot().Position
+                elseif target:IsA("BasePart") then targetPos = target.Position end
+            end
+            
+            local arenaPos = arena and (arena:IsA("Model") and arena:GetPivot().Position or arena:IsA("BasePart") and arena.Position)
+            local portalPos = portal and (portal:IsA("Model") and portal:GetPivot().Position or portal:IsA("BasePart") and portal.Position)
 
-                local portal = workspace:FindFirstChild("ScrambleArenaPortal")
-                local portalCFrame = portal and (portal:IsA("Model") and portal:GetPivot() or (portal:IsA("BasePart") and portal.CFrame))
+            local inArena = false
+            if arenaPos and (hrp.Position - arenaPos).Magnitude < 600 then inArena = true
+            elseif targetPos and (hrp.Position - targetPos).Magnitude < 500 then inArena = true end
 
-                -- ៣. ដំណើរការ Teleport ឬហោះទៅវាយ Target
-                if portalCFrame and not inArena then
-                    if tick() - lastPortalTeleport >= PORTAL_COOLDOWN then
-                        hrp.CFrame = portalCFrame
-                        if hrp:IsA("BasePart") then
-                            hrp.AssemblyLinearVelocity = Vector3.zero
-                            hrp.AssemblyAngularVelocity = Vector3.zero
-                        end
-                        lastPortalTeleport = tick()
-                    end
-                    
-                elseif targetCFrame then
-                    -- ចូលដល់ Arena -> ហោះទៅក្បែរ Target ភ្លាមៗ
-                    hrp.CFrame = targetCFrame * CFrame.new(0, 0, 3)
+            if not inArena and portalPos then
+                -- ផ្តាច់ខ្លួនពីម៉ាស៊ីនរត់មុនហោះចូល Portal
+                pcall(function()
+                    local repStorage = game:GetService("ReplicatedStorage")
+                    local askDoffRemote = repStorage:FindFirstChild("Packages") and repStorage.Packages:FindFirstChild("Networking") and repStorage.Packages.Networking:FindFirstChild("RF/Treadmill/AskDoff")
+                    if askDoffRemote then askDoffRemote:InvokeServer() end
+                    if hrp then hrp.Anchored = false end
+                end)
+
+                if tick() - lastPortalTeleport >= PORTAL_COOLDOWN then
+                    hrp.CFrame = CFrame.new(portalPos)
                     if hrp:IsA("BasePart") then
                         hrp.AssemblyLinearVelocity = Vector3.zero
                         hrp.AssemblyAngularVelocity = Vector3.zero
                     end
-                    
-                    -- កាន់អាវុធ (រកតាមឈ្មោះ Bat [X1] មុន បើគ្មានទេទាញអាវុធដែលមានស្រាប់មកប្រើ)
-                    local tool = character:FindFirstChild(TOOL_NAME) or character:FindFirstChildOfClass("Tool")
-                    if not tool then
-                        local backpack = player:FindFirstChild("Backpack")
-                        if backpack then
-                            local specificTool = backpack:FindFirstChild(TOOL_NAME) or backpack:FindFirstChildOfClass("Tool")
-                            if specificTool then
-                                humanoid:EquipTool(specificTool)
-                                tool = specificTool
-                            end
-                        end
-                    end
-                    
-                    -- វាយប្រហារ (Attack)
-                    if tool then
-                        tool:Activate()
-                    end
+                    lastPortalTeleport = tick()
                 end
                 
+            elseif targetPos then
+                local currentlyAttacking = isMechAttacking(arena)
+                
+                if currentlyAttacking then
+                    -- 🔴 [គេច] មេបញ្ចេញ Highlight ក្រហម ហោះគេចឡើងលើ
+                    hrp.CFrame = CFrame.lookAt(targetPos + Vector3.new(0, 30, 0), targetPos)
+                else
+                    -- 🟢 [វាយប្រហារ] ចូលវ៉ៃចំកណ្តាល Hitbox របស់ Mech
+                    hrp.CFrame = CFrame.lookAt(targetPos + Vector3.new(0, 0, 0.1), targetPos)
+                end
+                
+                if hrp:IsA("BasePart") then
+                    hrp.AssemblyLinearVelocity = Vector3.zero
+                    hrp.AssemblyAngularVelocity = Vector3.zero
+                end
+                
+                local tool = getBestTool(player, character)
+                if tool then
+                    if tool.Parent ~= character then
+                        humanoid:EquipTool(tool)
+                        tool.Parent = character 
+                    end
+                    tool:Activate()
+                end
+            else
+                -- បើមេងាប់ ឈរអណ្តែតចាំនៅកណ្តាល Arena មិនមក Base ទេព្រោះជញ្ជាំងកំពុងបើក
+                if arenaPos then
+                    hrp.CFrame = CFrame.new(arenaPos + Vector3.new(0, 5, 0))
+                    if hrp:IsA("BasePart") then
+                        hrp.AssemblyLinearVelocity = Vector3.zero
+                        hrp.AssemblyAngularVelocity = Vector3.zero
+                    end
+                end
             end
         end)
     end
@@ -453,7 +500,7 @@ task.spawn(function()
 
 
     
-                
+    
     local function safeFirePrompt(prompt)
     if typeof(fireproximityprompt) == "function" then
         fireproximityprompt(prompt)
@@ -487,7 +534,6 @@ local function runToExactPosition(hum, hrp, target)
     local exactPos = Vector3.new(targetPos.X, hrp.Position.Y, targetPos.Z)
     local distance = (hrp.Position - exactPos).Magnitude
 
-    -- [ការកែប្រែទី១] បើនៅកៀកស្រាប់ (ចម្ងាយ < 1.5) គ្រាន់តែបញ្ឈប់ចលនា មិនបាច់ទាញ CFrame ចូលទេ
     if distance < 1.5 then
         hum:Move(Vector3.zero)
         hrp.AssemblyLinearVelocity = Vector3.zero
@@ -498,7 +544,6 @@ local function runToExactPosition(hum, hrp, target)
     local walkSpeed = (hum.WalkSpeed and hum.WalkSpeed > 0) and hum.WalkSpeed or 25
     local duration = distance / walkSpeed
 
-    -- បែរមុខតួអង្គទៅរកគោលដៅ
     local lookCFrame = CFrame.lookAt(hrp.Position, exactPos)
     hrp.CFrame = lookCFrame
     local targetCFrame = CFrame.new(exactPos) * lookCFrame.Rotation
@@ -507,8 +552,17 @@ local function runToExactPosition(hum, hrp, target)
     local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
 
     local direction = (exactPos - hrp.Position).Unit
+    local animConn 
 
-    local animConn = RunService.Heartbeat:Connect(function()
+    -- បន្ថែមការការពារពេលងាប់នៅទីនេះ!
+    animConn = RunService.Heartbeat:Connect(function()
+        -- បើតួអង្គងាប់ ឬបាត់ HumanoidRootPart ពេលកំពុង Tween ឲ្យបញ្ឈប់ភ្លាមៗ
+        if not hum or hum.Health <= 0 or not hrp or not hrp.Parent then
+            tween:Cancel()
+            if animConn then animConn:Disconnect() end
+            return
+        end
+        
         hum:Move(direction)
         hrp.AssemblyLinearVelocity = direction * walkSpeed
     end)
@@ -516,13 +570,14 @@ local function runToExactPosition(hum, hrp, target)
     tween:Play()
     tween.Completed:Wait()
 
-    -- ពេល Tween ដើរចប់ ត្រូវបិទវាវិញ
-    animConn:Disconnect()
-    hum:Move(Vector3.zero)
-    hrp.AssemblyLinearVelocity = Vector3.zero
-    hrp.AssemblyAngularVelocity = Vector3.zero
+    if animConn then animConn:Disconnect() end
     
-    -- [ការកែប្រែទី២] លុបកូដ "hrp.CFrame = targetCFrame" ចេញ ដើម្បីកុំឱ្យមានការអូសទាញកន្ត្រាក់នៅពេលបញ្ចប់
+    -- ឆែកម្ដងទៀតក្រែងលោងាប់ក្រោយពេល Tween ចប់
+    if hum and hum.Health > 0 and hrp and hrp.Parent then
+        hum:Move(Vector3.zero)
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+    end
     
     return true
 end
@@ -535,6 +590,20 @@ local function stealEggAtLocation(hitbox)
     local basePos = originalCFrame.Position
 
     if not hrp or not hitbox or not hum then return end
+
+    -- ==========================================
+    -- 🟢 បើក Noclip ឲ្យ Portal (ទម្លុះបាន) មុនពេលហោះទៅលួច
+    -- ==========================================
+    pcall(function()
+        local portal = workspace:FindFirstChild("ScrambleArenaPortal")
+        if portal then
+            if portal:IsA("BasePart") then portal.CanCollide = false end
+            for _, part in ipairs(portal:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
+            end
+        end
+    end)
+    -- ==========================================
 
     hrp.Anchored = false
     hum.PlatformStand = false
@@ -554,7 +623,7 @@ local function stealEggAtLocation(hitbox)
         task.wait(0.5)
         loopCount = loopCount + 1
         
-        -- [បន្ថែម] បើចូលដល់ពេលយប់កណ្តាលផ្លូវ ផ្តាច់ការលួចភ្លាមៗ!
+        -- បើចូលដល់ពេលយប់កណ្តាលផ្លូវ ផ្តាច់ការលួចភ្លាមៗ!
         if not isWallOpenOrCountdownFinished() then
             break 
         end
@@ -583,18 +652,18 @@ local function stealEggAtLocation(hitbox)
             if targetPart then
                 local distToEgg = (hrp.Position - targetPart.Position).Magnitude
                 
-                if eggInChar or distToEgg <= 9 then
+                if eggInChar or distToEgg <= 15 then
                     local distToBase = (hrp.Position - basePos).Magnitude
                     if distToBase > 3 then
                         runToExactPosition(hum, hrp, basePos)
                     else
-                    task.wait(0.3)
-                        firePromptsInRadius(1)
+                        task.wait(0.3)
+                        firePromptsInRadius(20)
                     end
                 else
                     runToExactPosition(hum, hrp, targetPart)
                     task.wait(0.3)
-                    firePromptsInRadius(1)
+                    firePromptsInRadius(20)
                 end
             else
                 runToExactPosition(hum, hrp, basePos)
@@ -603,6 +672,21 @@ local function stealEggAtLocation(hitbox)
     end
 
     runToExactPosition(hum, hrp, basePos)
+    
+    -- ==========================================
+    -- 🔴 បិទ Noclip ឲ្យ Portal (រឹងធម្មតាវិញ) ពេលហោះមកដល់ Base
+    -- ==========================================
+    pcall(function()
+        local portal = workspace:FindFirstChild("ScrambleArenaPortal")
+        if portal then
+            if portal:IsA("BasePart") then portal.CanCollide = true end
+            for _, part in ipairs(portal:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = true end
+            end
+        end
+    end)
+    -- ==========================================
+
     task.wait(Config.Farm.WaitAtBase)
 end
     
@@ -767,105 +851,160 @@ end
     end
 
 
-    while true do
-    -- ១. ឆែកមើល Event តាមរយៈការរកមើល ScrambleArenaPortal នៅក្នុង workspace
-    local isEventActive = workspace:FindFirstChild("ScrambleArenaPortal") ~= nil
+local hasMovedToBase = false 
 
-    if getgenv().AutoFarmEvent and isEventActive then
-        if isCurrentlyOnTreadmill then
-            leaveTreadmill()
-            isCurrentlyOnTreadmill = false
-            task.wait(0.5)
-        end
-        task.wait(0.2)
-        continue
-    end
+while true do
+    task.wait(0.1) 
     
-    -- កូដផ្សេងៗទៀតរបស់អ្នកនៅខាងក្រោម...
-    task.wait(0.1) -- កុំភ្លេចដាក់ wait ក្នុង loop ផងដើម្បីកុំអោយគាំងហ្គេម
-
-
-        -- ២. ឆែកមើលស្ថានភាពថ្ងៃ/យប់
-        if isWallOpenOrCountdownFinished() then
-            -- ==========================================
-            -- [ពេលថ្ងៃ - ជញ្ជាំងបើក] ដំណើរការ Auto Steal និង Treadmill
-            -- ==========================================
-            local targetSlot = getTargetEgg()
-            if targetSlot then
-                local hitbox = targetSlot:FindFirstChild("Hitbox", true) or (targetSlot:IsA("BasePart") and targetSlot) or targetSlot:FindFirstChildWhichIsA("BasePart", true)
-
-                if hitbox then
-                    if isCurrentlyOnTreadmill then
-                        leaveTreadmill()
-                        isCurrentlyOnTreadmill = false
-                        local hrp = getHRP()
-                        if hrp then
-                            hrp.Anchored = false 
-                            hrp.AssemblyLinearVelocity = Vector3.zero
-                        end
-                        task.wait(0.5)
+    local arena = workspace:FindFirstChild("ScrambleArena")
+    local portal = workspace:FindFirstChild("ScrambleArenaPortal")
+    local isEventActive = (portal ~= nil or arena ~= nil)
+    
+    if isWallOpenOrCountdownFinished() then
+        -- ==========================================
+        -- [ពេលថ្ងៃ - ជញ្ជាំងបើក] ទើបវាខ្វល់ពីការបិទបើក Toggle របស់អ្នក
+        -- ==========================================
+        hasMovedToBase = false -- ដោះសោរពេលមេឃភ្លឺ
+        
+        local targetSlot = getTargetEgg()
+        
+        if targetSlot then
+            getgenv().IsDoingEgg = true 
+            local hitbox = targetSlot:FindFirstChild("Hitbox", true) or (targetSlot:IsA("BasePart") and targetSlot) or targetSlot:FindFirstChildWhichIsA("BasePart", true)
+            
+            if hitbox then
+                if isCurrentlyOnTreadmill then
+                    leaveTreadmill()
+                    isCurrentlyOnTreadmill = false
+                    local hrp = getHRP()
+                    if hrp then
+                        hrp.Anchored = false
+                        hrp.AssemblyLinearVelocity = Vector3.zero
                     end
-                    
-                    stealEggAtLocation(hitbox)
+                    task.wait(0.5)
+                end
+                stealEggAtLocation(hitbox)
+            end
+            
+        else
+            getgenv().IsDoingEgg = false 
+            
+            if getgenv().AutoFarmEvent and isEventActive then
+                if isCurrentlyOnTreadmill then
+                    leaveTreadmill()
+                    isCurrentlyOnTreadmill = false
+                    task.wait(0.5)
+                end
+                
+            elseif getgenv().AutoTreadmill then
+                local hrp = getHRP()
+                if isCurrentlyOnTreadmill and hrp and lastTreadmillTargetCF then
+                    local dist = (hrp.Position - lastTreadmillTargetCF.Position).Magnitude
+                    if dist > Config.Farm.TreadmillMaxDistance then
+                        isCurrentlyOnTreadmill = false
+                    end
+                end
+                if not isCurrentlyOnTreadmill then
+                    local success = tweenToTreadmillRoot()
+                    if success then
+                        isCurrentlyOnTreadmill = true
+                    end
                 end
             else
-                if getgenv().AutoTreadmill then
-                    local hrp = getHRP()
-                    if isCurrentlyOnTreadmill and hrp and lastTreadmillTargetCF then
-                        local dist = (hrp.Position - lastTreadmillTargetCF.Position).Magnitude
-                        if dist > Config.Farm.TreadmillMaxDistance then
-                            isCurrentlyOnTreadmill = false
-                        end
-                    end
-
-                    if not isCurrentlyOnTreadmill then
-                        local success = tweenToTreadmillRoot()
-                        if success then
-                            isCurrentlyOnTreadmill = true
-                        end
-                    end
-                else
-                    if isCurrentlyOnTreadmill then
-                        leaveTreadmill()
-                        isCurrentlyOnTreadmill = false
-                    end
+                if isCurrentlyOnTreadmill then
+                    leaveTreadmill()
+                    isCurrentlyOnTreadmill = false
                 end
-                task.wait(0.5)
             end
-        else
-            -- ==========================================
-            -- [ពេលយប់ - ជញ្ជាំងបិទ] ចុះពី Treadmill ហើយរត់មកឈរចាំនៅ Base
-            -- ==========================================
+        end
+        
+    else
+        -- ==========================================
+        -- [ពេលយប់ - ជញ្ជាំងបិទ] មិនពាក់ព័ន្ធជាមួយ Toggle ណាមួយទាំងអស់!
+        -- វាដើរដោយខ្លួនឯង ១០០% ទោះអ្នកបិទ Toggle ទាំងអស់ក៏ដោយ
+        -- ==========================================
+        getgenv().IsDoingEgg = false 
+        
+        if not hasMovedToBase then
+            -- ១. ផ្តាច់ខ្លួនពីម៉ាស៊ីនរត់ដោយស្វ័យប្រវត្តិ
             if isCurrentlyOnTreadmill then
                 leaveTreadmill()
                 isCurrentlyOnTreadmill = false
                 task.wait(0.5)
             end
             
+            -- ២. រត់ត្រលប់មក Base វិញ
             local hrp = getHRP()
             local char = player.Character
             local hum = char and char:FindFirstChild("Humanoid")
             
             if hrp and hum then
-                hum:Move(Vector3.zero)
-                hrp.AssemblyLinearVelocity = Vector3.zero
-                hrp.AssemblyAngularVelocity = Vector3.zero
-                
                 local basePos = originalCFrame.Position
                 local distToBase = (hrp.Position - basePos).Magnitude
                 
-                if distToBase > 3 then
+                if distToBase > 5 then
+                    hum:Move(Vector3.zero)
+                    hrp.AssemblyLinearVelocity = Vector3.zero
+                    hrp.AssemblyAngularVelocity = Vector3.zero
+                    
                     runToExactPosition(hum, hrp, basePos)
+                    if hrp then hrp.CFrame = originalCFrame end -- ទាញចំកណ្តាល១ដង
                 else
-                    hrp.CFrame = originalCFrame
+                    if hrp then hrp.CFrame = originalCFrame end
                 end
             end
             
-            task.wait(0.5)
+            -- ៣. ចាក់សោរទុក (ប្រាប់កុំឲ្យវាទាញតួអង្គទៀតនៅវិនាទីក្រោយៗ)
+            hasMovedToBase = true 
+            
+        else
+            -- ៤. ឈរស្ងៀមនៅ Base ដោយសេរីរហូតទាល់តែភ្លឺ
+            local char = player.Character
+            local hum = char and char:FindFirstChild("Humanoid")
+            if hum then
+                hum:Move(Vector3.zero) 
+            end
         end
-        task.wait(0.1)
+    end
+end
+end)
+getgenv().AutoAntiTrap = false
+
+-- ==========================================
+-- ប្រព័ន្ធ Anti-Trap (ការពារអន្ទាក់)
+-- ==========================================
+local function destroyTrap(t)
+    pcall(function()
+        local temp = t:FindFirstChild("TouchInterest", true)
+        if temp then
+            temp:Destroy()
+        end
+    end)
+end
+
+task.spawn(function()
+    -- ចាប់អន្ទាក់ដែលទើបនឹងធ្លាក់មកថ្មីៗភ្លាមៗ
+    Workspace.DescendantAdded:Connect(function(c)
+        if getgenv().AutoAntiTrap and c.Name == "PlayerTrap" then
+            task.wait(0.1) 
+            destroyTrap(c)
+        end
+    end)
+    
+    -- ឆែកនិងបន្សាបអន្ទាក់ចាស់ៗរៀងរាល់ ១ វិនាទី ពេលបើកមុខងារនេះ
+    while task.wait(1) do
+        if getgenv().AutoAntiTrap then
+            pcall(function()
+                -- ប្រើ QueryDescendants ដើម្បីរកអន្ទាក់ដែលមាន tag #PlayerTrap
+                for _, t in ipairs(Workspace:QueryDescendants("#PlayerTrap")) do
+                    destroyTrap(t)
+                end
+            end)
+        end
     end
 end)
+
+        
 
 -- ==========================================
 -- 6. Rayfield UI Initialization
@@ -888,7 +1027,6 @@ Rayfield:Notify({
 })
 
 local tabFarm = window:CreateTab("Farm", 4483362458)
-local tabVisuals = window:CreateTab("Visuals", 4483362458)
 local tabSettings = window:CreateTab("Settings", 4483362458)
 
 tabFarm:CreateDropdown({
@@ -945,7 +1083,7 @@ tabFarm:CreateToggle({
     end,
 })
 
-tabVisuals:CreateToggle({
+tabSettings:CreateToggle({
     Name = '<font size="24"><b>បង្ហាញព័ត៌មានស៊ុត</b></font> (Toggle ESP)',
     CurrentValue = false,
     Flag = "esp_toggle",
@@ -968,14 +1106,22 @@ tabSettings:CreateButton({
     end,
 })
 
-tabSettings:CreateSlider({
-    Name = '<font size="24"><b>កំណត់ល្បឿនហោះ</b></font>(Fly Speed)',
-    Range = {450, 600},
-    Increment = 10,
-    Suffix = " Speed",
-    CurrentValue = 450,
-    Flag = "FlySpeedSlider",
-    Callback = function(Value) getgenv().FlySpeed = Value end,
+tabSettings:CreateToggle({
+    Name = '<font size="24"><b>ការពារអន្ទាក់</b></font>(Anti-Trap)',
+    CurrentValue = true, -- កែត្រង់នេះទៅជា true ដើម្បីឲ្យប៊ូតុងបង្ហាញពណ៌បៃតង(បើក)ស្រាប់
+    Flag = "AntiTrapToggle",
+    Callback = function(value)
+        getgenv().AutoAntiTrap = value
+        
+        if value then
+            Rayfield:Notify({
+                Title = "Anti-Trap បានបើក",
+                Content = "អ្នកនឹងមិនរងគ្រោះថ្នាក់ពីអន្ទាក់ទៀតទេ។",
+                Duration = 2,
+                Image = 4483362458
+            })
+        end
+    end,
 })
 
 tabSettings:CreateToggle({
