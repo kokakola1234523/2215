@@ -1126,7 +1126,7 @@ tabFarm:CreateToggle({
 
 -- ប៊ូតុង បើក/បិទ Auto Farm Event
 tabFarm:CreateToggle({
-    Name = '<font size="24"><b>លេង Event ស្វ័យប្រវត្តិ</b></font>(កំពុងជួសជុលមិនទាន់អាចប្រើបានទេ)',
+    Name = '<font size="24"><b>វ៉ៃមេ ស្វ័យប្រវត្តិ</b></font>(Auto Kill Boss)',
     CurrentValue = false,
     Flag = "auto_farm_event_toggle",
     Callback = function(value)
