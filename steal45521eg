@@ -1,4 +1,38 @@
-repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer 
+-- ==========================================
+-- Auto Rejoin & Auto Execute (ដាក់ខាងលើគេបង្អស់នៃកូដ)
+-- ==========================================
+local CoreGui = game:GetService("CoreGui")
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+
+-- Link Script របស់អ្នកសម្រាប់ទាញមក Run វិញពេលលោតចូល Server ថ្មី
+local scriptToLoad = [[
+    task.wait(3)
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/kokakola1234523/2215/main/steal45521eg"))()
+]]
+
+local queue_on_teleport = queue_on_teleport or syn and syn.queue_on_teleport or fluxus and fluxus.queue_on_teleport
+if queue_on_teleport then
+    pcall(function() queue_on_teleport(scriptToLoad) end)
+end
+
+-- ចាប់ផ្ទាំង Error ពេលដាច់អ៊ីនធឺណិត ឫគេ Kick
+task.spawn(function()
+    local promptOverlay = CoreGui:FindFirstChild("RobloxPromptGui") and CoreGui.RobloxPromptGui:FindFirstChild("promptOverlay")
+    if promptOverlay then
+        promptOverlay.ChildAdded:Connect(function(child)
+            if child.Name == 'ErrorPrompt' then
+                task.wait(3)
+                TeleportService:Teleport(game.PlaceId, Players.LocalPlayer)
+            end
+        end)
+    end
+end)
+-- ==========================================
+
+-- ខាងក្រោមនេះគឺជាកូដដើមរបស់អ្នកធម្មតា ទុកនៅដដែល
+repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
+
 
 -- ==========================================
 -- [STEAL AN EGG] ToaToa Hub - Auto-Re-Treadmill Fixed
@@ -12,8 +46,10 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Lighting = game:GetService("Lighting")
-
 local player = Players.LocalPlayer
+
+-- ==========================================
+
 
 
 -- ==========================================
@@ -1189,3 +1225,5 @@ tabSettings:CreateToggle({
         end
     end,
 })
+
+Rayfield:LoadConfiguration()
