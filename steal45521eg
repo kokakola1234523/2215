@@ -969,15 +969,15 @@ task.spawn(function()
         if hrp then hrp.Anchored = false end
     end
 
-    local hasMovedToBase = false
+local hasMovedToBase = false
 local wasEventActive = false
+local wasMapResetting = false -- អថេរថ្មីសម្រាប់ចាំមើលការផ្លាស់ប្តូរពេលយប់ ឬ Map Reset
 
 while true do
     task.wait(0.1)
     pcall(function()
         local char = player.Character
         local hum = char and char:FindFirstChild("Humanoid")
-        
         if not char or not hum or hum.Health <= 0 or not char:FindFirstChild("HumanoidRootPart") then
             getgenv().IsDoingEgg = false
             isCurrentlyOnTreadmill = false
@@ -993,7 +993,7 @@ while true do
         if wasEventActive and not isEventActive then
             task.wait(3)
             if getgenv().AutoTreadmill then
-                local success = teleportToTreadmillRoot() -- ប្រើមុខងារ Teleport
+                local success = teleportToTreadmillRoot()
                 if success then
                     isCurrentlyOnTreadmill = true
                     task.wait(1)
@@ -1002,9 +1002,23 @@ while true do
         end
         wasEventActive = isEventActive
 
-        if isWallOpenOrCountdownFinished() then
+        -- ឆែកមើលពេលយប់ (ClockTime ចន្លោះម៉ោង 18:00 ល្ងាច ដល់ 6:30 ព្រឹក)
+        local isNight = (Lighting.ClockTime > 17.5 or Lighting.ClockTime < 6.5)
+        local isWallOpen = isWallOpenOrCountdownFinished()
+        
+        -- កំណត់ថា Map រួចរាល់ លុះត្រាតែជញ្ជាំងបើក ហើយមិនមែនជាពេលយប់
+        local isMapReady = isWallOpen and not isNight
+
+        if isMapReady then
+            -- [ចំណុចបន្ថែម] បើទើបតែភ្លឺ ឬ Map ទើបតែ Reset រួច ឲ្យវាចាំ ៣ វិនាទីសិន!
+            if wasMapResetting then
+                wasMapResetting = false
+                task.wait(3.5) -- រង់ចាំ 3 វិនាទី តាមការស្នើសុំ
+            end
+
             hasMovedToBase = false
             local targetSlot = getTargetEgg()
+            
             if targetSlot then
                 getgenv().IsDoingEgg = true
                 local hitbox = targetSlot:FindFirstChild("Hitbox", true) or (targetSlot:IsA("BasePart") and targetSlot) or targetSlot:FindFirstChildWhichIsA("BasePart", true)
@@ -1040,9 +1054,7 @@ while true do
                     end
                     if not isCurrentlyOnTreadmill then
                         local success = tweenToTreadmillRoot()
-                        if success then
-                            isCurrentlyOnTreadmill = true
-                        end
+                        if success then isCurrentlyOnTreadmill = true end
                     end
                 else
                     if isCurrentlyOnTreadmill then
@@ -1052,13 +1064,22 @@ while true do
                 end
             end
         else
+            -- ==========================================
+            -- ពេលយប់ ឬ ពេល Map កំពុង Reset វានឹងធ្លាក់ចូលទីនេះ
+            -- ==========================================
+            if not wasMapResetting then
+                wasMapResetting = true
+            end
+
             getgenv().IsDoingEgg = false
-            
-            -- [២] បញ្ឈប់ការរត់ទៅ Base ពេលកំពុងវ៉ៃមេ (បង្កកវានៅនឹងកន្លែង Area Event)
+
+            -- បញ្ឈប់ការរត់ទៅ Base ពេលកំពុងវ៉ៃមេ (បង្កកវានៅនឹងកន្លែង Area Event)
             if getgenv().AutoFarmEvent and isEventActive then
                 hasMovedToBase = true
                 if hum then hum:Move(Vector3.zero) end
             elseif not hasMovedToBase then
+                
+                -- [ចំណុចបន្ថែម] ផ្តាច់ខ្លួនពីម៉ាស៊ីនរត់ភ្លាមៗពេលយប់
                 if isCurrentlyOnTreadmill then
                     leaveTreadmill()
                     isCurrentlyOnTreadmill = false
@@ -1069,6 +1090,8 @@ while true do
                 if hrp and hum then
                     local basePos = originalCFrame.Position
                     local distToBase = (hrp.Position - basePos).Magnitude
+                    
+                    -- រត់មកឈរចាំនៅ Base
                     if distToBase > 5 then
                         hum:Move(Vector3.zero)
                         hrp.AssemblyLinearVelocity = Vector3.zero
