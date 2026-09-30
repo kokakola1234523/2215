@@ -31,22 +31,21 @@ end)
 -- ==========================================
 
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
+
 -- ==========================================
--- [STEAL AN EGG] ToaToa Hub - Auto-Re-Treadmill Fixed
+-- [STEAL AN EGG] ToaToa Hub - Bulletproof Auto-Reset Fixed
 -- ==========================================
 
 -- Services
 local TweenService = game:GetService("TweenService")
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Lighting = game:GetService("Lighting")
+
 local player = Players.LocalPlayer
-
 -- ==========================================
-
 
 -- ==========================================
 -- 1. Configuration & Global States
@@ -64,7 +63,7 @@ local Config = {
         WaitAtBase = 0.5,
         TreadmillTweenSpeed = 250,
         TreadmillHipOffset = 3,
-        TreadmillMaxDistance = 5 -- ឆែកមើលបើលោត ឬផ្លាតចេញឆ្ងាយជាង 10 studs វានឹង Tween ចូលវិញ
+        TreadmillMaxDistance = 5
     }
 }
 
@@ -73,14 +72,37 @@ getgenv().AutoBigEgg = false
 getgenv().AutoPartFarm = false
 getgenv().AutoRainbowEgg = false
 getgenv().AutoTreadmill = false
-getgenv().AutoESP = false 
+getgenv().AutoESP = false
 getgenv().FlySpeed = 450
+getgenv().AutoFarmEvent = false
+getgenv().IsDoingEgg = false
 
 local allAreaNames = {"Light Dark", "Titan Temple", "Cherry Blossom", "Cosmic", "Prehistoric", "Abyss Ocean", "Desert", "Jungle",  "Snow", "Volcano","Lake"}
 local selectedModules = {"Light Dark"}
 local RAINBOW_KEYWORDS = {"rainbow", "glow", "radicalhalo"}
-
 local originalCFrame = CFrame.new(548.139465, 70.2762833, -298.811737, 0.860891819, 1.13331433e-08, -0.50878799, -3.94499455e-09, 1, 1.5599678e-08, 0.50878799, -1.14224701e-08, 0.860891819)
+
+local isCurrentlyOnTreadmill = false
+local lastTreadmillTargetCF = nil
+
+-- ==========================================
+-- [ប្រព័ន្ធកែប្រែថ្មី ១០០%] កាត់ផ្តាច់រាល់ការងារចាស់ពេលតួអង្គទើបកើត ឬងាប់
+-- ==========================================
+local function SetupCharacter(char)
+    getgenv().IsDoingEgg = false
+    isCurrentlyOnTreadmill = false
+    
+    local hum = char:WaitForChild("Humanoid", 3)
+    if hum then
+        hum.Died:Connect(function()
+            getgenv().IsDoingEgg = false
+            isCurrentlyOnTreadmill = false
+        end)
+    end
+end
+player.CharacterAdded:Connect(SetupCharacter)
+if player.Character then SetupCharacter(player.Character) end
+-- ==========================================
 
 -- ==========================================
 -- 2. Helper Functions
@@ -88,6 +110,7 @@ local originalCFrame = CFrame.new(548.139465, 70.2762833, -298.811737, 0.8608918
 local function optimizeObject(v)
     local character = player.Character
     if character and v:IsDescendantOf(character) then return end
+
     if v:IsA("BasePart") then
         v.Material = Enum.Material.SmoothPlastic
         v.CastShadow = false
@@ -105,54 +128,42 @@ local function optimizeObject(v)
     end
 end
 
+-- [កែប្រែថ្មី] មិនឲ្យវាគាំងរង់ចាំ (No Yielding) ពេលតួអង្គបាត់ខ្លួន
 local function getHRP()
     local char = player.Character
-    local hum = char and char:FindFirstChild("Humanoid")
-    
-    -- បើគ្មានតួអង្គ ឬតួអង្គងាប់ហើយ គឺត្រូវរង់ចាំឲ្យវាកើតថ្មីសិន
-    if not char or not hum or hum.Health <= 0 then
-        char = player.CharacterAdded:Wait()
-        hum = char:WaitForChild("Humanoid", 5)
-    end
-    
-    if char then
-        return char:WaitForChild("HumanoidRootPart", 5)
-    end
-    return nil
+    if not char then return nil end
+    local hum = char:FindFirstChild("Humanoid")
+    if not hum or hum.Health <= 0 then return nil end
+    return char:FindFirstChild("HumanoidRootPart")
 end
-
-
-
 
 local function isWallOpenOrCountdownFinished()
     local playerGui = player:FindFirstChild("PlayerGui") or game:GetService("CoreGui")
     local resetTimerGui = playerGui:FindFirstChild("ResetStartTimer")
     
-    -- ១. ឆែកមើល GUI៖ ឲ្យតែ ResetStartTimer.Enabled = true មានន័យថាស្ថិតក្នុងវគ្គយប់
     if resetTimerGui and resetTimerGui.Enabled then
-        return false -- យប់ (ជញ្ជាំងបិទ)
+        return false
     end
-    
-    -- ២. ឆែកមើលជញ្ជាំងក្នុង Workspace បន្ថែម
+
     local resetWall = Workspace:FindFirstChild("AreaEggResetWall") or Workspace:FindFirstChild("EggResetWall")
     if resetWall then
         local wallPart = resetWall:IsA("BasePart") and resetWall or resetWall:FindFirstChildWhichIsA("BasePart", true)
         if wallPart and wallPart.Transparency < 1 and wallPart.CanCollide then
-            return false -- យប់ (ជញ្ជាំងបិទ)
+            return false
         end
     end
     
-    return true -- ថ្ងៃ (ជញ្ជាំងបើក អាចលួចបាន)
+    return true
 end
-    
-
 
 local function isRainbowEgg(slot)
     if not slot or not slot.Name then return false end
+    
     local slotNameLower = string.lower(slot.Name)
     for _, keyword in ipairs(RAINBOW_KEYWORDS) do
         if string.find(slotNameLower, keyword) then return true end
     end
+    
     for _, item in ipairs(slot:GetDescendants()) do
         if item and item.Name then
             local itemNameLower = string.lower(item.Name)
@@ -164,15 +175,14 @@ local function isRainbowEgg(slot)
     return false
 end
 
-
 local bodyVelocity, bodyGyro = nil, nil
 RunService.Stepped:Connect(function()
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         local hrp = char.HumanoidRootPart
         local hum = char:FindFirstChild("Humanoid")
+        
         if not hum then
-            
             if not bodyVelocity or bodyVelocity.Parent ~= hrp then
                 bodyVelocity = Instance.new("BodyVelocity")
                 bodyVelocity.Velocity = Vector3.zero
@@ -216,9 +226,7 @@ local function clearESP(folder, espNames)
     for _, name in ipairs(espNames) do
         local ui = folder:FindFirstChild(name)
         if ui then
-            if ui:IsA("BillboardGui") or ui:IsA("Highlight") then
-                ui.Enabled = false
-            end
+            if ui:IsA("BillboardGui") or ui:IsA("Highlight") then ui.Enabled = false end
         end
     end
 end
@@ -228,7 +236,7 @@ task.spawn(function()
         task.wait(0.3)
         local areaEggSlotsClient = Workspace:FindFirstChild("AreaEggSlotsClient")
         if not areaEggSlotsClient then continue end
-
+        
         if not getgenv().AutoESP then
             for _, slot in ipairs(areaEggSlotsClient:GetChildren()) do
                 clearESP(slot, {"EggSizeESP"})
@@ -259,7 +267,7 @@ task.spawn(function()
                     billboard.Size = UDim2.new(0, 100, 0, 40)
                     billboard.StudsOffset = Vector3.new(0, 2, 0)
                     billboard.Adornee = targetPart
-                    
+
                     local textLabel = Instance.new("TextLabel")
                     textLabel.Name = "Label"
                     textLabel.Size = UDim2.new(1, 0, 1, 0)
@@ -269,6 +277,7 @@ task.spawn(function()
                     textLabel.Parent = billboard
                     billboard.Parent = slot
                 end
+                
                 if billboard and billboard:FindFirstChild("Label") then
                     local textLabel = billboard.Label
                     if slot == biggestSlot then
@@ -291,26 +300,26 @@ task.spawn(function()
     while true do
         task.wait(0.5)
         if not areaEggSlotsClient then continue end
-
+        
         if not getgenv().AutoESP then
             for _, egg in ipairs(areaEggSlotsClient:GetChildren()) do
                 clearESP(egg, {"EggESP_Highlight", "EggESP_Text"})
             end
             continue
         end
-
+        
         for _, eggFolder in ipairs(areaEggSlotsClient:GetChildren()) do
             pcall(function()
                 local totalParts = countParts(eggFolder)
                 local highlight = eggFolder:FindFirstChild("EggESP_Highlight")
                 local billboard = eggFolder:FindFirstChild("EggESP_Text")
-
+                
                 if totalParts < Config.Farm.MinPartsCount then
                     if highlight then highlight:Destroy() end
                     if billboard then billboard:Destroy() end
                     return
                 end
-
+                
                 if not highlight then
                     highlight = Instance.new("Highlight")
                     highlight.Name = "EggESP_Highlight"
@@ -320,7 +329,7 @@ task.spawn(function()
                     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
                     highlight.Parent = eggFolder
                 end
-
+                
                 if not billboard then
                     billboard = Instance.new("BillboardGui")
                     billboard.Name = "EggESP_Text"
@@ -349,10 +358,6 @@ task.spawn(function()
     end
 end)
 
-getgenv().AutoFarmEvent = false
-getgenv().IsDoingEgg = false 
-
--- ១. មុខងារទាញយកអាវុធដោយឆ្លាតវៃ
 local function getBestTool(player, character)
     local backpack = player:FindFirstChild("Backpack")
     if not character then return nil end
@@ -369,56 +374,43 @@ local function getBestTool(player, character)
     return character:FindFirstChildOfClass("Tool") or (backpack and backpack:FindFirstChildOfClass("Tool"))
 end
 
--- ២. មុខងារឆែកមើលការវាយប្រហារ (រំលង HitFlash ហើយស្កែនរក Highlight ពណ៌ 255, 45, 45 ជំនួសវិញ)
 local function isMechAttacking(arena)
     if not arena then return false end
-    
     local mech = arena:FindFirstChild("Mech")
     if mech then
         for _, obj in ipairs(mech:GetDescendants()) do
-            -- រក Highlight ពណ៌ក្រហម តែហាមយកអាវមួយណាដែលឈ្មោះ "HitFlash" ដាច់ខាត!
             if obj:IsA("Highlight") and obj.Name ~= "HitFlash" and obj.Enabled then
                 local r = math.floor(obj.OutlineColor.R * 255 + 0.5)
                 local g = math.floor(obj.OutlineColor.G * 255 + 0.5)
                 local b = math.floor(obj.OutlineColor.B * 255 + 0.5)
-                
-                if r == 255 and g == 45 and b == 45 then
-                    return true
-                end
+                if r == 255 and g == 45 and b == 45 then return true end
             end
         end
     end
-    
-    -- ការពារក្រែងលោវាចេញរង្វង់ក្រហមលើដី
     local badParts = {"Warning", "Attack", "Danger", "AttackArea"}
     for _, name in ipairs(badParts) do
         if arena:FindFirstChild(name) then return true end
     end
-    
     return false
 end
 
--- ៣. Loop សម្រាប់ Event ដើរតួជា Priority ទី ២
+-- Boss Event Loop
 task.spawn(function()
     while task.wait(0.05) do
-        -- ផ្អាកបើមិនបានបើក Auto Event ឬកំពុងរវល់លួចស៊ុត
         if not getgenv().AutoFarmEvent or getgenv().IsDoingEgg then continue end
-        
         local arena = workspace:FindFirstChild("ScrambleArena")
         local portal = workspace:FindFirstChild("ScrambleArenaPortal")
         
-        if not portal and not arena then 
-            continue 
-        end
-
+        if not portal and not arena then continue end
+        
         pcall(function()
             local hrp = getHRP()
             if not hrp or not hrp.Parent then return end
+            
             local character = hrp.Parent
             local humanoid = character:FindFirstChildOfClass("Humanoid")
             if not humanoid or humanoid.Health <= 0 then return end
-
-            -- រកមើលទីតាំងមេ (Boss / Target)
+            
             local target = nil
             local beam = workspace:FindFirstChild("TutorialBeam", true)
             if beam and beam:IsA("Beam") then
@@ -426,7 +418,7 @@ task.spawn(function()
             elseif beam and (beam:IsA("BasePart") or beam:IsA("Model")) then
                 target = beam
             end
-
+            
             if not target and arena then
                 local mech = arena:FindFirstChild("Mech")
                 if mech then
@@ -435,31 +427,23 @@ task.spawn(function()
                     target = arena:FindFirstChild("Ball")
                 end
             end
-
+            
             local targetPos = target and (target:IsA("Model") and target:GetPivot().Position or target:IsA("BasePart") and target.Position) or nil
             local arenaPos = arena and (arena:IsA("Model") and arena:GetPivot().Position or arena:IsA("BasePart") and arena.Position)
             local portalPart = portal and (portal:IsA("Model") and portal.PrimaryPart or portal:IsA("BasePart") and portal or portal:FindFirstChildWhichIsA("BasePart", true))
-
-            -- ឆែកមើលថាតើនៅក្បែរទីលានវ៉ៃមេហើយឬនៅ
+            
             local inArena = false
-            if arenaPos and (hrp.Position - arenaPos).Magnitude < 600 then
-                inArena = true
-            elseif targetPos and (hrp.Position - targetPos).Magnitude < 500 then
-                inArena = true
-            end
-
-            -- ១. បើមិនទាន់ចូល Area ទេ ឱ្យបញ្ជាតួអង្គ "រត់ទៅប៉ះ" Portal ផ្ទាល់
+            if arenaPos and (hrp.Position - arenaPos).Magnitude < 600 then inArena = true
+            elseif targetPos and (hrp.Position - targetPos).Magnitude < 500 then inArena = true end
+            
             if not inArena and portalPart then
                 runToExactPosition(humanoid, hrp, portalPart)
-                task.wait(0.5) -- រង់ចាំបន្តិចឲ្យប្រព័ន្ធហ្គេមចាប់បានថាប៉ះហើយ
+                task.wait(0.5)
             end
-
-            -- ២. បន្ទាប់ពីរត់ទៅប៉ះ Portal រួច ក៏បង្ខំ Teleport ហោះទៅវ៉ៃមេក្នុង Area ផ្ទាល់តែម្តង
+            
             local finalTargetPos = targetPos or arenaPos
             if finalTargetPos then
                 local currentlyAttacking = isMechAttacking(arena)
-                
-                -- ការពារពេលមេវ៉ៃបញ្ចេញពន្លឺក្រហម ឱ្យហោះឡើងលើបន្តិច
                 if currentlyAttacking then
                     hrp.CFrame = CFrame.lookAt(finalTargetPos + Vector3.new(0, 30, 0), finalTargetPos)
                 else
@@ -468,8 +452,7 @@ task.spawn(function()
                 
                 hrp.AssemblyLinearVelocity = Vector3.zero
                 hrp.AssemblyAngularVelocity = Vector3.zero
-
-                -- ៣. កាន់អាវុធវ៉ៃអូតូតែម្តង
+                
                 local tool = getBestTool(player, character)
                 if tool then
                     if tool.Parent ~= character then
@@ -482,12 +465,8 @@ task.spawn(function()
         end)
     end
 end)
-local isCurrentlyOnTreadmill = false
-local lastTreadmillTargetCF = nil
-
 
 task.spawn(function()
-
     local areaEggSlotsClient = Workspace:WaitForChild("AreaEggSlotsClient")
     local rootFolder = Workspace:FindFirstChild("World") or Workspace:FindFirstChild("__OBJECTS")
     local areas = rootFolder and rootFolder:WaitForChild("Areas", 5)
@@ -496,6 +475,7 @@ task.spawn(function()
     local function isHitboxInAllowedArea(hitbox)
         if not hitbox then return false end
         local hitboxPos = hitbox.Position
+        
         for _, name in ipairs(selectedModules) do
             local areaObj = guardAreas and guardAreas:FindFirstChild(name)
             if areaObj then
@@ -509,109 +489,88 @@ task.spawn(function()
         return false
     end
 
-
-    
-    
     local function safeFirePrompt(prompt)
-    if typeof(fireproximityprompt) == "function" then
-        fireproximityprompt(prompt)
-    elseif prompt and prompt:FindFirstChildOfClass("RemoteEvent") then
-        prompt:FindFirstChildOfClass("RemoteEvent"):FireServer()
+        if typeof(fireproximityprompt) == "function" then
+            fireproximityprompt(prompt)
+        elseif prompt and prompt:FindFirstChildOfClass("RemoteEvent") then
+            prompt:FindFirstChildOfClass("RemoteEvent"):FireServer()
+        end
     end
-end
 
-local function firePromptsInRadius(radius)
-    local hrp = getHRP()
-    if not hrp then return end
-    local currentPos = hrp.Position
-    
-    for _, prompt in ipairs(Workspace:GetDescendants()) do
-        if prompt:IsA("ProximityPrompt") and prompt.Enabled then
-            local parentPart = prompt.Parent
-            if parentPart and parentPart:IsA("BasePart") then
-                if (parentPart.Position - currentPos).Magnitude <= radius then
-                    safeFirePrompt(prompt)
+    local function firePromptsInRadius(radius)
+        local hrp = getHRP()
+        if not hrp then return end
+        local currentPos = hrp.Position
+        for _, prompt in ipairs(Workspace:GetDescendants()) do
+            if prompt:IsA("ProximityPrompt") and prompt.Enabled then
+                local parentPart = prompt.Parent
+                if parentPart and parentPart:IsA("BasePart") then
+                    if (parentPart.Position - currentPos).Magnitude <= radius then
+                        safeFirePrompt(prompt)
+                    end
                 end
             end
         end
     end
-end
 
+    -- មុខងារនេះត្រូវកំណត់ជា Global ធម្មតា
+    function runToExactPosition(hum, hrp, target)
+        if not hrp or not hum then return false end
+        
+        local targetPos = typeof(target) == "Vector3" and target or target.Position
+        local exactPos = Vector3.new(targetPos.X, hrp.Position.Y, targetPos.Z)
+        local distance = (hrp.Position - exactPos).Magnitude
+        
+        if distance < 1.5 then
+            hum:Move(Vector3.zero)
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            return true
+        end
 
-  function runToExactPosition(hum, hrp, target)
-    if not hrp or not hum then return false end
-    
-    local targetPos = typeof(target) == "Vector3" and target or target.Position
-    local exactPos = Vector3.new(targetPos.X, hrp.Position.Y, targetPos.Z)
-    local distance = (hrp.Position - exactPos).Magnitude
+        local walkSpeed = (hum.WalkSpeed and hum.WalkSpeed > 0) and hum.WalkSpeed or 25
+        local duration = distance / walkSpeed
+        local lookCFrame = CFrame.lookAt(hrp.Position, exactPos)
+        hrp.CFrame = lookCFrame
+        local targetCFrame = CFrame.new(exactPos) * lookCFrame.Rotation
+        
+        local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+        local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
+        local direction = (exactPos - hrp.Position).Unit
+        local animConn
 
-    if distance < 1.5 then
-        hum:Move(Vector3.zero)
-        hrp.AssemblyLinearVelocity = Vector3.zero
-        hrp.AssemblyAngularVelocity = Vector3.zero
+        animConn = RunService.Heartbeat:Connect(function()
+            if not hum or hum.Health <= 0 or not hrp or not hrp.Parent then
+                tween:Cancel()
+                if animConn then animConn:Disconnect() end
+                return
+            end
+            hum:Move(direction)
+            hrp.AssemblyLinearVelocity = direction * walkSpeed
+        end)
+        
+        tween:Play()
+        tween.Completed:Wait()
+        
+        if animConn then animConn:Disconnect() end
+        
+        if hum and hum.Health > 0 and hrp and hrp.Parent then
+            hum:Move(Vector3.zero)
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+        end
         return true
     end
 
-    local walkSpeed = (hum.WalkSpeed and hum.WalkSpeed > 0) and hum.WalkSpeed or 25
-    local duration = distance / walkSpeed
-
-    local lookCFrame = CFrame.lookAt(hrp.Position, exactPos)
-    hrp.CFrame = lookCFrame
-    local targetCFrame = CFrame.new(exactPos) * lookCFrame.Rotation
-
-    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
-    local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
-
-    local direction = (exactPos - hrp.Position).Unit
-    local animConn 
-
-    -- បន្ថែមការការពារពេលងាប់នៅទីនេះ!
-    animConn = RunService.Heartbeat:Connect(function()
-        -- បើតួអង្គងាប់ ឬបាត់ HumanoidRootPart ពេលកំពុង Tween ឲ្យបញ្ឈប់ភ្លាមៗ
-        if not hum or hum.Health <= 0 or not hrp or not hrp.Parent then
-            tween:Cancel()
-            if animConn then animConn:Disconnect() end
-            return
-        end
-        
-        hum:Move(direction)
-        hrp.AssemblyLinearVelocity = direction * walkSpeed
-    end)
-
-    tween:Play()
-    tween.Completed:Wait()
-
-    if animConn then animConn:Disconnect() end
-    
-    -- ឆែកម្ដងទៀតក្រែងលោងាប់ក្រោយពេល Tween ចប់
-    if hum and hum.Health > 0 and hrp and hrp.Parent then
-        hum:Move(Vector3.zero)
-        hrp.AssemblyLinearVelocity = Vector3.zero
-        hrp.AssemblyAngularVelocity = Vector3.zero
-    end
-    
-    return true
-    end
-
-
-
-    
-
-
-
-
-
-    
-
-
-
     local function getTargetEgg()
         local slots = areaEggSlotsClient:GetChildren()
+        
         if getgenv().AutoRainbowEgg then
             for _, slot in ipairs(slots) do
                 if isRainbowEgg(slot) then return slot end
             end
         end
+
         if getgenv().AutoPartFarm then
             local bestPartEgg = nil
             local maxParts = -1
@@ -624,6 +583,7 @@ end
             end
             if bestPartEgg then return bestPartEgg end
         end
+
         if getgenv().AutoBigEgg then
             local bestBigEgg = nil
             local maxVolume = -1
@@ -636,6 +596,7 @@ end
             end
             if bestBigEgg then return bestBigEgg end
         end
+
         if getgenv().AutoInteract then
             for _, slot in ipairs(slots) do
                 local hitbox = slot:FindFirstChild("Hitbox", true)
@@ -647,361 +608,298 @@ end
         return nil
     end
 
-
-
     local cachedMyPlot = nil
+    local function findMyPlot()
+        if cachedMyPlot and cachedMyPlot.Parent then return cachedMyPlot end
+        local plotsFolder = workspace:FindFirstChild("Plots")
+        if not plotsFolder then return nil end
 
-local function findMyPlot()
-    if cachedMyPlot and cachedMyPlot.Parent then
-        return cachedMyPlot
-    end
-
-    local plotsFolder = workspace:FindFirstChild("Plots")
-    if not plotsFolder then return nil end
-
-    for _, plot in ipairs(plotsFolder:GetChildren()) do
-        if plot.Name == player.Name or plot.Name == tostring(player.UserId) then
-            cachedMyPlot = plot
-            return plot
-        end
-
-        for attrName, attrValue in pairs(plot:GetAttributes()) do
-            local strVal = tostring(attrValue)
-            if strVal == player.Name or strVal == player.DisplayName or strVal == tostring(player.UserId) then
+        for _, plot in ipairs(plotsFolder:GetChildren()) do
+            if plot.Name == player.Name or plot.Name == tostring(player.UserId) then
                 cachedMyPlot = plot
                 return plot
             end
-        end
-
-        for _, descendant in ipairs(plot:GetDescendants()) do
-            if (descendant:IsA("TextLabel") or descendant:IsA("TextButton")) and (string.find(descendant.Text, player.Name) or string.find(descendant.Text, player.DisplayName)) then
-                cachedMyPlot = plot
-                return plot
-            elseif descendant:IsA("StringValue") and (descendant.Value == player.Name or descendant.Value == player.DisplayName) then
-                cachedMyPlot = plot
-                return plot
-            elseif descendant:IsA("ObjectValue") and descendant.Value == player then
-                cachedMyPlot = plot
-                return plot
-            elseif (descendant:IsA("IntValue") or descendant:IsA("NumberValue")) and descendant.Value == player.UserId then
-                cachedMyPlot = plot
-                return plot
-            end
-        end
-    end
-    return nil
-end
-
-local function teleportToTreadmillRoot()
-    local myPlot = findMyPlot()
-    if not myPlot then return false end
-
-    local plotNumber = string.match(myPlot.Name, "%d+")
-    local treadmillFolder = workspace:FindFirstChild("__ClientTreadmillRenders")
-    if not plotNumber or not treadmillFolder then return false end
-
-    local myTreadmill = treadmillFolder:FindFirstChild("TreadmillRender_" .. plotNumber)
-    if myTreadmill then
-        local rootPart = myTreadmill:FindFirstChild("Root", true)
-        local targetCFrame
-        if rootPart and rootPart:IsA("BasePart") then
-            targetCFrame = rootPart.CFrame
-        else
-            targetCFrame = myTreadmill:IsA("Model") and myTreadmill:GetPivot() or (myTreadmill:IsA("BasePart") and myTreadmill.CFrame)
-        end
-        
-        if targetCFrame then
-            local hrp = getHRP()
-            if not hrp then return false end
-
-            -- Teleport ទៅចំម៉ាស៊ីនរត់ភ្លាមៗ
-            local finalCFrame = targetCFrame * CFrame.new(0, Config.Farm.TreadmillHipOffset or 3, 0)
-            hrp.CFrame = finalCFrame
-            hrp.AssemblyLinearVelocity = Vector3.zero
-            hrp.AssemblyAngularVelocity = Vector3.zero
-            
-            return true
-        end
-    end
-    return false
-end
-
-local function tweenToTreadmillRoot()
-    local myPlot = findMyPlot()
-    if not myPlot then return false end
-
-    local plotNumber = string.match(myPlot.Name, "%d+")
-    local treadmillFolder = workspace:FindFirstChild("__ClientTreadmillRenders")
-    if not plotNumber or not treadmillFolder then return false end
-
-    local myTreadmill = treadmillFolder:FindFirstChild("TreadmillRender_" .. plotNumber)
-    if myTreadmill then
-        local rootPart = myTreadmill:FindFirstChild("Root", true)
-        local targetCFrame
-        if rootPart and rootPart:IsA("BasePart") then
-            targetCFrame = rootPart.CFrame
-        else
-            targetCFrame = myTreadmill:IsA("Model") and myTreadmill:GetPivot() or (myTreadmill:IsA("BasePart") and myTreadmill.CFrame)
-        end
-        
-        if targetCFrame then
-            local hrp = getHRP()
-            if not hrp then return false end
-
-            local char = player.Character
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            
-            -- បើក PlatformStand ដើម្បីឱ្យ Humanoid មិនប្រជែងចលនា Tween
-            if hum then
-                hum.PlatformStand = true
-            end
-
-            -- រក្សា Anchored = false ដូច Script ចាស់របស់អ្នក ដើម្បីឱ្យ Tween រត់ស្មើដីធម្មតា
-            hrp.Anchored = false
-            
-            -- បានលុបការហៅទៅកាន់ Base (tweenToCheckpointFirst) ចេញពីទីនេះ
-            
-            local finalCFrame = targetCFrame * CFrame.new(0, Config.Farm.TreadmillHipOffset, 0)
-            lastTreadmillTargetCF = finalCFrame
-
-            local distance = (hrp.Position - finalCFrame.Position).Magnitude
-            local duration = distance / Config.Farm.TreadmillTweenSpeed
-            local tweenInfo = TweenInfo.new(math.max(duration, 0.1), Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
-            local tween = TweenService:Create(hrp, tweenInfo, {CFrame = finalCFrame})
-            
-            tween:Play()
-            tween.Completed:Wait()
-            
-            hrp.Anchored = false
-            
-            -- បិទ PlatformStand វិញពេលដល់ទីតាំង
-            if hum then
-                hum.PlatformStand = false
-            end
-
-            return true
-        end
-    end
-    return false
-end
-
-
-local function stealEggAtLocation(hitbox)
-    local char = player.Character
-    local hum = char and char:FindFirstChild("Humanoid")
-    local hrp = getHRP()
-    local basePos = originalCFrame.Position
-    if not hrp or not hitbox or not hum then return end
-
-    -- ==========================================
-    -- 🟢 បើក Noclip ឲ្យ Portal (ទម្លុះបាន) មុនពេលហោះទៅលួច
-    -- ==========================================
-    pcall(function()
-        local portal = workspace:FindFirstChild("ScrambleArenaPortal")
-        if portal then
-            if portal:IsA("BasePart") then portal.CanCollide = false end
-            for _, part in ipairs(portal:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = false end
-            end
-        end
-    end)
-    -- ==========================================
-
-    hrp.Anchored = false
-    hum.PlatformStand = false
-    
-    -- ១. Teleport (TP) មក Base ភ្លាមៗ មុននឹងចេញទៅលួចស៊ុត
-    hrp.CFrame = CFrame.new(basePos)
-    hrp.AssemblyLinearVelocity = Vector3.zero
-    hrp.AssemblyAngularVelocity = Vector3.zero
-    task.wait(0.2) 
-
-    local eggName = hitbox.Parent.Name
-    if eggName == "AreaEggSlotsClient" or eggName == "Workspace" then
-        eggName = hitbox.Name
-    end
-    
-    -- ២. រត់/ហោះទៅរកស៊ុតតាមធម្មតាវិញ (សុវត្ថិភាព មិនងាយគាំង)
-    runToExactPosition(hum, hrp, hitbox)
-
-    local loopCount = 0
-    local maxTime = 150 
-
-    while loopCount < maxTime do
-        task.wait(0.5)
-        loopCount = loopCount + 1
-        
-        if not isWallOpenOrCountdownFinished() then break end
-
-        char = player.Character
-        if not char then continue end
-        
-        hum = char:FindFirstChild("Humanoid")
-        hrp = char:FindFirstChild("HumanoidRootPart")
-
-        if not hum or hum.Health <= 0 or not hrp then continue end 
-        
-        local eggInArea = Workspace:FindFirstChild("AreaEggSlotsClient") and Workspace.AreaEggSlotsClient:FindFirstChild(eggName)
-        local eggInWorkspace = Workspace:FindFirstChild(eggName)
-        local eggInChar = char:FindFirstChild(eggName, true)
-
-        if not eggInArea and not eggInWorkspace and not eggInChar then break end
-        
-        if eggInArea then
-            local targetPart = eggInArea:IsA("BasePart") and eggInArea or eggInArea:FindFirstChild("Hitbox", true) or eggInArea:FindFirstChildWhichIsA("BasePart", true)
-            if targetPart then
-                if (hrp.Position - targetPart.Position).Magnitude > 3 then
-                    runToExactPosition(hum, hrp, targetPart)
+            for attrName, attrValue in pairs(plot:GetAttributes()) do
+                local strVal = tostring(attrValue)
+                if strVal == player.Name or strVal == player.DisplayName or strVal == tostring(player.UserId) then
+                    cachedMyPlot = plot
+                    return plot
                 end
-                firePromptsInRadius(1)
+            end
+            for _, descendant in ipairs(plot:GetDescendants()) do
+                if (descendant:IsA("TextLabel") or descendant:IsA("TextButton")) and (string.find(descendant.Text, player.Name) or string.find(descendant.Text, player.DisplayName)) then
+                    cachedMyPlot = plot
+                    return plot
+                elseif descendant:IsA("StringValue") and (descendant.Value == player.Name or descendant.Value == player.DisplayName) then
+                    cachedMyPlot = plot
+                    return plot
+                elseif descendant:IsA("ObjectValue") and descendant.Value == player then
+                    cachedMyPlot = plot
+                    return plot
+                elseif (descendant:IsA("IntValue") or descendant:IsA("NumberValue")) and descendant.Value == player.UserId then
+                    cachedMyPlot = plot
+                    return plot
+                end
+            end
+        end
+        return nil
+    end
+
+    local function teleportToTreadmillRoot()
+        local myPlot = findMyPlot()
+        if not myPlot then return false end
+        local plotNumber = string.match(myPlot.Name, "%d+")
+        local treadmillFolder = workspace:FindFirstChild("__ClientTreadmillRenders")
+        if not plotNumber or not treadmillFolder then return false end
+
+        local myTreadmill = treadmillFolder:FindFirstChild("TreadmillRender_" .. plotNumber)
+        if myTreadmill then
+            local rootPart = myTreadmill:FindFirstChild("Root", true)
+            local targetCFrame
+            if rootPart and rootPart:IsA("BasePart") then
+                targetCFrame = rootPart.CFrame
+            else
+                targetCFrame = myTreadmill:IsA("Model") and myTreadmill:GetPivot() or (myTreadmill:IsA("BasePart") and myTreadmill.CFrame)
             end
 
-        elseif eggInWorkspace or eggInChar then
-            local actualEgg = eggInChar or eggInWorkspace
-            local targetPart = actualEgg:IsA("BasePart") and actualEgg or actualEgg:FindFirstChild("Hitbox", true) or actualEgg:FindFirstChildWhichIsA("BasePart", true)
-            
-            if targetPart then
-                local distToEgg = (hrp.Position - targetPart.Position).Magnitude
+            if targetCFrame then
+                local hrp = getHRP()
+                if not hrp then return false end
                 
-                if eggInChar or distToEgg <= 30 then
-                    local distToBase = (hrp.Position - basePos).Magnitude
-                    if distToBase > 3 then
-                        
-                        -- ១. Teleport ទៅកន្លែងចោលស៊ុត ភ្លាមៗ (កុំអោយខាតពេល)
-                        local dropCFrame = CFrame.new(628.188538, 70.2761765, -341.850861, -0.440210193, 1.06578053e-08, 0.89789474, -2.74083281e-08, 1, -2.53072319e-08, -0.89789474, -3.57502969e-08, -0.440210193)
-                        hrp.CFrame = dropCFrame
-                        hrp.AssemblyLinearVelocity = Vector3.zero
-                        hrp.AssemblyAngularVelocity = Vector3.zero
-                        task.wait(0.5)
+                local finalCFrame = targetCFrame * CFrame.new(0, Config.Farm.TreadmillHipOffset or 3, 0)
+                hrp.CFrame = finalCFrame
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+                return true
+            end
+        end
+        return false
+    end
 
-                        -- ២. ទម្លាក់ស៊ុតចោល
-                        pcall(function()
-                            local ReplicatedStorage = game:GetService("ReplicatedStorage")
-                            local AreaEggs = require(ReplicatedStorage.Shared.Types.AreaEggs)
-                            local EggState = require(ReplicatedStorage.Client.EggState)
-                            local PlayerRequest = AreaEggs.DropReasons.PlayerRequest
-                            EggState.DropFieldEgg(PlayerRequest)
-                        end)
+    local function tweenToTreadmillRoot()
+        local myPlot = findMyPlot()
+        if not myPlot then return false end
+        
+        local plotNumber = string.match(myPlot.Name, "%d+")
+        local treadmillFolder = workspace:FindFirstChild("__ClientTreadmillRenders")
+        if not plotNumber or not treadmillFolder then return false end
 
-                        task.wait(0.5)
-                        -- ៣. ⚡ Teleport ទៅម៉ាស៊ីនរត់ភ្លាមៗ 
-                        teleportToTreadmillRoot()
-                        task.wait(0.5) -- ទុកពេលអោយតួអង្គធ្លាក់ដល់ដីច្បាស់លាស់
+        local myTreadmill = treadmillFolder:FindFirstChild("TreadmillRender_" .. plotNumber)
+        if myTreadmill then
+            local rootPart = myTreadmill:FindFirstChild("Root", true)
+            local targetCFrame
+            if rootPart and rootPart:IsA("BasePart") then
+                targetCFrame = rootPart.CFrame
+            else
+                targetCFrame = myTreadmill:IsA("Model") and myTreadmill:GetPivot() or (myTreadmill:IsA("BasePart") and myTreadmill.CFrame)
+            end
 
-                        
-                        
-                        -- ទាញយក Remote ត្រៀមទុក
-                        local repStorage = game:GetService("ReplicatedStorage")
-                        local networking = repStorage:FindFirstChild("Packages") and repStorage.Packages:FindFirstChild("Networking")
-                        local askWearStillRemote = networking and networking:FindFirstChild("RF/Treadmill/AskWearStill")
-                        local askDoffRemote = networking and networking:FindFirstChild("RF/Treadmill/AskDoff")
+            if targetCFrame then
+                local hrp = getHRP()
+                if not hrp then return false end
+                local char = player.Character
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                
+                if hum then hum.PlatformStand = true end
+                hrp.Anchored = false
+                
+                local finalCFrame = targetCFrame * CFrame.new(0, Config.Farm.TreadmillHipOffset, 0)
+                lastTreadmillTargetCF = finalCFrame
+                
+                local distance = (hrp.Position - finalCFrame.Position).Magnitude
+                local duration = distance / Config.Farm.TreadmillTweenSpeed
+                
+                local tweenInfo = TweenInfo.new(math.max(duration, 0.1), Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+                local tween = TweenService:Create(hrp, tweenInfo, {CFrame = finalCFrame})
+                tween:Play()
+                tween.Completed:Wait()
+                
+                hrp.Anchored = false
+                if hum then hum.PlatformStand = false end
+                return true
+            end
+        end
+        return false
+    end
 
-                        -- ៤. ឡើងលើម៉ាស៊ីនរត់ឲ្យប្រាកដ ១០០% (ព្យាយាមបញ្ជា ៣ ដង)
-                        if askWearStillRemote then
-                            for attempt = 1, 3 do
-                                local success, response = pcall(function()
-                                    return askWearStillRemote:InvokeServer()
-                                end)
-                                -- បើ Server ឆ្លើយតបថាជោគជ័យ គឺបញ្ឈប់ការផ្ញើសំណើ
-                                if success and response then 
-                                    break 
+    local function stealEggAtLocation(hitbox)
+        local char = player.Character
+        local hum = char and char:FindFirstChild("Humanoid")
+        local hrp = getHRP()
+        local basePos = originalCFrame.Position
+        
+        if not hrp or not hitbox or not hum then return end
+
+        pcall(function()
+            local portal = workspace:FindFirstChild("ScrambleArenaPortal")
+            if portal then
+                if portal:IsA("BasePart") then portal.CanCollide = false end
+                for _, part in ipairs(portal:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end
+        end)
+
+        hrp.Anchored = false
+        hum.PlatformStand = false
+        
+        hrp.CFrame = CFrame.new(basePos)
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+        task.wait(0.2)
+        
+        local eggName = hitbox.Parent.Name
+        if eggName == "AreaEggSlotsClient" or eggName == "Workspace" then
+            eggName = hitbox.Name
+        end
+
+        runToExactPosition(hum, hrp, hitbox)
+
+        local loopCount = 0
+        local maxTime = 150
+        local initialHum = hum
+
+        while loopCount < maxTime do
+            task.wait(0.5)
+            loopCount = loopCount + 1
+
+            if not isWallOpenOrCountdownFinished() then break end
+
+            local currentChar = player.Character
+            if not currentChar then 
+                getgenv().IsDoingEgg = false
+                break 
+            end
+            
+            local currentHum = currentChar:FindFirstChild("Humanoid")
+            local currentHrp = currentChar:FindFirstChild("HumanoidRootPart")
+
+            if not currentHum or currentHum.Health <= 0 or not currentHrp or currentHum ~= initialHum then 
+                getgenv().IsDoingEgg = false
+                break 
+            end
+            
+            char = currentChar
+            hum = currentHum
+            hrp = currentHrp
+
+            local eggInArea = Workspace:FindFirstChild("AreaEggSlotsClient") and Workspace.AreaEggSlotsClient:FindFirstChild(eggName)
+            local eggInWorkspace = Workspace:FindFirstChild(eggName)
+            local eggInChar = char:FindFirstChild(eggName, true)
+
+            if not eggInArea and not eggInWorkspace and not eggInChar then break end
+
+            if eggInArea then
+                local targetPart = eggInArea:IsA("BasePart") and eggInArea or eggInArea:FindFirstChild("Hitbox", true) or eggInArea:FindFirstChildWhichIsA("BasePart", true)
+                if targetPart then
+                    if (hrp.Position - targetPart.Position).Magnitude > 3 then
+                        runToExactPosition(hum, hrp, targetPart)
+                    end
+                    firePromptsInRadius(1)
+                end
+            elseif eggInWorkspace or eggInChar then
+                local actualEgg = eggInChar or eggInWorkspace
+                local targetPart = actualEgg:IsA("BasePart") and actualEgg or actualEgg:FindFirstChild("Hitbox", true) or actualEgg:FindFirstChildWhichIsA("BasePart", true)
+                if targetPart then
+                    local distToEgg = (hrp.Position - targetPart.Position).Magnitude
+                    if eggInChar or distToEgg <= 30 then
+                        local distToBase = (hrp.Position - basePos).Magnitude
+                        if distToBase > 3 then
+                            local dropCFrame = CFrame.new(628.188538, 70.2761765, -341.850861, -0.440210193, 1.06578053e-08, 0.89789474, -2.74083281e-08, 1, -2.53072319e-08, -0.89789474, -3.57502969e-08, -0.440210193)
+                            hrp.CFrame = dropCFrame
+                            hrp.AssemblyLinearVelocity = Vector3.zero
+                            hrp.AssemblyAngularVelocity = Vector3.zero
+                            task.wait(0.5)
+                            
+                            pcall(function()
+                                local ReplicatedStorage = game:GetService("ReplicatedStorage")
+                                local AreaEggs = require(ReplicatedStorage.Shared.Types.AreaEggs)
+                                local EggState = require(ReplicatedStorage.Client.EggState)
+                                local PlayerRequest = AreaEggs.DropReasons.PlayerRequest
+                                EggState.DropFieldEgg(PlayerRequest)
+                            end)
+                            task.wait(0.5)
+
+                            teleportToTreadmillRoot()
+                            task.wait(0.5)
+
+                            local repStorage = game:GetService("ReplicatedStorage")
+                            local networking = repStorage:FindFirstChild("Packages") and repStorage.Packages:FindFirstChild("Networking")
+                            local askWearStillRemote = networking and networking:FindFirstChild("RF/Treadmill/AskWearStill")
+                            local askDoffRemote = networking and networking:FindFirstChild("RF/Treadmill/AskDoff")
+
+                            if askWearStillRemote then
+                                for attempt = 1, 3 do
+                                    local success, response = pcall(function() return askWearStillRemote:InvokeServer() end)
+                                    if success and response then break end
+                                    task.wait(0.2)
                                 end
-                                task.wait(0.2) -- បើបរាជ័យ រង់ចាំ 0.2s រួចសាកម្តងទៀត
                             end
-                        end
-                        task.wait(0.6) -- ទុកពេលអោយ Animation លោតឡើងដំណើរការ
+                            task.wait(0.6)
 
-                        -- ៥. ផ្តាច់ខ្លួនពីម៉ាស៊ីនរត់ឲ្យប្រាកដ ១០០% (ព្យាយាមបញ្ជា ៣ ដង)
-                        if askDoffRemote then
-                            for attempt = 1, 3 do
-                                local success = pcall(function()
-                                    return askDoffRemote:InvokeServer()
-                                end)
-                                -- ឲ្យតែបាញ់ Remote ទៅដល់ដោយគ្មាន Error គឺចាត់ទុកថាជោគជ័យ
-                                if success then 
-                                    break 
+                            if askDoffRemote then
+                                for attempt = 1, 3 do
+                                    local success = pcall(function() return askDoffRemote:InvokeServer() end)
+                                    if success then break end
+                                    task.wait(0.2)
                                 end
-                                task.wait(0.2)
                             end
-                        end
-                        task.wait(0.5) -- ទុកពេលអោយតួអង្គលោតចុះពីម៉ាស៊ីនវិញច្បាស់លាស់
-                    
+                            task.wait(0.5)
+                            
+                            hrp.CFrame = dropCFrame
+                            hrp.AssemblyLinearVelocity = Vector3.zero
+                            hrp.AssemblyAngularVelocity = Vector3.zero
+                            task.wait(0.2)
+                            
+                            hum:ChangeState(Enum.HumanoidStateType.Landed)
+                            hum.Jump = true
+                            hum:Move(Vector3.new(1, 0, 1))
+                            task.wait(1)
+                            
+                            firePromptsInRadius(30)
+                            task.wait(0.1)
+                            firePromptsInRadius(30)
+                            task.wait(0.5)
 
-                        -- ៦. Teleport ត្រឡប់ទៅកន្លែងទម្លាក់ស៊ុតវិញ ដើម្បីរើស
-                        hrp.CFrame = dropCFrame
-                        hrp.AssemblyLinearVelocity = Vector3.zero
-                        hrp.AssemblyAngularVelocity = Vector3.zero
-                        task.wait(0.2)
-                        
-                        hum:ChangeState(Enum.HumanoidStateType.Landed)
-                        hum.Jump = true 
-                        hum:Move(Vector3.new(1, 0, 1))
-                        task.wait(1)
-
-                        -- ៧. ចុចរើសស៊ុតភ្លាមៗ
-                        firePromptsInRadius(30)
-                        task.wait(0.1)
-                        firePromptsInRadius(30)
-                        task.wait(0.5)
-
-                         -- ៨. Teleport ត្រឡប់មក Base វិញដោយផ្ទាល់
-                        if typeof(basePos) == "Vector3" then
-                            hrp.CFrame = CFrame.new(basePos)
+                            if typeof(basePos) == "Vector3" then hrp.CFrame = CFrame.new(basePos)
+                            else hrp.CFrame = basePos.CFrame or basePos end
+                            hrp.AssemblyLinearVelocity = Vector3.zero
+                            hrp.AssemblyAngularVelocity = Vector3.zero
+                            task.wait(2)
+                            break
                         else
-                            hrp.CFrame = basePos.CFrame or basePos
+                            task.wait(0.3)
+                            firePromptsInRadius(20)
                         end
+                    else
+                        if typeof(targetPart) == "Vector3" then hrp.CFrame = CFrame.new(targetPart)
+                        else hrp.CFrame = targetPart.CFrame end
                         hrp.AssemblyLinearVelocity = Vector3.zero
                         hrp.AssemblyAngularVelocity = Vector3.zero
-                        
-                        task.wait(2)
-                        break
-                    else
                         task.wait(0.3)
                         firePromptsInRadius(20)
                     end
                 else
-                    -- Teleport ទៅកាន់ targetPart
-                    if typeof(targetPart) == "Vector3" then
-                        hrp.CFrame = CFrame.new(targetPart)
-                    else
-                        hrp.CFrame = targetPart.CFrame
-                    end
+                    if typeof(basePos) == "Vector3" then hrp.CFrame = CFrame.new(basePos)
+                    else hrp.CFrame = basePos.CFrame or basePos end
                     hrp.AssemblyLinearVelocity = Vector3.zero
                     hrp.AssemblyAngularVelocity = Vector3.zero
-                    
-                    task.wait(0.3)
-                    firePromptsInRadius(20)
                 end
-            else
-                -- Teleport ទៅកាន់ basePos
-                if typeof(basePos) == "Vector3" then
-                    hrp.CFrame = CFrame.new(basePos)
-                else
-                    hrp.CFrame = basePos.CFrame or basePos
-                end
-                hrp.AssemblyLinearVelocity = Vector3.zero
-                hrp.AssemblyAngularVelocity = Vector3.zero
             end
         end
+        
+        pcall(function()
+            local portal = workspace:FindFirstChild("ScrambleArenaPortal")
+            if portal then
+                if portal:IsA("BasePart") then portal.CanCollide = true end
+                for _, part in ipairs(portal:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = true end
+                end
+            end
+        end)
+        
+        task.wait(Config.Farm.WaitAtBase)
     end
-
-    -- ==========================================
-    -- 🔴 បិទ Noclip ឲ្យ Portal (រឹងធម្មតាវិញ) ពេលហោះមកដល់ Base
-    -- ==========================================
-    pcall(function()
-        local portal = workspace:FindFirstChild("ScrambleArenaPortal")
-        if portal then
-            if portal:IsA("BasePart") then portal.CanCollide = true end
-            for _, part in ipairs(portal:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = true end
-            end
-        end
-    end)
-    -- ==========================================
-    
-    task.wait(Config.Farm.WaitAtBase)
-end
-
 
     local function leaveTreadmill()
         local askDoffRemote = nil
@@ -1015,156 +913,142 @@ end
         if hrp then hrp.Anchored = false end
     end
 
+    local hasMovedToBase = false
+    local wasEventActive = false
 
-local hasMovedToBase = false
-local wasEventActive = false -- 🟢 បន្ថែមការចងចាំថាកំពុងមាន Event ឬអត់
+    while true do
+        task.wait(0.1)
+        pcall(function()
+            -- [ចំណុចបន្ថែមថ្មី] ពេលតួអង្គងាប់ គឺផ្អាកការបញ្ជាសិន រង់ចាំវាធ្លាក់ដល់ដីទើបឲ្យដើរវិញ
+            local char = player.Character
+            local hum = char and char:FindFirstChild("Humanoid")
+            if not char or not hum or hum.Health <= 0 or not char:FindFirstChild("HumanoidRootPart") then
+                getgenv().IsDoingEgg = false
+                isCurrentlyOnTreadmill = false
+                hasMovedToBase = false
+                return -- ផ្អាកត្រឹមនេះសិន ដើម្បីកុំឲ្យមានការរង់ចាំ
+            end
 
-while true do
-    task.wait(0.1)
-    
-    pcall(function()
-        local arena = workspace:FindFirstChild("ScrambleArena")
-        local portal = workspace:FindFirstChild("ScrambleArenaPortal")
-        local isEventActive = (portal ~= nil or arena ~= nil)
+            local arena = workspace:FindFirstChild("ScrambleArena")
+            local portal = workspace:FindFirstChild("ScrambleArenaPortal")
+            local isEventActive = (portal ~= nil or arena ~= nil)
 
-        -- ==========================================
-        -- 🔴 ចំណុចកែប្រែ៖ ពេល Event ទើបតែចប់ (Portal បាត់ភ្លាមៗ)
-        -- ==========================================
-        if wasEventActive and not isEventActive then
-            task.wait(2) -- រង់ចាំ ២ វិនាទីតាមការស្នើសុំ
-            
-            -- បង្ខំឲ្យវាទៅរត់ម៉ាស៊ីនភ្លាម (ប្រសិនបើ Toggle ម៉ាស៊ីនបានបើក)
-            if getgenv().AutoTreadmill then
-                local success = tweenToTreadmillRoot()
-                if success then 
-                    isCurrentlyOnTreadmill = true 
-                    task.wait(1) -- ទុកពេលឲ្យវាដើរលើម៉ាស៊ីនបន្តិចសិន មុននឹងបន្តស្កែនស៊ុត
+            if wasEventActive and not isEventActive then
+                task.wait(2)
+                if getgenv().AutoTreadmill then
+                    local success = tweenToTreadmillRoot()
+                    if success then
+                        isCurrentlyOnTreadmill = true
+                        task.wait(1)
+                    end
                 end
             end
-        end
-        wasEventActive = isEventActive -- ធ្វើបច្ចុប្បន្នភាពទិន្នន័យ (Update State)
-        -- ==========================================
+            
+            wasEventActive = isEventActive 
 
-        if isWallOpenOrCountdownFinished() then
-            hasMovedToBase = false 
-            
-            -- អាទិភាពទី១៖ ស្កែនរកលួចស៊ុតមុនគេជានិច្ច!
-            local targetSlot = getTargetEgg()
-            
-            if targetSlot then
-                getgenv().IsDoingEgg = true 
-                
-                local hitbox = targetSlot:FindFirstChild("Hitbox", true) or (targetSlot:IsA("BasePart") and targetSlot) or targetSlot:FindFirstChildWhichIsA("BasePart", true)
-                if hitbox then
-                    if isCurrentlyOnTreadmill then
-                        leaveTreadmill()
-                        isCurrentlyOnTreadmill = false
-                        local hrp = getHRP()
-                        if hrp then
-                            hrp.Anchored = false
-                            hrp.AssemblyLinearVelocity = Vector3.zero
+            if isWallOpenOrCountdownFinished() then
+                hasMovedToBase = false
+                local targetSlot = getTargetEgg()
+                if targetSlot then
+                    getgenv().IsDoingEgg = true
+                    local hitbox = targetSlot:FindFirstChild("Hitbox", true) or (targetSlot:IsA("BasePart") and targetSlot) or targetSlot:FindFirstChildWhichIsA("BasePart", true)
+                    if hitbox then
+                        if isCurrentlyOnTreadmill then
+                            leaveTreadmill()
+                            isCurrentlyOnTreadmill = false
+                            local hrp = getHRP()
+                            if hrp then
+                                hrp.Anchored = false
+                                hrp.AssemblyLinearVelocity = Vector3.zero
+                            end
+                            task.wait(0.5)
                         end
-                        task.wait(0.5)
+                        stealEggAtLocation(hitbox)
                     end
-                    stealEggAtLocation(hitbox)
-                end
-            else
-                getgenv().IsDoingEgg = false 
-                
-                -- អាទិភាពទី២ (វ៉ៃមេ) និង អាទិភាពទី៣ (រត់ម៉ាស៊ីន)
-                if getgenv().AutoFarmEvent and isEventActive then
-                    if isCurrentlyOnTreadmill then
-                        leaveTreadmill()
-                        isCurrentlyOnTreadmill = false
-                        task.wait(0.5)
-                    end
-                    -- ទុកឲ្យ Event Loop ទាញទៅវ៉ៃមេ
-                elseif getgenv().AutoTreadmill then
-                    local hrp = getHRP()
-                    if isCurrentlyOnTreadmill and hrp and lastTreadmillTargetCF then
-                        local dist = (hrp.Position - lastTreadmillTargetCF.Position).Magnitude
-                        if dist > Config.Farm.TreadmillMaxDistance then
+                else
+                    getgenv().IsDoingEgg = false
+                    if getgenv().AutoFarmEvent and isEventActive then
+                        if isCurrentlyOnTreadmill then
+                            leaveTreadmill()
+                            isCurrentlyOnTreadmill = false
+                            task.wait(0.5)
+                        end
+                    elseif getgenv().AutoTreadmill then
+                        local hrp = getHRP()
+                        if isCurrentlyOnTreadmill and hrp and lastTreadmillTargetCF then
+                            local dist = (hrp.Position - lastTreadmillTargetCF.Position).Magnitude
+                            if dist > Config.Farm.TreadmillMaxDistance then
+                                isCurrentlyOnTreadmill = false
+                            end
+                        end
+                        
+                        if not isCurrentlyOnTreadmill then
+                            local success = tweenToTreadmillRoot()
+                            if success then isCurrentlyOnTreadmill = true end
+                        end
+                    else
+                        if isCurrentlyOnTreadmill then
+                            leaveTreadmill()
                             isCurrentlyOnTreadmill = false
                         end
                     end
-                    if not isCurrentlyOnTreadmill then
-                        local success = tweenToTreadmillRoot()
-                        if success then isCurrentlyOnTreadmill = true end
-                    end
-                else
+                end
+            else
+                getgenv().IsDoingEgg = false
+                if not hasMovedToBase then
                     if isCurrentlyOnTreadmill then
                         leaveTreadmill()
                         isCurrentlyOnTreadmill = false
+                        task.wait(0.5)
                     end
+                    
+                    local hrp = getHRP()
+                    if hrp and hum then
+                        local basePos = originalCFrame.Position
+                        local distToBase = (hrp.Position - basePos).Magnitude
+                        
+                        if distToBase > 5 then
+                            hum:Move(Vector3.zero)
+                            hrp.AssemblyLinearVelocity = Vector3.zero
+                            hrp.AssemblyAngularVelocity = Vector3.zero
+                            runToExactPosition(hum, hrp, basePos)
+                            if hrp then hrp.CFrame = originalCFrame end
+                        else
+                            if hrp then hrp.CFrame = originalCFrame end
+                        end
+                    end
+                    hasMovedToBase = true
+                else
+                    -- លែងមាន local char ជាន់គ្នាទៀតហើយ (Error Fixed)
+                    if hum then hum:Move(Vector3.zero) end
                 end
             end
-        else
-            -- ==========================================
-            -- [ពេលយប់ - ជញ្ជាំងបិទ] ឈប់ធ្វើការងារទាំងអស់ រួចរត់មក Base
-            -- ==========================================
-            getgenv().IsDoingEgg = false
-            if not hasMovedToBase then
-                if isCurrentlyOnTreadmill then
-                    leaveTreadmill()
-                    isCurrentlyOnTreadmill = false
-                    task.wait(0.5)
-                end
-                
-                local hrp = getHRP()
-                local char = player.Character
-                local hum = char and char:FindFirstChild("Humanoid")
-                
-                if hrp and hum then
-                    local basePos = originalCFrame.Position
-                    local distToBase = (hrp.Position - basePos).Magnitude
-                    if distToBase > 5 then
-                        hum:Move(Vector3.zero)
-                        hrp.AssemblyLinearVelocity = Vector3.zero
-                        hrp.AssemblyAngularVelocity = Vector3.zero
-                        runToExactPosition(hum, hrp, basePos)
-                        if hrp then hrp.CFrame = originalCFrame end
-                    else
-                        if hrp then hrp.CFrame = originalCFrame end
-                    end
-                end
-                hasMovedToBase = true
-            else
-                local char = player.Character
-                local hum = char and char:FindFirstChild("Humanoid")
-                if hum then hum:Move(Vector3.zero) end
-            end
-        end
-    end)
-end
+        end)
+    end
 end)
-getgenv().AutoAntiTrap = true
 
+getgenv().AutoAntiTrap = true
 -- ==========================================
 -- ប្រព័ន្ធ Anti-Trap (ការពារអន្ទាក់)
 -- ==========================================
 local function destroyTrap(t)
     pcall(function()
         local temp = t:FindFirstChild("TouchInterest", true)
-        if temp then
-            temp:Destroy()
-        end
+        if temp then temp:Destroy() end
     end)
 end
 
 task.spawn(function()
-    -- ចាប់អន្ទាក់ដែលទើបនឹងធ្លាក់មកថ្មីៗភ្លាមៗ
     Workspace.DescendantAdded:Connect(function(c)
         if getgenv().AutoAntiTrap and c.Name == "PlayerTrap" then
-            task.wait(0.1) 
+            task.wait(0.1)
             destroyTrap(c)
         end
     end)
     
-    -- ឆែកនិងបន្សាបអន្ទាក់ចាស់ៗរៀងរាល់ ១ វិនាទី ពេលបើកមុខងារនេះ
     while task.wait(1) do
         if getgenv().AutoAntiTrap then
             pcall(function()
-                -- ប្រើ QueryDescendants ដើម្បីរកអន្ទាក់ដែលមាន tag #PlayerTrap
                 for _, t in ipairs(Workspace:QueryDescendants("#PlayerTrap")) do
                     destroyTrap(t)
                 end
@@ -1172,14 +1056,12 @@ task.spawn(function()
         end
     end
 end)
- 
+
 task.wait(1)
+
 -- Anti-AFK (Disable Idled Signal)
-
 local LocalPlayer = Players.LocalPlayer
-
 local get_connections = getconnections or get_signal_cons
-
 if get_connections then
     for _, connection in pairs(get_connections(LocalPlayer.Idled)) do
         if connection.Disable then
@@ -1196,15 +1078,12 @@ end
 task.wait(0.5)
 
 -- Bypass ដោយផ្ញើ Remote ទៅកាន់ហ្គេមផ្ទាល់
-
-
 task.spawn(function()
     while true do
         task.wait(30)
         pcall(function()
             local Remotes = ReplicatedStorage:FindFirstChild("Shared") and ReplicatedStorage.Shared:FindFirstChild("Remotes")
             if Remotes then
-                -- ផ្ញើសារប្រាប់ Server ថា Player នៅតែសកម្ម (Not Idle)
                 if Remotes:FindFirstChild("Telemetry") and Remotes.Telemetry:FindFirstChild("SubmitIdleState") then
                     Remotes.Telemetry.SubmitIdleState:FireServer(false)
                 end
@@ -1218,10 +1097,10 @@ end)
 
 print("[Anti-AFK] បានបើកប្រព័ន្ធ Bypass Custom Remote ជោគជ័យ!")
 task.wait(1)
+
 pcall(function(...)
     loadstring(game:HttpGet("https://raw.githubusercontent.com/kokakola1234523/4411/refs/heads/main/by435pas"))()
 end)
-
 
 -- ==========================================
 -- 6. Rayfield UI Initialization
@@ -1252,45 +1131,56 @@ tabFarm:CreateDropdown({
     CurrentOption = selectedModules,
     MultipleOptions = true,
     Flag = "AreaDropdown",
-    Callback = function(selected) selectedModules = selected end,
+    Callback = function(selected)
+        selectedModules = selected
+    end,
 })
 
 tabFarm:CreateToggle({
     Name = '<font size="24"><b>លួចតែស៊ុតនៅទីតាំងដែរបានជ្រើសរើស</b></font>(Select)',
     CurrentValue = false,
     Flag = "steal_dropdown",
-    Callback = function(value) getgenv().AutoInteract = value end,
+    Callback = function(value)
+        getgenv().AutoInteract = value
+    end,
 })
 
 tabFarm:CreateToggle({
     Name = '<font size="24"><b>លួចតែស៊ុតធំៗ</b></font>(Steal Big Egg)',
     CurrentValue = false,
     Flag = "steal_bigeggs",
-    Callback = function(value) getgenv().AutoBigEgg = value end,
+    Callback = function(value)
+        getgenv().AutoBigEgg = value
+    end,
 })
 
 tabFarm:CreateToggle({
     Name = '<font size="24"><b>លួចស៊ុត៧ពណ៏</b></font>(Devine, Eternal, Secret)',
     CurrentValue = false,
     Flag = "auto_rainbow_egg",
-    Callback = function(value) getgenv().AutoRainbowEgg = value end,
+    Callback = function(value)
+        getgenv().AutoRainbowEgg = value
+    end,
 })
 
 tabFarm:CreateToggle({
     Name = '<font size="24"><b>លួចស៊ុតដែលមានស្លាប</b></font>(MASSIVE EGGS)',
     CurrentValue = false,
     Flag = "auto_part_farm",
-    Callback = function(value) getgenv().AutoPartFarm = value end,
+    Callback = function(value)
+        getgenv().AutoPartFarm = value
+    end,
 })
 
 tabFarm:CreateToggle({
     Name = '<font size="24"><b>រត់លើម៉ាស៊ីនពេលទំនេរ</b></font>(Auto Treadmill)',
     CurrentValue = false,
     Flag = "auto_treadmill",
-    Callback = function(value) getgenv().AutoTreadmill = value end,
+    Callback = function(value)
+        getgenv().AutoTreadmill = value
+    end,
 })
 
--- ប៊ូតុង បើក/បិទ Auto Farm Event
 tabFarm:CreateToggle({
     Name = '<font size="24"><b>វ៉ៃមេ ស្វ័យប្រវត្តិ</b></font>(Auto Kill Boss)',
     CurrentValue = false,
@@ -1304,7 +1194,9 @@ tabSettings:CreateToggle({
     Name = '<font size="24"><b>បង្ហាញព័ត៌មានស៊ុត</b></font> (Toggle ESP)',
     CurrentValue = false,
     Flag = "esp_toggle",
-    Callback = function(value) getgenv().AutoESP = value end,
+    Callback = function(value)
+        getgenv().AutoESP = value
+    end,
 })
 
 tabSettings:CreateButton({
@@ -1325,11 +1217,10 @@ tabSettings:CreateButton({
 
 tabSettings:CreateToggle({
     Name = '<font size="24"><b>ការពារអន្ទាក់</b></font>(Anti-Trap)',
-    CurrentValue = true, -- កែត្រង់នេះទៅជា true ដើម្បីឲ្យប៊ូតុងបង្ហាញពណ៌បៃតង(បើក)ស្រាប់
+    CurrentValue = true,
     Flag = "AntiTrapToggle",
     Callback = function(value)
         getgenv().AutoAntiTrap = value
-        
         if value then
             Rayfield:Notify({
                 Title = "Anti-Trap បានបើក",
@@ -1347,8 +1238,12 @@ tabSettings:CreateToggle({
     Flag = "Optimization",
     Callback = function(value)
         if value then
-            for _, v in pairs(Workspace:GetDescendants()) do pcall(optimizeObject, v) end
-            Workspace.DescendantAdded:Connect(function(v) pcall(optimizeObject, v) end)
+            for _, v in pairs(Workspace:GetDescendants()) do
+                pcall(optimizeObject, v)
+            end
+            Workspace.DescendantAdded:Connect(function(v)
+                pcall(optimizeObject, v)
+            end)
             Lighting.GlobalShadows = false
         else
             Lighting.GlobalShadows = true
