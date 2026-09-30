@@ -138,21 +138,17 @@ local function getHRP()
 end
 
 local function isWallOpenOrCountdownFinished()
-    local playerGui = player:FindFirstChild("PlayerGui") or game:GetService("CoreGui")
-    local resetTimerGui = playerGui:FindFirstChild("ResetStartTimer")
-    
-    if resetTimerGui and resetTimerGui.Enabled then
-        return false
-    end
-
+    -- យើងលុបការឆែក PlayerGui ចោល ព្រោះវា Glitch ពេលតួអង្គកើតមកវិញ
+    -- ឲ្យវាឆែកមើលតែជញ្ជាំងពិតប្រាកដនៅក្នុង Workspace វិញ ទើបច្បាស់ ១០០%
     local resetWall = Workspace:FindFirstChild("AreaEggResetWall") or Workspace:FindFirstChild("EggResetWall")
     if resetWall then
         local wallPart = resetWall:IsA("BasePart") and resetWall or resetWall:FindFirstChildWhichIsA("BasePart", true)
+        -- បើជញ្ជាំងនៅបាំង (CanCollide = true) មានន័យថាមិនទាន់បើកទេ
         if wallPart and wallPart.Transparency < 1 and wallPart.CanCollide then
             return false
         end
     end
-    
+    -- បើគ្មានជញ្ជាំង ឬជញ្ជាំងអត់បាំងទេ គឺបើកហើយ
     return true
 end
 
@@ -398,19 +394,18 @@ end
 task.spawn(function()
     while task.wait(0.05) do
         if not getgenv().AutoFarmEvent or getgenv().IsDoingEgg then continue end
+
         local arena = workspace:FindFirstChild("ScrambleArena")
         local portal = workspace:FindFirstChild("ScrambleArenaPortal")
-        
         if not portal and not arena then continue end
-        
+
         pcall(function()
             local hrp = getHRP()
             if not hrp or not hrp.Parent then return end
-            
             local character = hrp.Parent
             local humanoid = character:FindFirstChildOfClass("Humanoid")
             if not humanoid or humanoid.Health <= 0 then return end
-            
+
             local target = nil
             local beam = workspace:FindFirstChild("TutorialBeam", true)
             if beam and beam:IsA("Beam") then
@@ -418,7 +413,7 @@ task.spawn(function()
             elseif beam and (beam:IsA("BasePart") or beam:IsA("Model")) then
                 target = beam
             end
-            
+
             if not target and arena then
                 local mech = arena:FindFirstChild("Mech")
                 if mech then
@@ -427,45 +422,70 @@ task.spawn(function()
                     target = arena:FindFirstChild("Ball")
                 end
             end
-            
+
             local targetPos = target and (target:IsA("Model") and target:GetPivot().Position or target:IsA("BasePart") and target.Position) or nil
             local arenaPos = arena and (arena:IsA("Model") and arena:GetPivot().Position or arena:IsA("BasePart") and arena.Position)
             local portalPart = portal and (portal:IsA("Model") and portal.PrimaryPart or portal:IsA("BasePart") and portal or portal:FindFirstChildWhichIsA("BasePart", true))
-            
-            local inArena = false
-            if arenaPos and (hrp.Position - arenaPos).Magnitude < 600 then inArena = true
-            elseif targetPos and (hrp.Position - targetPos).Magnitude < 500 then inArena = true end
-            
-            if not inArena and portalPart then
-                runToExactPosition(humanoid, hrp, portalPart)
-                task.wait(0.5)
-            end
-            
+
             local finalTargetPos = targetPos or arenaPos
+            local distToTarget = math.huge
+            local distToPortal = math.huge
+            
             if finalTargetPos then
-                local currentlyAttacking = isMechAttacking(arena)
-                if currentlyAttacking then
-                    hrp.CFrame = CFrame.lookAt(finalTargetPos + Vector3.new(0, 30, 0), finalTargetPos)
-                else
-                    hrp.CFrame = CFrame.lookAt(finalTargetPos + Vector3.new(0, 0, 1.5), finalTargetPos)
-                end
-                
-                hrp.AssemblyLinearVelocity = Vector3.zero
-                hrp.AssemblyAngularVelocity = Vector3.zero
-                
-                local tool = getBestTool(player, character)
-                if tool then
-                    if tool.Parent ~= character then
-                        humanoid:EquipTool(tool)
-                        tool.Parent = character
+                distToTarget = (hrp.Position - finalTargetPos).Magnitude
+            end
+
+            -- ឆែកមើលចម្ងាយពីតួអង្គយើង ទៅកាន់ Portal
+            if portalPart then
+                distToPortal = (hrp.Position - portalPart.Position).Magnitude
+            end
+
+            -- បើនៅឆ្ងាយពីមេ លើសពី 1000 (ទើបកើតវិញនៅ Base)
+            if distToTarget > 1000 then
+                if portalPart and isWallOpenOrCountdownFinished() then
+                    -- ឆែកមើលចម្ងាយពីយើងទៅ Portal
+                    if distToPortal > 15 then
+                        -- ១. បើនៅឆ្ងាយពី Portal (លើសពី 15 Studs) ឲ្យរត់ទៅរក Portal សិន
+                        runToExactPosition(humanoid, hrp, portalPart)
+                        task.wait(0.2)
+                    else
+                        -- ២. បើមកដល់ជិត Portal (ក្នុងគម្លាត 15 Studs) ឲ្យ Teleport ទៅវ៉ៃមេផ្ទាល់យកតែម្តង!
+                        hrp.CFrame = CFrame.new(finalTargetPos + Vector3.new(0, 5, 0))
+                        task.wait(0.3)
                     end
-                    tool:Activate()
+                else
+                    -- បើជញ្ជាំងមិនទាន់បើក ត្រូវ return ផ្អាកសិន ដើម្បីការពារកុំឲ្យវា CFrame ទៅរកមេដោយផ្ទាល់
+                    return
+                end
+            end
+
+            -- ពេលវា Teleport ទៅដល់ក្បែរមេរួចហើយ ចាប់ផ្តើមវ៉ៃ
+            if finalTargetPos then
+                -- ធ្វើបច្ចុប្បន្នភាពចម្ងាយសាជាថ្មី (ព្រោះវាអាចទើបតែ Teleport មកពី Portal)
+                local currentDistToTarget = (hrp.Position - finalTargetPos).Magnitude
+                if currentDistToTarget <= 1000 then
+                    local currentlyAttacking = isMechAttacking(arena)
+                    if currentlyAttacking then
+                        hrp.CFrame = CFrame.lookAt(finalTargetPos + Vector3.new(0, 30, 0), finalTargetPos)
+                    else
+                        hrp.CFrame = CFrame.lookAt(finalTargetPos + Vector3.new(0, 0, 1.5), finalTargetPos)
+                    end
+                    hrp.AssemblyLinearVelocity = Vector3.zero
+                    hrp.AssemblyAngularVelocity = Vector3.zero
+
+                    local tool = getBestTool(player, character)
+                    if tool then
+                        if tool.Parent ~= character then
+                            humanoid:EquipTool(tool)
+                            tool.Parent = character
+                        end
+                        tool:Activate()
+                    end
                 end
             end
         end)
     end
 end)
-
 task.spawn(function()
     local areaEggSlotsClient = Workspace:WaitForChild("AreaEggSlotsClient")
     local rootFolder = Workspace:FindFirstChild("World") or Workspace:FindFirstChild("__OBJECTS")
@@ -914,117 +934,122 @@ task.spawn(function()
     end
 
     local hasMovedToBase = false
-    local wasEventActive = false
+local wasEventActive = false
 
-    while true do
-        task.wait(0.1)
-        pcall(function()
-            -- [ចំណុចបន្ថែមថ្មី] ពេលតួអង្គងាប់ គឺផ្អាកការបញ្ជាសិន រង់ចាំវាធ្លាក់ដល់ដីទើបឲ្យដើរវិញ
-            local char = player.Character
-            local hum = char and char:FindFirstChild("Humanoid")
-            if not char or not hum or hum.Health <= 0 or not char:FindFirstChild("HumanoidRootPart") then
-                getgenv().IsDoingEgg = false
-                isCurrentlyOnTreadmill = false
-                hasMovedToBase = false
-                return -- ផ្អាកត្រឹមនេះសិន ដើម្បីកុំឲ្យមានការរង់ចាំ
-            end
+while true do
+    task.wait(0.1)
+    pcall(function()
+        local char = player.Character
+        local hum = char and char:FindFirstChild("Humanoid")
+        
+        if not char or not hum or hum.Health <= 0 or not char:FindFirstChild("HumanoidRootPart") then
+            getgenv().IsDoingEgg = false
+            isCurrentlyOnTreadmill = false
+            hasMovedToBase = false
+            return -- ផ្អាកត្រឹមនេះសិន ដើម្បីកុំឲ្យមានការរង់ចាំ
+        end
 
-            local arena = workspace:FindFirstChild("ScrambleArena")
-            local portal = workspace:FindFirstChild("ScrambleArenaPortal")
-            local isEventActive = (portal ~= nil or arena ~= nil)
+        local arena = workspace:FindFirstChild("ScrambleArena")
+        local portal = workspace:FindFirstChild("ScrambleArenaPortal")
+        local isEventActive = (portal ~= nil or arena ~= nil)
 
-            if wasEventActive and not isEventActive then
-                task.wait(2)
-                if getgenv().AutoTreadmill then
-                    local success = tweenToTreadmillRoot()
-                    if success then
-                        isCurrentlyOnTreadmill = true
-                        task.wait(1)
-                    end
+        -- [១] ពេលចប់ Event (បាត់ Portal) រង់ចាំ ៣ វិនាទី រួច Teleport ទៅម៉ាស៊ីនរត់
+        if wasEventActive and not isEventActive then
+            task.wait(3)
+            if getgenv().AutoTreadmill then
+                local success = teleportToTreadmillRoot() -- ប្រើមុខងារ Teleport
+                if success then
+                    isCurrentlyOnTreadmill = true
+                    task.wait(1)
                 end
             end
-            
-            wasEventActive = isEventActive 
+        end
+        wasEventActive = isEventActive
 
-            if isWallOpenOrCountdownFinished() then
-                hasMovedToBase = false
-                local targetSlot = getTargetEgg()
-                if targetSlot then
-                    getgenv().IsDoingEgg = true
-                    local hitbox = targetSlot:FindFirstChild("Hitbox", true) or (targetSlot:IsA("BasePart") and targetSlot) or targetSlot:FindFirstChildWhichIsA("BasePart", true)
-                    if hitbox then
-                        if isCurrentlyOnTreadmill then
-                            leaveTreadmill()
-                            isCurrentlyOnTreadmill = false
-                            local hrp = getHRP()
-                            if hrp then
-                                hrp.Anchored = false
-                                hrp.AssemblyLinearVelocity = Vector3.zero
-                            end
-                            task.wait(0.5)
-                        end
-                        stealEggAtLocation(hitbox)
-                    end
-                else
-                    getgenv().IsDoingEgg = false
-                    if getgenv().AutoFarmEvent and isEventActive then
-                        if isCurrentlyOnTreadmill then
-                            leaveTreadmill()
-                            isCurrentlyOnTreadmill = false
-                            task.wait(0.5)
-                        end
-                    elseif getgenv().AutoTreadmill then
+        if isWallOpenOrCountdownFinished() then
+            hasMovedToBase = false
+            local targetSlot = getTargetEgg()
+            if targetSlot then
+                getgenv().IsDoingEgg = true
+                local hitbox = targetSlot:FindFirstChild("Hitbox", true) or (targetSlot:IsA("BasePart") and targetSlot) or targetSlot:FindFirstChildWhichIsA("BasePart", true)
+                
+                if hitbox then
+                    if isCurrentlyOnTreadmill then
+                        leaveTreadmill()
+                        isCurrentlyOnTreadmill = false
                         local hrp = getHRP()
-                        if isCurrentlyOnTreadmill and hrp and lastTreadmillTargetCF then
-                            local dist = (hrp.Position - lastTreadmillTargetCF.Position).Magnitude
-                            if dist > Config.Farm.TreadmillMaxDistance then
-                                isCurrentlyOnTreadmill = false
-                            end
+                        if hrp then
+                            hrp.Anchored = false
+                            hrp.AssemblyLinearVelocity = Vector3.zero
                         end
-                        
-                        if not isCurrentlyOnTreadmill then
-                            local success = tweenToTreadmillRoot()
-                            if success then isCurrentlyOnTreadmill = true end
-                        end
-                    else
-                        if isCurrentlyOnTreadmill then
-                            leaveTreadmill()
-                            isCurrentlyOnTreadmill = false
-                        end
+                        task.wait(0.5)
                     end
+                    stealEggAtLocation(hitbox)
                 end
             else
                 getgenv().IsDoingEgg = false
-                if not hasMovedToBase then
+                if getgenv().AutoFarmEvent and isEventActive then
                     if isCurrentlyOnTreadmill then
                         leaveTreadmill()
                         isCurrentlyOnTreadmill = false
                         task.wait(0.5)
                     end
-                    
+                elseif getgenv().AutoTreadmill then
                     local hrp = getHRP()
-                    if hrp and hum then
-                        local basePos = originalCFrame.Position
-                        local distToBase = (hrp.Position - basePos).Magnitude
-                        
-                        if distToBase > 5 then
-                            hum:Move(Vector3.zero)
-                            hrp.AssemblyLinearVelocity = Vector3.zero
-                            hrp.AssemblyAngularVelocity = Vector3.zero
-                            runToExactPosition(hum, hrp, basePos)
-                            if hrp then hrp.CFrame = originalCFrame end
-                        else
-                            if hrp then hrp.CFrame = originalCFrame end
+                    if isCurrentlyOnTreadmill and hrp and lastTreadmillTargetCF then
+                        local dist = (hrp.Position - lastTreadmillTargetCF.Position).Magnitude
+                        if dist > Config.Farm.TreadmillMaxDistance then
+                            isCurrentlyOnTreadmill = false
                         end
                     end
-                    hasMovedToBase = true
+                    if not isCurrentlyOnTreadmill then
+                        local success = tweenToTreadmillRoot()
+                        if success then
+                            isCurrentlyOnTreadmill = true
+                        end
+                    end
                 else
-                    -- លែងមាន local char ជាន់គ្នាទៀតហើយ (Error Fixed)
-                    if hum then hum:Move(Vector3.zero) end
+                    if isCurrentlyOnTreadmill then
+                        leaveTreadmill()
+                        isCurrentlyOnTreadmill = false
+                    end
                 end
             end
-        end)
-    end
+        else
+            getgenv().IsDoingEgg = false
+            
+            -- [២] បញ្ឈប់ការរត់ទៅ Base ពេលកំពុងវ៉ៃមេ (បង្កកវានៅនឹងកន្លែង Area Event)
+            if getgenv().AutoFarmEvent and isEventActive then
+                hasMovedToBase = true
+                if hum then hum:Move(Vector3.zero) end
+            elseif not hasMovedToBase then
+                if isCurrentlyOnTreadmill then
+                    leaveTreadmill()
+                    isCurrentlyOnTreadmill = false
+                    task.wait(0.5)
+                end
+                
+                local hrp = getHRP()
+                if hrp and hum then
+                    local basePos = originalCFrame.Position
+                    local distToBase = (hrp.Position - basePos).Magnitude
+                    if distToBase > 5 then
+                        hum:Move(Vector3.zero)
+                        hrp.AssemblyLinearVelocity = Vector3.zero
+                        hrp.AssemblyAngularVelocity = Vector3.zero
+                        runToExactPosition(hum, hrp, basePos)
+                        if hrp then hrp.CFrame = originalCFrame end
+                    else
+                        if hrp then hrp.CFrame = originalCFrame end
+                    end
+                end
+                hasMovedToBase = true
+            else
+                if hum then hum:Move(Vector3.zero) end
+            end
+        end
+    end)
+end
 end)
 
 getgenv().AutoAntiTrap = true
