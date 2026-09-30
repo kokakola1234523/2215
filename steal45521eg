@@ -152,25 +152,48 @@ local function isWallOpenOrCountdownFinished()
     return true
 end
 
-local function isRainbowEgg(slot)
-    if not slot or not slot.Name then return false end
-    
-    local slotNameLower = string.lower(slot.Name)
-    for _, keyword in ipairs(RAINBOW_KEYWORDS) do
-        if string.find(slotNameLower, keyword) then return true end
-    end
-    
-    for _, item in ipairs(slot:GetDescendants()) do
-        if item and item.Name then
-            local itemNameLower = string.lower(item.Name)
-            for _, keyword in ipairs(RAINBOW_KEYWORDS) do
-                if string.find(itemNameLower, keyword) then return true end
-            end
+local function getRainbowPriority(slot)
+    if not slot or not slot.Name then return 99 end
+
+    local hasAttachment = false
+    local hasFXStars = false
+    local hasDecal = false
+    local isBaseRainbow = false
+
+    local function checkWord(str)
+        local lowerStr = string.lower(str)
+        if string.find(lowerStr, "attachment") then hasAttachment = true end
+        if string.find(lowerStr, "fx") or string.find(lowerStr, "stars") or string.find(lowerStr, "starspecs") then hasFXStars = true end
+        if string.find(lowerStr, "decal") then hasDecal = true end
+        
+        -- ឆែកមើល Keyword ដើម (rainbow, glow, radicalhalo)
+        for _, kw in ipairs(RAINBOW_KEYWORDS) do
+            if string.find(lowerStr, kw) then isBaseRainbow = true end
         end
     end
-    return false
-end
 
+    -- ឆែកឈ្មោះស៊ុត
+    checkWord(slot.Name)
+    -- ឆែកមើលរបស់ខាងក្នុងស៊ុត (Descendants)
+    for _, item in ipairs(slot:GetDescendants()) do
+        if item and item.Name then
+            checkWord(item.Name)
+        end
+    end
+
+    -- កំណត់អាទិភាព (លេខកាន់តែតូច លួចមុនគេ)
+    if hasFXStars and hasDecal then
+        return 1 -- លេខ 1: Devine (លួចមុនគេបង្អស់)
+    elseif hasFXStars then
+        return 2 -- លេខ 2: Eternal (លួចបន្ទាប់)
+    elseif hasAttachment then
+        return 3 -- លេខ 3: Secret (លួចចុងក្រោយគេក្នុងចំណោមស៊ុតពិសេស)
+    elseif isBaseRainbow then
+        return 4 -- លេខ 4: Rainbow ធម្មតា
+    end
+
+    return 99 -- មិនមែនជាស៊ុតដែលចង់បាន
+end
 local bodyVelocity, bodyGyro = nil, nil
 RunService.Stepped:Connect(function()
     local char = player.Character
@@ -583,13 +606,26 @@ task.spawn(function()
     end
 
     local function getTargetEgg()
-        local slots = areaEggSlotsClient:GetChildren()
+    local slots = areaEggSlotsClient:GetChildren()
+    
+    if getgenv().AutoRainbowEgg then
+        local bestEgg = nil
+        local bestPriority = 99
         
-        if getgenv().AutoRainbowEgg then
-            for _, slot in ipairs(slots) do
-                if isRainbowEgg(slot) then return slot end
+        -- វានឹងស្វែងរកស៊ុតទាំងអស់ ហើយរើសយកស៊ុតណាដែលមានលេខ Priority តូចជាងគេ (លេខ 1 ល្អជាងគេ)
+        for _, slot in ipairs(slots) do
+            local priority = getRainbowPriority(slot)
+            if priority < bestPriority then
+                bestPriority = priority
+                bestEgg = slot
             end
         end
+        
+        -- បើរកឃើញស៊ុត វានឹងទៅលួចមួយហ្នឹងមុនគេ
+        if bestEgg then
+            return bestEgg
+        end
+    end
 
         if getgenv().AutoPartFarm then
             local bestPartEgg = nil
