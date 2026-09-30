@@ -1,8 +1,36 @@
+-- ==========================================
+-- Auto Rejoin & Auto Execute (ដាក់ខាងលើគេបង្អស់នៃកូដ)
+-- ==========================================
+local CoreGui = game:GetService("CoreGui")
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+
+-- Link Script របស់អ្នកសម្រាប់ទាញមក Run វិញពេលលោតចូល Server ថ្មី
+local scriptToLoad = [[
+    task.wait(3)
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/kokakola1234523/2215/main/steal45521eg"))()
+]]
+
+local queue_on_teleport = queue_on_teleport or syn and syn.queue_on_teleport or fluxus and fluxus.queue_on_teleport
+if queue_on_teleport then
+    pcall(function() queue_on_teleport(scriptToLoad) end)
+end
+
+-- ចាប់ផ្ទាំង Error ពេលដាច់អ៊ីនធឺណិត ឫគេ Kick
+task.spawn(function()
+    local promptOverlay = CoreGui:FindFirstChild("RobloxPromptGui") and CoreGui.RobloxPromptGui:FindFirstChild("promptOverlay")
+    if promptOverlay then
+        promptOverlay.ChildAdded:Connect(function(child)
+            if child.Name == 'ErrorPrompt' then
+                task.wait(3)
+                TeleportService:Teleport(game.PlaceId, Players.LocalPlayer)
+            end
+        end)
+    end
+end)
+-- ==========================================
+
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
-
-
-
-
 -- ==========================================
 -- [STEAL AN EGG] ToaToa Hub - Auto-Re-Treadmill Fixed
 -- ==========================================
@@ -420,19 +448,13 @@ task.spawn(function()
                 inArena = true
             end
 
-            -- ១. បើមិនទាន់ចូល Area ទេ យើងប៉ះ Portal យកសិទ្ធិ (Trigger Touch) សិន
+            -- ១. បើមិនទាន់ចូល Area ទេ ឱ្យបញ្ជាតួអង្គ "រត់ទៅប៉ះ" Portal ផ្ទាល់
             if not inArena and portalPart then
-                if firetouchinterest then
-                    firetouchinterest(hrp, portalPart, 0 :: any)
-                    firetouchinterest(hrp, portalPart, 1 :: any)
-                else
-                    -- បើ Executor អត់ Support ទេ ឱ្យវា Teleport ទៅប៉ះ Portal មួយភ្លែត
-                    hrp.CFrame = portalPart.CFrame
-                    task.wait(0.05)
-                end
+                runToExactPosition(humanoid, hrp, portalPart)
+                task.wait(0.5) -- រង់ចាំបន្តិចឲ្យប្រព័ន្ធហ្គេមចាប់បានថាប៉ះហើយ
             end
 
-            -- ២. ទោះទើបតែប៉ះ Portal ក៏ដោយ ក៏បង្ខំ Teleport ហោះទៅវ៉ៃមេក្នុង Area ផ្ទាល់តែម្តង
+            -- ២. បន្ទាប់ពីរត់ទៅប៉ះ Portal រួច ក៏បង្ខំ Teleport ហោះទៅវ៉ៃមេក្នុង Area ផ្ទាល់តែម្តង
             local finalTargetPos = targetPos or arenaPos
             if finalTargetPos then
                 local currentlyAttacking = isMechAttacking(arena)
