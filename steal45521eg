@@ -876,6 +876,12 @@ end
                                 EggState.DropFieldEgg(PlayerRequest)
                             end)
                             task.wait(0.5)
+                            if typeof(basePos) == "Vector3" then hrp.CFrame = CFrame.new(basePos)
+                            else hrp.CFrame = basePos.CFrame or basePos end
+                            hrp.AssemblyLinearVelocity = Vector3.zero
+                            hrp.AssemblyAngularVelocity = Vector3.zero
+                            task.wait(0.3)
+                            
 
                             teleportToTreadmillRoot()
                             task.wait(0.5)
