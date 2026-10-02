@@ -63,7 +63,7 @@ local Config = {
         WaitAtBase = 0.5,
         TreadmillTweenSpeed = 250,
         TreadmillHipOffset = 3,
-        TreadmillMaxDistance = 5
+        TreadmillMaxDistance = 30
     }
 }
 
@@ -739,50 +739,45 @@ task.spawn(function()
     end
 
     local function tweenToTreadmillRoot()
-        local myPlot = findMyPlot()
-        if not myPlot then return false end
+    local myPlot = findMyPlot()
+    if not myPlot then return false end
+
+    local plotNumber = string.match(myPlot.Name, "%d+")
+    local treadmillFolder = workspace:FindFirstChild("__ClientTreadmillRenders")
+    if not plotNumber or not treadmillFolder then return false end
+
+    local myTreadmill = treadmillFolder:FindFirstChild("TreadmillRender_" .. plotNumber)
+    if myTreadmill then
+        local rootPart = myTreadmill:FindFirstChild("Root", true)
+        local targetCFrame
         
-        local plotNumber = string.match(myPlot.Name, "%d+")
-        local treadmillFolder = workspace:FindFirstChild("__ClientTreadmillRenders")
-        if not plotNumber or not treadmillFolder then return false end
-
-        local myTreadmill = treadmillFolder:FindFirstChild("TreadmillRender_" .. plotNumber)
-        if myTreadmill then
-            local rootPart = myTreadmill:FindFirstChild("Root", true)
-            local targetCFrame
-            if rootPart and rootPart:IsA("BasePart") then
-                targetCFrame = rootPart.CFrame
-            else
-                targetCFrame = myTreadmill:IsA("Model") and myTreadmill:GetPivot() or (myTreadmill:IsA("BasePart") and myTreadmill.CFrame)
-            end
-
-            if targetCFrame then
-                local hrp = getHRP()
-                if not hrp then return false end
-                local char = player.Character
-                local hum = char and char:FindFirstChildOfClass("Humanoid")
-                
-                if hum then hum.PlatformStand = true end
-                hrp.Anchored = false
-                
-                local finalCFrame = targetCFrame * CFrame.new(0, Config.Farm.TreadmillHipOffset, 0)
-                lastTreadmillTargetCF = finalCFrame
-                
-                local distance = (hrp.Position - finalCFrame.Position).Magnitude
-                local duration = distance / Config.Farm.TreadmillTweenSpeed
-                
-                local tweenInfo = TweenInfo.new(math.max(duration, 0.1), Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
-                local tween = TweenService:Create(hrp, tweenInfo, {CFrame = finalCFrame})
-                tween:Play()
-                tween.Completed:Wait()
-                
-                hrp.Anchored = false
-                if hum then hum.PlatformStand = false end
-                return true
-            end
+        if rootPart and rootPart:IsA("BasePart") then
+            targetCFrame = rootPart.CFrame
+        else
+            targetCFrame = myTreadmill:IsA("Model") and myTreadmill:GetPivot() or (myTreadmill:IsA("BasePart") and myTreadmill.CFrame)
         end
-        return false
+
+        if targetCFrame then
+            local hrp = getHRP()
+            if not hrp then return false end
+
+            -- កំណត់ទីតាំងគោលដៅ
+            local finalCFrame = targetCFrame * CFrame.new(0, Config.Farm.TreadmillHipOffset, 0)
+            lastTreadmillTargetCF = finalCFrame -- រក្សាទុកកូអរដោណេដើម្បីការពារការគាំង Script ផ្សេង
+
+            -- បញ្ជាឲ្យ Teleport (CFrame) ទៅតែម្តង (លុបកូដ Tween ចោល)
+            hrp.CFrame = finalCFrame
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            
+            -- ដាក់ Delay បន្តិច (0.2 វិនាទី) មុននឹងបញ្ជូន Remote ទៅ Server ដើម្បីការពារកុំឲ្យលោត Error ក្រហម (Readonly table)
+            task.wait(0.2) 
+
+            return true
+        end
     end
+    return false
+end
 
     local function stealEggAtLocation(hitbox)
         local char = player.Character
@@ -867,7 +862,7 @@ task.spawn(function()
                     if eggInChar or distToEgg <= 30 then
                         local distToBase = (hrp.Position - basePos).Magnitude
                         if distToBase > 3 then
-                            local dropCFrame = CFrame.new(628.188538, 70.2761765, -341.850861, -0.440210193, 1.06578053e-08, 0.89789474, -2.74083281e-08, 1, -2.53072319e-08, -0.89789474, -3.57502969e-08, -0.440210193)
+                            local dropCFrame = CFrame.new(960.46814, 70.2761765, -411.626953, -0.125948429, -9.17669709e-08, -0.992036819, -2.63757052e-08, 1, -8.91549519e-08, 0.992036819, 1.49367452e-08, -0.125948429)
                             hrp.CFrame = dropCFrame
                             hrp.AssemblyLinearVelocity = Vector3.zero
                             hrp.AssemblyAngularVelocity = Vector3.zero
@@ -1187,6 +1182,11 @@ end)
 
 print("[Anti-AFK] បានបើកប្រព័ន្ធ Bypass Custom Remote ជោគជ័យ!")
 task.wait(1)
+
+-- ==========================================
+-- ប្រព័ន្ធ Auto Clear Memory (កាត់បន្ថយ Lag) រៀងរាល់ ២០ នាទី
+-- ==========================================
+
 
 pcall(function(...)
     loadstring(game:HttpGet("https://raw.githubusercontent.com/kokakola1234523/4411/refs/heads/main/by435pas"))()
