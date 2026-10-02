@@ -1014,7 +1014,7 @@ while true do
             -- [ចំណុចបន្ថែម] បើទើបតែភ្លឺ ឬ Map ទើបតែ Reset រួច ឲ្យវាចាំ ៣ វិនាទីសិន!
             if wasMapResetting then
                 wasMapResetting = false
-                task.wait(3.5) -- រង់ចាំ 3 វិនាទី តាមការស្នើសុំ
+                task.wait(3) -- រង់ចាំ 3 វិនាទី តាមការស្នើសុំ
             end
 
             hasMovedToBase = false
