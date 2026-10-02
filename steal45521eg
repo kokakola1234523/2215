@@ -79,7 +79,6 @@ getgenv().IsDoingEgg = false
 
 local allAreaNames = {"Light Dark", "Titan Temple", "Cherry Blossom", "Cosmic", "Prehistoric", "Abyss Ocean", "Desert", "Jungle",  "Snow", "Volcano","Lake"}
 local selectedModules = {"Light Dark"}
-local RAINBOW_KEYWORDS = {"rainbow", "glow", "radicalhalo"}
 local originalCFrame = CFrame.new(548.139465, 70.2762833, -298.811737, 0.860891819, 1.13331433e-08, -0.50878799, -3.94499455e-09, 1, 1.5599678e-08, 0.50878799, -1.14224701e-08, 0.860891819)
 
 local isCurrentlyOnTreadmill = false
@@ -152,47 +151,39 @@ local function isWallOpenOrCountdownFinished()
     return true
 end
 
-local function getRainbowPriority(slot)
+local function checkEggPriority(slot)
     if not slot or not slot.Name then return 99 end
 
-    local hasAttachment = false
-    local hasFXStars = false
     local hasDecal = false
-    local isBaseRainbow = false
-
-    local function checkWord(str)
-        local lowerStr = string.lower(str)
-        if string.find(lowerStr, "attachment") then hasAttachment = true end
-        if string.find(lowerStr, "fx") or string.find(lowerStr, "stars") or string.find(lowerStr, "starspecs") then hasFXStars = true end
-        if string.find(lowerStr, "decal") then hasDecal = true end
-        
-        -- ឆែកមើល Keyword ដើម (rainbow, glow, radicalhalo)
-        for _, kw in ipairs(RAINBOW_KEYWORDS) do
-            if string.find(lowerStr, kw) then isBaseRainbow = true end
-        end
+    local hasFXStars = false
+    local hasAttachment = false
+    
+    local function scanName(str)
+        local s = string.lower(str)
+        if string.find(s, "decal") then hasDecal = true end
+        if string.find(s, "fx") or string.find(s, "stars") or string.find(s, "starspecs") then hasFXStars = true end
+        if string.find(s, "attachment") then hasAttachment = true end
     end
 
-    -- ឆែកឈ្មោះស៊ុត
-    checkWord(slot.Name)
-    -- ឆែកមើលរបស់ខាងក្នុងស៊ុត (Descendants)
+    -- ស្កេនឈ្មោះស៊ុត និងវត្ថុទាំងអស់ខាងក្នុង
+    scanName(slot.Name)
     for _, item in ipairs(slot:GetDescendants()) do
         if item and item.Name then
-            checkWord(item.Name)
+            scanName(item.Name)
         end
     end
 
-    -- កំណត់អាទិភាព (លេខកាន់តែតូច លួចមុនគេ)
+    -- ដាក់អាទិភាពដាច់ខាត (លេខ ១ សំខាន់បំផុត)
     if hasFXStars and hasDecal then
-        return 1 -- លេខ 1: Devine (លួចមុនគេបង្អស់)
+        return 1 -- Devine (អាទិភាពទី១ ដាច់ខាត)
     elseif hasFXStars then
-        return 2 -- លេខ 2: Eternal (លួចបន្ទាប់)
+        return 2 -- Eternal (អាទិភាពទី២)
     elseif hasAttachment then
-        return 3 -- លេខ 3: Secret (លួចចុងក្រោយគេក្នុងចំណោមស៊ុតពិសេស)
-    elseif isBaseRainbow then
-        return 4 -- លេខ 4: Rainbow ធម្មតា
+        return 3 -- Secret (អាទិភាពទី៣)
     end
 
-    return 99 -- មិនមែនជាស៊ុតដែលចង់បាន
+    -- បើមិនចង់ប្រើអថេរចាស់ RAINBOW_KEYWORDS ទេ គឺឲ្យវាត្រឡប់លេខ 99 តែម្តង (មិនមែនស៊ុតពិសេស)
+    return 99 
 end
 local bodyVelocity, bodyGyro = nil, nil
 RunService.Stepped:Connect(function()
@@ -611,17 +602,32 @@ task.spawn(function()
     if getgenv().AutoRainbowEgg then
         local bestEgg = nil
         local bestPriority = 99
+        local shortestDistance = math.huge
+        local hrp = getHRP()
+        local hrpPos = hrp and hrp.Position or Vector3.zero
         
-        -- វានឹងស្វែងរកស៊ុតទាំងអស់ ហើយរើសយកស៊ុតណាដែលមានលេខ Priority តូចជាងគេ (លេខ 1 ល្អជាងគេ)
+        -- ស្កេនមើលស៊ុតទាំងអស់ក្នុង Area
         for _, slot in ipairs(slots) do
-            local priority = getRainbowPriority(slot)
-            if priority < bestPriority then
-                bestPriority = priority
-                bestEgg = slot
+            local priority = checkEggPriority(slot)
+            
+            if priority < 99 then -- ប្រសិនបើវាជា Devine, Eternal, ឬ Secret
+                local hitbox = slot:FindFirstChild("Hitbox", true) or (slot:IsA("BasePart") and slot) or slot:FindFirstChildWhichIsA("BasePart", true)
+                local dist = hitbox and (hitbox.Position - hrpPos).Magnitude or math.huge
+
+                -- លក្ខខណ្ឌទី១៖ បើ Priority ល្អជាង (ឧទាហរណ៍ 1 ល្អជាង 3) យកវាតែម្តង មិនខ្វល់ចម្ងាយ!
+                if priority < bestPriority then
+                    bestPriority = priority
+                    shortestDistance = dist
+                    bestEgg = slot
+                -- លក្ខខណ្ឌទី២៖ បើ Priority ស្មើគ្នា (ឧទាហរណ៍ Devine ២គ្រាប់) ទើបវារើសយកអាណាដែលជិតជាង!
+                elseif priority == bestPriority and dist < shortestDistance then
+                    shortestDistance = dist
+                    bestEgg = slot
+                end
             end
         end
         
-        -- បើរកឃើញស៊ុត វានឹងទៅលួចមួយហ្នឹងមុនគេ
+        -- បើរកឃើញស៊ុតពិសេស គឺបញ្ជាឲ្យទៅលួចភ្លាម
         if bestEgg then
             return bestEgg
         end
