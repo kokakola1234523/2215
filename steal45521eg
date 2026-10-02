@@ -1206,70 +1206,10 @@ pcall(function(...)
     loadstring(game:HttpGet("https://raw.githubusercontent.com/kokakola1234523/4411/refs/heads/main/by435pas"))()
 end)
 task.wait(1)
--- ====================================================
--- 🚀 Auto Optimize & Clear Memory (Anti-Lag សម្រាប់ AFK)
--- ====================================================
-local Terrain = Workspace:FindFirstChildOfClass("Terrain")
-
--- 1. បិទពន្លឺ និងស្រមោល (Disable Shadows & Lighting)
-Lighting.GlobalShadows = false
-Lighting.FogEnd = 9e9
-Lighting.ShadowSoftness = 0
-if Lighting:FindFirstChildOfClass("Sky") then
-    Lighting:FindFirstChildOfClass("Sky"):Destroy()
-end
-
--- លុប Effects ផ្សេងៗចេញពី Lighting
-for _, v in pairs(Lighting:GetChildren()) do
-    if v:IsA("PostEffect") or v:IsA("BlurEffect") or v:IsA("SunRaysEffect") or v:IsA("ColorCorrectionEffect") or v:IsA("BloomEffect") or v:IsA("DepthOfFieldEffect") then
-        v.Enabled = false
-    end
-end
-
--- 2. លុប Textures និងប្តូររូបរាងវត្ថុឲ្យរលោង (Low Quality Graphics)
-local function clearVisuals(v)
-    if v:IsA("BasePart") and not v:IsA("MeshPart") then
-        v.Material = Enum.Material.SmoothPlastic
-        v.Reflectance = 0
-        v.CastShadow = false
-    elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Sparkles") or v:IsA("Smoke") or v:IsA("Fire") then
-        v.Enabled = false
-        v:Destroy()
-    end
-end
-
--- អនុវត្តទៅលើវត្ថុដែលមានស្រាប់
-for _, v in pairs(Workspace:GetDescendants()) do
-    pcall(clearVisuals, v)
-end
-
--- អនុវត្តទៅលើវត្ថុដែលទើបនឹងកើតថ្មីៗ
-Workspace.DescendantAdded:Connect(function(v)
-    pcall(clearVisuals, v)
+pcall(function(...)
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/kokakola1234523/4411/refs/heads/main/fps"))()
 end)
-
--- 3. កាត់បន្ថយគុណភាពទឹក និងដី (Low Terrain Quality)
-if Terrain then
-    Terrain.WaterWaveSize = 0
-    Terrain.WaterWaveSpeed = 0
-    Terrain.WaterReflectance = 0
-    Terrain.WaterTransparency = 0
-    Terrain.Decoration = false
-end
-
--- 4. ប្រព័ន្ធជម្រះសំរាម (Auto Garbage Collection) រៀងរាល់ ១០ នាទី
-task.spawn(function()
-    while true do
-        task.wait(600) -- រង់ចាំ 600 វិនាទី (10 នាទី)
-        pcall(function()
-            -- បង្ខំលុប cache ចាស់ៗចេញពី Memory ប្រសិនបើ Executor គាំទ្រ
-            if setfpscap then setfpscap(30) end -- ទម្លាក់ FPS មកត្រឹម 30 ដើម្បីកុំឲ្យស៊ី CPU/GPU ខ្លាំងពេកពេលទុកចោល
-        end)
-        print("[System] Memory Cleared & Optimized for Smooth AFK!")
-    end
-end)
-
-print("[System] Anti-Lag Script Loaded Successfully!")
+task.wait(1)
 
 -- ==========================================
 -- 6. Rayfield UI Initialization
