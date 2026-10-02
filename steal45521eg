@@ -80,6 +80,7 @@ getgenv().IsDoingEgg = false
 local allAreaNames = {"Light Dark", "Titan Temple", "Cherry Blossom", "Cosmic", "Prehistoric", "Abyss Ocean", "Desert", "Jungle",  "Snow", "Volcano","Lake"}
 local selectedModules = {"Light Dark"}
 local originalCFrame = CFrame.new(548.139465, 70.2762833, -298.811737, 0.860891819, 1.13331433e-08, -0.50878799, -3.94499455e-09, 1, 1.5599678e-08, 0.50878799, -1.14224701e-08, 0.860891819)
+getgenv().SelectedSpecialEggs = {"Devine", "Eternal", "Secret"} -- លំនាំដើមយកទាំងអស់
 
 local isCurrentlyOnTreadmill = false
 local lastTreadmillTargetCF = nil
@@ -153,37 +154,38 @@ end
 
 local function checkEggPriority(slot)
     if not slot or not slot.Name then return 99 end
-
     local hasDecal = false
     local hasFXStars = false
     local hasAttachment = false
-    
+
     local function scanName(str)
         local s = string.lower(str)
-        if string.find(s, "decal") then hasDecal = true end
-        if string.find(s, "fx") or string.find(s, "stars") or string.find(s, "starspecs") then hasFXStars = true end
+        if string.find(s, "decal") or string.find(s, "fx") then hasDecal = true end
+        if string.find(s, "fx")  then hasFXStars = true end
         if string.find(s, "attachment") then hasAttachment = true end
     end
 
     -- ស្កេនឈ្មោះស៊ុត និងវត្ថុទាំងអស់ខាងក្នុង
     scanName(slot.Name)
     for _, item in ipairs(slot:GetDescendants()) do
-        if item and item.Name then
-            scanName(item.Name)
-        end
+        if item and item.Name then scanName(item.Name) end
     end
 
-    -- ដាក់អាទិភាពដាច់ខាត (លេខ ១ សំខាន់បំផុត)
-    if hasFXStars and hasDecal then
+    -- កំណត់លក្ខណៈសម្បត្តិនៃស៊ុតនីមួយៗ
+    local isDevine = hasFXStars and hasDecal
+    local isEternal = hasFXStars and not hasDecal
+    local isSecret = hasAttachment and not hasFXStars
+
+    -- ឆែកមើលថាតើប្រភេទស៊ុតនេះមាននៅក្នុងបញ្ជីដែលបានរើសក្នុង Dropdown ដែរឬទេ
+    if isDevine and table.find(getgenv().SelectedSpecialEggs, "Devine") then
         return 1 -- Devine (អាទិភាពទី១ ដាច់ខាត)
-    elseif hasFXStars then
+    elseif isEternal and table.find(getgenv().SelectedSpecialEggs, "Eternal") then
         return 2 -- Eternal (អាទិភាពទី២)
-    elseif hasAttachment then
+    elseif isSecret and table.find(getgenv().SelectedSpecialEggs, "Secret") then
         return 3 -- Secret (អាទិភាពទី៣)
     end
 
-    -- បើមិនចង់ប្រើអថេរចាស់ RAINBOW_KEYWORDS ទេ គឺឲ្យវាត្រឡប់លេខ 99 តែម្តង (មិនមែនស៊ុតពិសេស)
-    return 99 
+    return 99
 end
 local bodyVelocity, bodyGyro = nil, nil
 RunService.Stepped:Connect(function()
@@ -1197,6 +1199,71 @@ task.wait(1)
 pcall(function(...)
     loadstring(game:HttpGet("https://raw.githubusercontent.com/kokakola1234523/4411/refs/heads/main/by435pas"))()
 end)
+task.wait(1)
+-- ====================================================
+-- 🚀 Auto Optimize & Clear Memory (Anti-Lag សម្រាប់ AFK)
+-- ====================================================
+local Terrain = Workspace:FindFirstChildOfClass("Terrain")
+
+-- 1. បិទពន្លឺ និងស្រមោល (Disable Shadows & Lighting)
+Lighting.GlobalShadows = false
+Lighting.FogEnd = 9e9
+Lighting.ShadowSoftness = 0
+if Lighting:FindFirstChildOfClass("Sky") then
+    Lighting:FindFirstChildOfClass("Sky"):Destroy()
+end
+
+-- លុប Effects ផ្សេងៗចេញពី Lighting
+for _, v in pairs(Lighting:GetChildren()) do
+    if v:IsA("PostEffect") or v:IsA("BlurEffect") or v:IsA("SunRaysEffect") or v:IsA("ColorCorrectionEffect") or v:IsA("BloomEffect") or v:IsA("DepthOfFieldEffect") then
+        v.Enabled = false
+    end
+end
+
+-- 2. លុប Textures និងប្តូររូបរាងវត្ថុឲ្យរលោង (Low Quality Graphics)
+local function clearVisuals(v)
+    if v:IsA("BasePart") and not v:IsA("MeshPart") then
+        v.Material = Enum.Material.SmoothPlastic
+        v.Reflectance = 0
+        v.CastShadow = false
+    elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Sparkles") or v:IsA("Smoke") or v:IsA("Fire") then
+        v.Enabled = false
+        v:Destroy()
+    end
+end
+
+-- អនុវត្តទៅលើវត្ថុដែលមានស្រាប់
+for _, v in pairs(Workspace:GetDescendants()) do
+    pcall(clearVisuals, v)
+end
+
+-- អនុវត្តទៅលើវត្ថុដែលទើបនឹងកើតថ្មីៗ
+Workspace.DescendantAdded:Connect(function(v)
+    pcall(clearVisuals, v)
+end)
+
+-- 3. កាត់បន្ថយគុណភាពទឹក និងដី (Low Terrain Quality)
+if Terrain then
+    Terrain.WaterWaveSize = 0
+    Terrain.WaterWaveSpeed = 0
+    Terrain.WaterReflectance = 0
+    Terrain.WaterTransparency = 0
+    Terrain.Decoration = false
+end
+
+-- 4. ប្រព័ន្ធជម្រះសំរាម (Auto Garbage Collection) រៀងរាល់ ១០ នាទី
+task.spawn(function()
+    while true do
+        task.wait(600) -- រង់ចាំ 600 វិនាទី (10 នាទី)
+        pcall(function()
+            -- បង្ខំលុប cache ចាស់ៗចេញពី Memory ប្រសិនបើ Executor គាំទ្រ
+            if setfpscap then setfpscap(30) end -- ទម្លាក់ FPS មកត្រឹម 30 ដើម្បីកុំឲ្យស៊ី CPU/GPU ខ្លាំងពេកពេលទុកចោល
+        end)
+        print("[System] Memory Cleared & Optimized for Smooth AFK!")
+    end
+end)
+
+print("[System] Anti-Lag Script Loaded Successfully!")
 
 -- ==========================================
 -- 6. Rayfield UI Initialization
@@ -1247,6 +1314,25 @@ tabFarm:CreateToggle({
     Flag = "steal_bigeggs",
     Callback = function(value)
         getgenv().AutoBigEgg = value
+    end,
+})
+
+-- លុប Toggle ឈ្មោះ 'លួចស៊ុត៧ពណ៏' របស់អ្នកចោល ហើយជំនួសដោយកូដនេះ៖
+tabFarm:CreateDropdown({
+    Name = '<font size="24"><b>ជ្រើសរើសស៊ុតពិសេស</b></font>(Secret, Eternal, Devine)',
+    Options = {"Devine", "Eternal", "Secret"},
+    CurrentOption = {"Devine", "Eternal", "Secret"}, -- លំនាំដើមវាជ្រើសរើសទាំងអស់
+    MultipleOptions = true, -- អនុញ្ញាតឲ្យជ្រើសរើសច្រើនក្នុងពេលតែមួយ
+    Flag = "SpecialEggDropdown",
+    Callback = function(selected)
+        getgenv().SelectedSpecialEggs = selected
+        
+        -- កំណត់ឲ្យប្រព័ន្ធដើរដោយស្វ័យប្រវត្តិ ប្រសិនបើមានរើសស៊ុតយ៉ាងហោចណាស់មួយ
+        if #selected > 0 then
+            getgenv().AutoRainbowEgg = true
+        else
+            getgenv().AutoRainbowEgg = false
+        end
     end,
 })
 
