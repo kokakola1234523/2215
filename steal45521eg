@@ -922,15 +922,11 @@ end
                             hrp.AssemblyAngularVelocity = Vector3.zero
                             task.wait(0.2)
                             
-                            hum:ChangeState(Enum.HumanoidStateType.Landed)
-                            hum.Jump = true
-                            hum:Move(Vector3.new(1, 0, 1))
-                            task.wait(1)
                             
-                            firePromptsInRadius(30)
-                            task.wait(0.1)
-                            firePromptsInRadius(30)
-                            task.wait(0.5)
+                            for i = 1, 6 do
+                            firePromptsInRadius(20)
+                            task.wait(0.05) -- រង់ចាំ 0.05 វិនាទីមុននឹង Fire ម្តងទៀត
+                            end
 
                             if typeof(basePos) == "Vector3" then hrp.CFrame = CFrame.new(basePos)
                             else hrp.CFrame = basePos.CFrame or basePos end
