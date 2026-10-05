@@ -77,8 +77,8 @@ getgenv().FlySpeed = 450
 getgenv().AutoFarmEvent = false
 getgenv().IsDoingEgg = false
 
-local allAreaNames = {"Light Dark", "Titan Temple", "Cherry Blossom", "Cosmic", "Prehistoric", "Abyss Ocean", "Desert", "Jungle",  "Snow", "Volcano","Lake"}
-local selectedModules = {"Light Dark"}
+local allAreaNames = {"Enchanted Forest","Light Dark", "Titan Temple", "Cherry Blossom", "Cosmic", "Prehistoric", "Abyss Ocean", "Desert", "Jungle",  "Snow", "Volcano","Lake"}
+local selectedModules = {"Enchanted Forest"}
 local originalCFrame = CFrame.new(548.139465, 70.2762833, -298.811737, 0.860891819, 1.13331433e-08, -0.50878799, -3.94499455e-09, 1, 1.5599678e-08, 0.50878799, -1.14224701e-08, 0.860891819)
 getgenv().SelectedSpecialEggs = {"Devine", "Eternal", "Secret"} -- លំនាំដើមយកទាំងអស់
 
