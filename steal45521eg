@@ -651,8 +651,8 @@ end
         local initialHum = hum
 
         while loopCount < maxTime do
-            task.wait(0.3)
-            loopCount = loopCount + 0
+            task.wait(0)
+            loopCount = loopCount + 1
 
             if not isWallOpenOrCountdownFinished() then break end
 
