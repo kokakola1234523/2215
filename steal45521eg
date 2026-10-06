@@ -30,6 +30,7 @@ task.spawn(function()
 end)
 -- ==========================================
 
+
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
 -- ==========================================
@@ -78,9 +79,9 @@ getgenv().AutoFarmEvent = false
 getgenv().IsDoingEgg = false
 
 local allAreaNames = {"Enchanted Forest","Light Dark", "Titan Temple", "Cherry Blossom", "Cosmic", "Prehistoric", "Abyss Ocean", "Desert", "Jungle",  "Snow", "Volcano","Lake"}
-local selectedModules = {"Enchanted Forest"}
+local selectedModules = {""}
 local originalCFrame = CFrame.new(548.139465, 70.2762833, -298.811737, 0.860891819, 1.13331433e-08, -0.50878799, -3.94499455e-09, 1, 1.5599678e-08, 0.50878799, -1.14224701e-08, 0.860891819)
-getgenv().SelectedSpecialEggs = {"Devine", "Eternal", "Secret"} -- លំនាំដើមយកទាំងអស់
+getgenv().SelectedSpecialEggs = {""} -- លំនាំដើមយកទាំងអស់
 
 local isCurrentlyOnTreadmill = false
 local lastTreadmillTargetCF = nil
@@ -214,161 +215,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- ==========================================
--- 4. ESP System
--- ==========================================
-local function getEggSize(slot)
-    local targetPart = slot:FindFirstChild("Hitbox", true) or (slot:IsA("BasePart") and slot or slot:FindFirstChildWhichIsA("BasePart", true))
-    if targetPart then
-        local size = targetPart.Size
-        return size.X * size.Y * size.Z, targetPart
-    end
-    return 0, nil
-end
 
-local function countParts(object)
-    local count = object:IsA("BasePart") and 1 or 0
-    for _, descendant in ipairs(object:GetDescendants()) do
-        if descendant:IsA("BasePart") then count += 1 end
-    end
-    return count
-end
-
-local function clearESP(folder, espNames)
-    for _, name in ipairs(espNames) do
-        local ui = folder:FindFirstChild(name)
-        if ui then
-            if ui:IsA("BillboardGui") or ui:IsA("Highlight") then ui.Enabled = false end
-        end
-    end
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.3)
-        local areaEggSlotsClient = Workspace:FindFirstChild("AreaEggSlotsClient")
-        if not areaEggSlotsClient then continue end
-        
-        if not getgenv().AutoESP then
-            for _, slot in ipairs(areaEggSlotsClient:GetChildren()) do
-                clearESP(slot, {"EggSizeESP"})
-            end
-            continue
-        end
-
-        local slots = areaEggSlotsClient:GetChildren()
-        local maxVolume, biggestSlot = -1, nil
-        for _, slot in ipairs(slots) do
-            local volume = getEggSize(slot)
-            if volume >= 90 and volume > maxVolume then
-                maxVolume, biggestSlot = volume, slot
-            end
-        end
-
-        for _, slot in ipairs(slots) do
-            local volume, targetPart = getEggSize(slot)
-            local billboard = slot:FindFirstChild("EggSizeESP")
-            
-            if volume < 90 then
-                if billboard then billboard:Destroy() end
-            else
-                if not billboard and targetPart then
-                    billboard = Instance.new("BillboardGui")
-                    billboard.Name = "EggSizeESP"
-                    billboard.AlwaysOnTop = true
-                    billboard.Size = UDim2.new(0, 100, 0, 40)
-                    billboard.StudsOffset = Vector3.new(0, 2, 0)
-                    billboard.Adornee = targetPart
-
-                    local textLabel = Instance.new("TextLabel")
-                    textLabel.Name = "Label"
-                    textLabel.Size = UDim2.new(1, 0, 1, 0)
-                    textLabel.BackgroundTransparency = 1
-                    textLabel.TextStrokeTransparency = 0
-                    textLabel.Font = Enum.Font.SourceSansBold
-                    textLabel.Parent = billboard
-                    billboard.Parent = slot
-                end
-                
-                if billboard and billboard:FindFirstChild("Label") then
-                    local textLabel = billboard.Label
-                    if slot == biggestSlot then
-                        textLabel.TextColor3 = Config.Colors.Biggest
-                        textLabel.TextSize = 22
-                        textLabel.Text = string.format("👑 %.1f", volume)
-                    else
-                        textLabel.TextColor3 = Config.Colors.Normal
-                        textLabel.TextSize = 18
-                        textLabel.Text = string.format("%.1f", volume)
-                    end
-                end
-            end
-        end
-    end
-end)
-
-task.spawn(function()
-    local areaEggSlotsClient = Workspace:WaitForChild("AreaEggSlotsClient", 15)
-    while true do
-        task.wait(0.5)
-        if not areaEggSlotsClient then continue end
-        
-        if not getgenv().AutoESP then
-            for _, egg in ipairs(areaEggSlotsClient:GetChildren()) do
-                clearESP(egg, {"EggESP_Highlight", "EggESP_Text"})
-            end
-            continue
-        end
-        
-        for _, eggFolder in ipairs(areaEggSlotsClient:GetChildren()) do
-            pcall(function()
-                local totalParts = countParts(eggFolder)
-                local highlight = eggFolder:FindFirstChild("EggESP_Highlight")
-                local billboard = eggFolder:FindFirstChild("EggESP_Text")
-                
-                if totalParts < Config.Farm.MinPartsCount then
-                    if highlight then highlight:Destroy() end
-                    if billboard then billboard:Destroy() end
-                    return
-                end
-                
-                if not highlight then
-                    highlight = Instance.new("Highlight")
-                    highlight.Name = "EggESP_Highlight"
-                    highlight.FillColor = Color3.fromRGB(255, 85, 0)
-                    highlight.FillTransparency = 0.3
-                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                    highlight.Parent = eggFolder
-                end
-                
-                if not billboard then
-                    billboard = Instance.new("BillboardGui")
-                    billboard.Name = "EggESP_Text"
-                    billboard.AlwaysOnTop = true
-                    billboard.Size = UDim2.new(0, 180, 0, 35)
-                    billboard.StudsOffset = Vector3.new(0, 3.5, 0)
-                    
-                    local nameLabel = Instance.new("TextLabel")
-                    nameLabel.Name = "Label"
-                    nameLabel.Parent = billboard
-                    nameLabel.Size = UDim2.new(1, 0, 1, 0)
-                    nameLabel.BackgroundTransparency = 1
-                    nameLabel.Text = string.format("🔥 %s\n[%d Parts]", eggFolder.Name, totalParts)
-                    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-                    nameLabel.TextSize = 14
-                    nameLabel.Font = Enum.Font.SourceSansBold
-                    
-                    local targetPart = eggFolder:IsA("BasePart") and eggFolder or eggFolder:FindFirstChildWhichIsA("BasePart", true)
-                    if targetPart then
-                        billboard.Adornee = targetPart
-                        billboard.Parent = eggFolder
-                    end
-                end
-            end)
-        end
-    end
-end)
 
 local function getBestTool(player, character)
     local backpack = player:FindFirstChild("Backpack")
@@ -509,11 +356,15 @@ task.spawn(function()
     local guardAreas = areas and areas:WaitForChild("GuardAreas", 5)
 
     local function isHitboxInAllowedArea(hitbox)
-        if not hitbox then return false end
-        local hitboxPos = hitbox.Position
-        
-        for _, name in ipairs(selectedModules) do
-            local areaObj = guardAreas and guardAreas:FindFirstChild(name)
+    if not hitbox then return false end
+    
+    -- បន្ថែមបន្ទាត់នេះ៖ បើអត់មានរើស Area ណាមួយទេ គឺអនុញ្ញាតឲ្យលួចគ្រប់ទីកន្លែង (Return true)
+    if #selectedModules == 0 then return true end 
+
+    local hitboxPos = hitbox.Position
+    for _, name in ipairs(selectedModules) do
+        local areaObj = guardAreas and guardAreas:FindFirstChild(name)
+        -- ... [កូដខាងក្រោមនេះទុកនៅដដែល]
             if areaObj then
                 local areaPart = areaObj:IsA("BasePart") and areaObj or (areaObj.PrimaryPart or areaObj:FindFirstChildWhichIsA("BasePart", true))
                 if areaPart then
@@ -600,66 +451,47 @@ task.spawn(function()
 
     local function getTargetEgg()
     local slots = areaEggSlotsClient:GetChildren()
-    
+
     if getgenv().AutoRainbowEgg then
         local bestEgg = nil
         local bestPriority = 99
         local shortestDistance = math.huge
         local hrp = getHRP()
         local hrpPos = hrp and hrp.Position or Vector3.zero
-        
-        -- ស្កេនមើលស៊ុតទាំងអស់ក្នុង Area
+
+        -- ស្កេនមើលស៊ុតទាំងអស់
         for _, slot in ipairs(slots) do
             local priority = checkEggPriority(slot)
-            
-            if priority < 99 then -- ប្រសិនបើវាជា Devine, Eternal, ឬ Secret
+            if priority < 99 then -- ប្រសិនបើវាជា Devine, Eternal, ឬ Secret ដែលបានជ្រើសរើស
                 local hitbox = slot:FindFirstChild("Hitbox", true) or (slot:IsA("BasePart") and slot) or slot:FindFirstChildWhichIsA("BasePart", true)
-                local dist = hitbox and (hitbox.Position - hrpPos).Magnitude or math.huge
 
-                -- លក្ខខណ្ឌទី១៖ បើ Priority ល្អជាង (ឧទាហរណ៍ 1 ល្អជាង 3) យកវាតែម្តង មិនខ្វល់ចម្ងាយ!
-                if priority < bestPriority then
-                    bestPriority = priority
-                    shortestDistance = dist
-                    bestEgg = slot
-                -- លក្ខខណ្ឌទី២៖ បើ Priority ស្មើគ្នា (ឧទាហរណ៍ Devine ២គ្រាប់) ទើបវារើសយកអាណាដែលជិតជាង!
-                elseif priority == bestPriority and dist < shortestDistance then
-                    shortestDistance = dist
-                    bestEgg = slot
+                -- ==============================================================
+                -- [ចំណុចបន្ថែមថ្មី]៖ ឆែកមើលថាតើស៊ុតនេះស្ថិតក្នុង Area ដែលបានធីកដែរឬអត់?
+                -- ==============================================================
+                if hitbox and isHitboxInAllowedArea(hitbox) then
+                    local dist = (hitbox.Position - hrpPos).Magnitude
+
+                    -- លក្ខខណ្ឌទី១៖ បើ Priority ល្អជាង យកវាតែម្តង!
+                    if priority < bestPriority then
+                        bestPriority = priority
+                        shortestDistance = dist
+                        bestEgg = slot
+                    -- លក្ខខណ្ឌទី២៖ បើ Priority ស្មើគ្នា រើសយកអាណាដែលនៅជិតជាង!
+                    elseif priority == bestPriority and dist < shortestDistance then
+                        shortestDistance = dist
+                        bestEgg = slot
+                    end
                 end
             end
         end
-        
-        -- បើរកឃើញស៊ុតពិសេស គឺបញ្ជាឲ្យទៅលួចភ្លាម
-        if bestEgg then
-            return bestEgg
-        end
+
+        -- បើរកឃើញស៊ុតពិសេសក្នុង Area នោះមែន គឺបញ្ជាឲ្យទៅលួចភ្លាម
+        if bestEgg then return bestEgg end
     end
 
-        if getgenv().AutoPartFarm then
-            local bestPartEgg = nil
-            local maxParts = -1
-            for _, slot in ipairs(slots) do
-                local partsCount = countParts(slot)
-                if partsCount >= Config.Farm.MinPartsCount and partsCount > maxParts then
-                    maxParts = partsCount
-                    bestPartEgg = slot
-                end
-            end
-            if bestPartEgg then return bestPartEgg end
-        end
-
-        if getgenv().AutoBigEgg then
-            local bestBigEgg = nil
-            local maxVolume = -1
-            for _, slot in ipairs(slots) do
-                local volume = getEggSize(slot)
-                if volume >= 90 and volume > maxVolume then
-                    maxVolume = volume
-                    bestBigEgg = slot
-                end
-            end
-            if bestBigEgg then return bestBigEgg end
-        end
+    -- =======================================================================
+    -- កូដខាងក្រោមនេះ (AutoPartFarm, AutoBigEgg, AutoInteract) គឺរក្សាទុកឲ្យនៅដដែល
+    -- =======================================================================
 
         if getgenv().AutoInteract then
             for _, slot in ipairs(slots) do
@@ -819,8 +651,8 @@ end
         local initialHum = hum
 
         while loopCount < maxTime do
-            task.wait(0.5)
-            loopCount = loopCount + 1
+            task.wait(0.3)
+            loopCount = loopCount + 0
 
             if not isWallOpenOrCountdownFinished() then break end
 
@@ -861,7 +693,7 @@ end
                 local targetPart = actualEgg:IsA("BasePart") and actualEgg or actualEgg:FindFirstChild("Hitbox", true) or actualEgg:FindFirstChildWhichIsA("BasePart", true)
                 if targetPart then
                     local distToEgg = (hrp.Position - targetPart.Position).Magnitude
-                    if eggInChar or distToEgg <= 30 then
+                    if eggInChar or distToEgg <= 26 then
                         local distToBase = (hrp.Position - basePos).Magnitude
                         if distToBase > 3 then
                             local dropCFrame = CFrame.new(960.46814, 70.2761765, -411.626953, -0.125948429, -9.17669709e-08, -0.992036819, -2.63757052e-08, 1, -8.91549519e-08, 0.992036819, 1.49367452e-08, -0.125948429)
@@ -1208,171 +1040,413 @@ end)
 task.wait(1)
 
 -- ==========================================
--- 6. Rayfield UI Initialization
+-- 6. ToaToa Hub Mini - Premium (Auto Open on Execute)
 -- ==========================================
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-local window = Rayfield:CreateWindow({
-    Name = "[STEAL AN EGG] ToaToa Hub - By 2BK2",
-    LoadingTitle = "Welcome to (ToaToa Hub)",
-    LoadingSubtitle = "អគុណដែរគ្រាំទ្រ",
-    ConfigurationSaving = {Enabled = true, FolderName = "RayfieldTestConfig", FileName = "PlayerSettings"},
-    Discord = {Enabled = false},
-    KeySystem = false,
-})
 
-Rayfield:Notify({
-    Title = "----ហាមចុចបើកអីទាំងអស់----\n!រង់ចាំបន្តិចសិន!",
-    Content = "មិនទាន់លេងបានទេចាំអោយប្រព័ន្ធដំណើរការចប់សិន\nហាមចុចបើកមុខងារអីទាំងអស់",
-    Duration = 10,
-    Image = 4483362458
-})
+local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
 
-local tabFarm = window:CreateTab("Farm", 4483362458)
-local tabSettings = window:CreateTab("Settings", 4483362458)
+local SaveFileName = "ToaToaHubMini_Premium.json"
 
-tabFarm:CreateDropdown({
-    Name = '<font size="24"><b>ជ្រើសរើសទីតាំង</b></font>(Select Areas)',
-    Options = allAreaNames,
-    CurrentOption = selectedModules,
-    MultipleOptions = true,
-    Flag = "AreaDropdown",
-    Callback = function(selected)
-        selectedModules = selected
-    end,
-})
+local currentSettings = {}
+local defaultSettings = {
+    SelectedAreas = {"Light Dark"},
+    AutoInteract = false, AutoBigEgg = false,
+    SpecialEggs = {"Devine", "Eternal", "Secret"},
+    AutoRainbowEgg = false, AutoPartFarm = false,
+    AutoTreadmill = false, AutoFarmEvent = false,
+    AutoESP = false, AntiTrap = true, Optimization = false
+}
 
-tabFarm:CreateToggle({
-    Name = '<font size="24"><b>លួចតែស៊ុតនៅទីតាំងដែរបានជ្រើសរើស</b></font>(Select)',
-    CurrentValue = false,
-    Flag = "steal_dropdown",
-    Callback = function(value)
-        getgenv().AutoInteract = value
-    end,
-})
-
-tabFarm:CreateToggle({
-    Name = '<font size="24"><b>លួចតែស៊ុតធំៗ</b></font>(Steal Big Egg)',
-    CurrentValue = false,
-    Flag = "steal_bigeggs",
-    Callback = function(value)
-        getgenv().AutoBigEgg = value
-    end,
-})
-
--- លុប Toggle ឈ្មោះ 'លួចស៊ុត៧ពណ៏' របស់អ្នកចោល ហើយជំនួសដោយកូដនេះ៖
-tabFarm:CreateDropdown({
-    Name = '<font size="24"><b>ជ្រើសរើសស៊ុតពិសេស</b></font>(Secret, Eternal, Devine)',
-    Options = {"Devine", "Eternal", "Secret"},
-    CurrentOption = {"Devine", "Eternal", "Secret"}, -- លំនាំដើមវាជ្រើសរើសទាំងអស់
-    MultipleOptions = true, -- អនុញ្ញាតឲ្យជ្រើសរើសច្រើនក្នុងពេលតែមួយ
-    Flag = "SpecialEggDropdown",
-    Callback = function(selected)
-        getgenv().SelectedSpecialEggs = selected
-        
-        -- កំណត់ឲ្យប្រព័ន្ធដើរដោយស្វ័យប្រវត្តិ ប្រសិនបើមានរើសស៊ុតយ៉ាងហោចណាស់មួយ
-        if #selected > 0 then
-            getgenv().AutoRainbowEgg = true
+local function LoadSettings()
+    if isfile and isfile(SaveFileName) and readfile then
+        local success, result = pcall(function() return HttpService:JSONDecode(readfile(SaveFileName)) end)
+        if success and type(result) == "table" then
+            for k, v in pairs(result) do currentSettings[k] = v end
         else
-            getgenv().AutoRainbowEgg = false
+            for k, v in pairs(defaultSettings) do currentSettings[k] = v end
         end
-    end,
-})
+    else
+        for k, v in pairs(defaultSettings) do currentSettings[k] = v end
+    end
+end
+local function SaveSettings()
+    if writefile then pcall(function() writefile(SaveFileName, HttpService:JSONEncode(currentSettings)) end) end
+end
+LoadSettings()
 
-tabFarm:CreateToggle({
-    Name = '<font size="24"><b>លួចស៊ុត៧ពណ៏</b></font>(Devine, Eternal, Secret)',
-    CurrentValue = false,
-    Flag = "auto_rainbow_egg",
-    Callback = function(value)
-        getgenv().AutoRainbowEgg = value
-    end,
-})
+for _, ui in pairs(CoreGui:GetChildren()) do
+    if ui.Name == "PremiumToaToaUI" then ui:Destroy() end
+end
 
-tabFarm:CreateToggle({
-    Name = '<font size="24"><b>លួចស៊ុតដែលមានស្លាប</b></font>(MASSIVE EGGS)',
-    CurrentValue = false,
-    Flag = "auto_part_farm",
-    Callback = function(value)
-        getgenv().AutoPartFarm = value
-    end,
-})
+-- ================== COLOR THEME ==================
+local Theme = {
+    Background = Color3.fromRGB(20, 22, 30),     
+    Container = Color3.fromRGB(28, 30, 42),      
+    Stroke = Color3.fromRGB(60, 65, 85),         
+    Accent = Color3.fromRGB(140, 82, 255),       
+    AccentHover = Color3.fromRGB(160, 100, 255), 
+    Text = Color3.fromRGB(240, 240, 250),        
+    TextDim = Color3.fromRGB(170, 175, 190),
+    ToggleOn = Color3.fromRGB(46, 204, 113),     
+    ToggleOff = Color3.fromRGB(231, 76, 60),     
+    ButtonIdle = Color3.fromRGB(35, 38, 53),
+    ButtonHover = Color3.fromRGB(45, 50, 70)
+}
 
-tabFarm:CreateToggle({
-    Name = '<font size="24"><b>រត់លើម៉ាស៊ីនពេលទំនេរ</b></font>(Auto Treadmill)',
-    CurrentValue = false,
-    Flag = "auto_treadmill",
-    Callback = function(value)
-        getgenv().AutoTreadmill = value
-    end,
-})
+local function Tween(obj, props, time)
+    local tweenInfo = TweenInfo.new(time or 0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local t = TweenService:Create(obj, tweenInfo, props)
+    t:Play()
+    return t
+end
 
-tabFarm:CreateToggle({
-    Name = '<font size="24"><b>វ៉ៃមេ ស្វ័យប្រវត្តិ</b></font>(Auto Kill Boss)',
-    CurrentValue = false,
-    Flag = "auto_farm_event_toggle",
-    Callback = function(value)
-        getgenv().AutoFarmEvent = value
-    end,
-})
+-- 1. ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "PremiumToaToaUI"
+ScreenGui.Parent = CoreGui
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true 
 
-tabSettings:CreateToggle({
-    Name = '<font size="24"><b>បង្ហាញព័ត៌មានស៊ុត</b></font> (Toggle ESP)',
-    CurrentValue = false,
-    Flag = "esp_toggle",
-    Callback = function(value)
-        getgenv().AutoESP = value
-    end,
-})
+-- 2. Toggle Button
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Parent = ScreenGui
+ToggleButton.AnchorPoint = Vector2.new(0, 0.5) 
+ToggleButton.Position = UDim2.new(0, 15, 0.5, 0)
+ToggleButton.Size = UDim2.new(0, 65, 0, 65) 
+ToggleButton.BackgroundColor3 = Theme.ToggleOff -- កំណត់ពណ៌បិទ(ក្រហម) ពេលកំពុងបើកផ្ទាំង
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.Text = "បិទ" -- ដូរពាក្យដើមទៅជា បិទ
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextScaled = false 
+ToggleButton.TextSize = 20 
+ToggleButton.AutoButtonColor = false 
+Instance.new("UICorner", ToggleButton).CornerRadius = UDim.new(1, 0) 
 
-tabSettings:CreateButton({
-    Name = '<font size="24"><b>កំណត់ទីតាំងបច្ចុប្បន្នជា Base</b></font> (Set Checkpoint)',
-    Callback = function()
-        local char = player.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            originalCFrame = char.HumanoidRootPart.CFrame
-            Rayfield:Notify({
-                Title = "ជោគជ័យ!",
-                Content = "បានកំណត់ទីតាំង Base ថ្មីរួចរាល់។",
-                Duration = 3,
-                Image = 4483362458
-            })
-        end
-    end,
-})
+local ToggleStroke = Instance.new("UIStroke", ToggleButton)
+ToggleStroke.Color = Color3.fromRGB(255, 255, 255)
+ToggleStroke.Transparency = 0.8
+ToggleStroke.Thickness = 2
 
-tabSettings:CreateToggle({
-    Name = '<font size="24"><b>ការពារអន្ទាក់</b></font>(Anti-Trap)',
-    CurrentValue = true,
-    Flag = "AntiTrapToggle",
-    Callback = function(value)
-        getgenv().AutoAntiTrap = value
-        if value then
-            Rayfield:Notify({
-                Title = "Anti-Trap បានបើក",
-                Content = "អ្នកនឹងមិនរងគ្រោះថ្នាក់ពីអន្ទាក់ទៀតទេ។",
-                Duration = 2,
-                Image = 4483362458
-            })
-        end
-    end,
-})
+ToggleButton.MouseEnter:Connect(function() Tween(ToggleButton, {Size = UDim2.new(0, 70, 0, 70)}, 0.2) end)
+ToggleButton.MouseLeave:Connect(function() Tween(ToggleButton, {Size = UDim2.new(0, 65, 0, 65)}, 0.2) end)
 
-tabSettings:CreateToggle({
-    Name = '<font size="24"><b>បន្ថយការឡេគ</b></font>(Optimization)',
-    CurrentValue = false,
-    Flag = "Optimization",
-    Callback = function(value)
-        if value then
-            for _, v in pairs(Workspace:GetDescendants()) do
-                pcall(optimizeObject, v)
+-- 3. Main Frame (កំណត់អោយបើកស្រាប់ពេល Execute)
+local MainFrame = Instance.new("CanvasGroup")
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Theme.Background
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5) 
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0) 
+MainFrame.Size = UDim2.new(0.85, 0, 0.8, 0)
+MainFrame.Visible = true -- បើកស្រាប់
+MainFrame.Active = true
+MainFrame.Draggable = true 
+MainFrame.GroupTransparency = 0 -- មិនព្រាល
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = Theme.Stroke
+MainStroke.Thickness = 1.5
+
+local SizeConstraint = Instance.new("UISizeConstraint", MainFrame)
+SizeConstraint.MaxSize = Vector2.new(450, 550) 
+SizeConstraint.MinSize = Vector2.new(340, 420) 
+
+-- 4. Title Bar
+local Title = Instance.new("TextLabel")
+Title.Parent = MainFrame
+Title.BackgroundTransparency = 1
+Title.Size = UDim2.new(1, 0, 0, 55)
+Title.Font = Enum.Font.GothamBold
+Title.Text = "✨ TOATOA HUB"
+Title.TextColor3 = Theme.Accent
+Title.TextScaled = false
+Title.TextSize = 24 
+Title.TextXAlignment = Enum.TextXAlignment.Left
+local TitlePad = Instance.new("UIPadding", Title)
+TitlePad.PaddingLeft = UDim.new(0, 20) 
+
+local Divider = Instance.new("Frame", MainFrame)
+Divider.BackgroundColor3 = Theme.Stroke
+Divider.BorderSizePixel = 0
+Divider.Position = UDim2.new(0, 0, 0, 55)
+Divider.Size = UDim2.new(1, 0, 0, 1)
+
+-- 5. ប្រព័ន្ធ Tab System
+local TabBar = Instance.new("Frame", MainFrame)
+TabBar.BackgroundTransparency = 1
+TabBar.Position = UDim2.new(0, 0, 0, 56)
+TabBar.Size = UDim2.new(1, 0, 0, 50)
+local TabListLayout = Instance.new("UIListLayout", TabBar)
+TabListLayout.FillDirection = Enum.FillDirection.Horizontal
+TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+local ContentContainer = Instance.new("Frame", MainFrame)
+ContentContainer.BackgroundTransparency = 1
+ContentContainer.Position = UDim2.new(0, 0, 0, 106)
+ContentContainer.Size = UDim2.new(1, 0, 1, -106)
+
+local function CreateTab(name)
+    local TabBtn = Instance.new("TextButton", TabBar)
+    TabBtn.Size = UDim2.new(0.5, 0, 1, 0)
+    TabBtn.BackgroundTransparency = 1
+    TabBtn.Font = Enum.Font.GothamBold
+    TabBtn.Text = name
+    TabBtn.TextColor3 = Theme.TextDim
+    TabBtn.TextScaled = false
+    TabBtn.TextSize = 18 
+
+    local Indicator = Instance.new("Frame", TabBtn)
+    Indicator.BackgroundColor3 = Theme.Accent
+    Indicator.Size = UDim2.new(0, 0, 0, 3)
+    Indicator.Position = UDim2.new(0.5, 0, 1, -3)
+    Indicator.AnchorPoint = Vector2.new(0.5, 0)
+    Indicator.BorderSizePixel = 0
+
+    local TabContent = Instance.new("ScrollingFrame", ContentContainer)
+    TabContent.Size = UDim2.new(1, 0, 1, 0)
+    TabContent.BackgroundTransparency = 1
+    TabContent.ScrollBarThickness = 4
+    TabContent.ScrollBarImageColor3 = Theme.Accent
+    TabContent.Visible = false
+    
+    local ContentLayout = Instance.new("UIListLayout", TabContent)
+    ContentLayout.Padding = UDim.new(0, 12)
+    ContentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    Instance.new("UIPadding", TabContent).PaddingTop = UDim.new(0, 15)
+    
+    ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        TabContent.CanvasSize = UDim2.new(0, 0, 0, ContentLayout.AbsoluteContentSize.Y + 30)
+    end)
+    
+    TabBtn.MouseButton1Click:Connect(function()
+        for _, child in pairs(TabBar:GetChildren()) do
+            if child:IsA("TextButton") then
+                Tween(child, {TextColor3 = Theme.TextDim}, 0.2)
+                Tween(child:FindFirstChildOfClass("Frame"), {Size = UDim2.new(0, 0, 0, 3)}, 0.2)
             end
-            Workspace.DescendantAdded:Connect(function(v)
-                pcall(optimizeObject, v)
-            end)
-            Lighting.GlobalShadows = false
-        else
-            Lighting.GlobalShadows = true
         end
-    end,
-})
+        for _, child in pairs(ContentContainer:GetChildren()) do
+            if child:IsA("ScrollingFrame") then child.Visible = false end
+        end
+        Tween(TabBtn, {TextColor3 = Theme.Text}, 0.2)
+        Tween(Indicator, {Size = UDim2.new(0.6, 0, 0, 3)}, 0.3)
+        TabContent.Visible = true
+    end)
+    return TabContent, TabBtn, Indicator
+end
 
-Rayfield:LoadConfiguration()
+-- 6. អនុគមន៍សម្រាប់ Toggle
+local function CreateToggle(tab, name, settingKey, callback)
+    local default = currentSettings[settingKey] or false
+
+    local ToggleBtn = Instance.new("TextButton", tab)
+    ToggleBtn.BackgroundColor3 = Theme.Container
+    ToggleBtn.Size = UDim2.new(0.92, 0, 0, 55) 
+    ToggleBtn.Font = Enum.Font.GothamMedium
+    ToggleBtn.Text = name
+    ToggleBtn.TextColor3 = Theme.Text
+    ToggleBtn.TextScaled = false
+    ToggleBtn.TextSize = 18 
+    ToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+    ToggleBtn.AutoButtonColor = false
+    Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 10)
+    Instance.new("UIStroke", ToggleBtn).Color = Theme.Stroke
+    
+    local pad = Instance.new("UIPadding", ToggleBtn)
+    pad.PaddingLeft = UDim.new(0, 15) 
+
+    local StatusBg = Instance.new("Frame", ToggleBtn)
+    StatusBg.AnchorPoint = Vector2.new(1, 0.5)
+    StatusBg.Size = UDim2.new(0, 46, 0, 24) 
+    StatusBg.Position = UDim2.new(1, -15, 0.5, 0)
+    StatusBg.BackgroundColor3 = default and Theme.ToggleOn or Theme.ToggleOff
+    Instance.new("UICorner", StatusBg).CornerRadius = UDim.new(1, 0)
+
+    local Dot = Instance.new("Frame", StatusBg)
+    Dot.AnchorPoint = Vector2.new(0, 0.5)
+    Dot.Size = UDim2.new(0, 18, 0, 18)
+    Dot.Position = UDim2.new(default and 1 or 0, default and -21 or 3, 0.5, 0)
+    Dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Instance.new("UICorner", Dot).CornerRadius = UDim.new(1, 0)
+    
+    ToggleBtn.MouseEnter:Connect(function() Tween(ToggleBtn, {BackgroundColor3 = Theme.ButtonHover}, 0.2) end)
+    ToggleBtn.MouseLeave:Connect(function() Tween(ToggleBtn, {BackgroundColor3 = Theme.Container}, 0.2) end)
+
+    local state = default
+    ToggleBtn.MouseButton1Click:Connect(function()
+        state = not state
+        Tween(StatusBg, {BackgroundColor3 = state and Theme.ToggleOn or Theme.ToggleOff}, 0.3)
+        Tween(Dot, {Position = UDim2.new(state and 1 or 0, state and -21 or 3, 0.5, 0)}, 0.3)
+        currentSettings[settingKey] = state
+        SaveSettings()
+        callback(state)
+    end)
+    task.spawn(function() callback(state) end)
+end
+
+-- 7. អនុគមន៍សម្រាប់ Dropdown
+local function CreateDropdown(tab, name, options, settingKey, callback)
+    local savedSelection = currentSettings[settingKey] or {}
+    local selectedItems = {}
+    for _, v in pairs(savedSelection) do selectedItems[v] = true end
+
+    local DropdownFrame = Instance.new("Frame", tab)
+    DropdownFrame.BackgroundColor3 = Theme.Container
+    DropdownFrame.Size = UDim2.new(0.92, 0, 0, 55)
+    DropdownFrame.ClipsDescendants = true
+    Instance.new("UICorner", DropdownFrame).CornerRadius = UDim.new(0, 10)
+    Instance.new("UIStroke", DropdownFrame).Color = Theme.Stroke
+
+    local MainBtn = Instance.new("TextButton", DropdownFrame)
+    MainBtn.Size = UDim2.new(1, 0, 0, 55)
+    MainBtn.BackgroundTransparency = 1
+    MainBtn.Font = Enum.Font.GothamMedium
+    MainBtn.Text = name
+    MainBtn.TextColor3 = Theme.Text
+    MainBtn.TextScaled = false
+    MainBtn.TextSize = 18 
+    MainBtn.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local pad = Instance.new("UIPadding", MainBtn)
+    pad.PaddingLeft = UDim.new(0, 15)
+
+    local Arrow = Instance.new("TextLabel", MainBtn)
+    Arrow.BackgroundTransparency = 1
+    Arrow.AnchorPoint = Vector2.new(1, 0.5)
+    Arrow.Position = UDim2.new(1, -15, 0.5, 0)
+    Arrow.Size = UDim2.new(0, 24, 0, 24)
+    Arrow.Font = Enum.Font.GothamBold
+    Arrow.Text = "▼"
+    Arrow.TextColor3 = Theme.TextDim
+    Arrow.TextSize = 18
+
+    local OptionsContainer = Instance.new("Frame", DropdownFrame)
+    OptionsContainer.Position = UDim2.new(0, 0, 0, 55)
+    OptionsContainer.Size = UDim2.new(1, 0, 1, -55)
+    OptionsContainer.BackgroundTransparency = 1
+    Instance.new("UIListLayout", OptionsContainer).SortOrder = Enum.SortOrder.LayoutOrder
+
+    local isOpen = false
+    MainBtn.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        Tween(DropdownFrame, {Size = UDim2.new(0.92, 0, 0, isOpen and (55 + (#options * 45)) or 55)}, 0.3)
+        Tween(Arrow, {Rotation = isOpen and 180 or 0}, 0.3)
+    end)
+
+    for _, opt in ipairs(options) do
+        local OptBtn = Instance.new("TextButton", OptionsContainer)
+        OptBtn.Size = UDim2.new(1, 0, 0, 45)
+        OptBtn.BackgroundColor3 = selectedItems[opt] and Theme.Accent or Theme.Background
+        OptBtn.BackgroundTransparency = selectedItems[opt] and 0.2 or 1
+        OptBtn.Font = Enum.Font.GothamMedium
+        OptBtn.Text = "•  " .. opt
+        OptBtn.TextColor3 = selectedItems[opt] and Color3.fromRGB(255,255,255) or Theme.TextDim
+        OptBtn.TextScaled = false
+        OptBtn.TextSize = 16 
+        OptBtn.TextXAlignment = Enum.TextXAlignment.Left
+        OptBtn.AutoButtonColor = false
+        
+        local optPad = Instance.new("UIPadding", OptBtn)
+        optPad.PaddingLeft = UDim.new(0, 30)
+
+        OptBtn.MouseEnter:Connect(function() if not selectedItems[opt] then Tween(OptBtn, {BackgroundTransparency = 0.8}, 0.2) end end)
+        OptBtn.MouseLeave:Connect(function() if not selectedItems[opt] then Tween(OptBtn, {BackgroundTransparency = 1}, 0.2) end end)
+
+        OptBtn.MouseButton1Click:Connect(function()
+            selectedItems[opt] = not selectedItems[opt]
+            Tween(OptBtn, {
+                BackgroundColor3 = selectedItems[opt] and Theme.Accent or Theme.Background,
+                BackgroundTransparency = selectedItems[opt] and 0.2 or 1,
+                TextColor3 = selectedItems[opt] and Color3.fromRGB(255,255,255) or Theme.TextDim
+            }, 0.2)
+            
+            local result = {}
+            for k, v in pairs(selectedItems) do if v then table.insert(result, k) end end
+            currentSettings[settingKey] = result
+            SaveSettings()
+            callback(result)
+        end)
+    end
+    task.spawn(function() callback(savedSelection) end)
+end
+
+-- 8. អនុគមន៍សម្រាប់ Button ធម្មតា
+local function CreateButton(tab, name, callback)
+    local Btn = Instance.new("TextButton", tab)
+    Btn.BackgroundColor3 = Theme.ButtonIdle
+    Btn.Size = UDim2.new(0.92, 0, 0, 55)
+    Btn.Font = Enum.Font.GothamBold
+    Btn.Text = name
+    Btn.TextColor3 = Theme.Text
+    Btn.TextScaled = false
+    Btn.TextSize = 18 
+    Btn.AutoButtonColor = false
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 10)
+    Instance.new("UIStroke", Btn).Color = Theme.Accent
+
+    Btn.MouseEnter:Connect(function() Tween(Btn, {BackgroundColor3 = Theme.ButtonHover}, 0.2) end)
+    Btn.MouseLeave:Connect(function() Tween(Btn, {BackgroundColor3 = Theme.ButtonIdle}, 0.2) end)
+    Btn.MouseButton1Down:Connect(function() Tween(Btn, {Size = UDim2.new(0.88, 0, 0, 50)}, 0.1) end)
+    Btn.MouseButton1Up:Connect(function() Tween(Btn, {Size = UDim2.new(0.92, 0, 0, 55)}, 0.1) callback() end)
+end
+
+-- 9. ដំណើរការចុច បិទ/បើក UI 
+local isUIAwake = true -- កំណត់ថា UI កំពុងបើកស្រាប់
+ToggleButton.MouseButton1Click:Connect(function()
+    isUIAwake = not isUIAwake
+    if isUIAwake then
+        MainFrame.Visible = true
+        MainFrame.Size = UDim2.new(0.7, 0, 0.6, 0)
+        MainFrame.GroupTransparency = 1
+        Tween(MainFrame, {Size = UDim2.new(0.85, 0, 0.8, 0), GroupTransparency = 0}, 0.4)
+        Tween(ToggleButton, {BackgroundColor3 = Theme.ToggleOff}, 0.3)
+        ToggleButton.Text = "បិទ"
+    else
+        local t = Tween(MainFrame, {Size = UDim2.new(0.7, 0, 0.6, 0), GroupTransparency = 1}, 0.3)
+        Tween(ToggleButton, {BackgroundColor3 = Theme.Accent}, 0.3)
+        ToggleButton.Text = "បើក"
+        t.Completed:Connect(function() if not isUIAwake then MainFrame.Visible = false end end)
+    end
+end)
+
+-- ==========================================
+-- បញ្ចូលមុខងារ (Features) ទាំងអស់
+-- ==========================================
+local TabFarm, TabFarmBtn, FarmInd = CreateTab("⚔️ FARM")
+local TabSettings, TabSetBtn, SetInd = CreateTab("⚙️ SETTINGS")
+
+Tween(TabFarmBtn, {TextColor3 = Theme.Text}, 0)
+Tween(FarmInd, {Size = UDim2.new(0.6, 0, 0, 3)}, 0)
+TabFarm.Visible = true
+CreateDropdown(TabFarm, "ជ្រើសរើសEggប្រភេទ(Rainbow)", {"Devine", "Eternal", "Secret"}, "SpecialEggs", function(selected)
+    getgenv().SelectedSpecialEggs = selected
+    getgenv().AutoRainbowEgg = #selected > 0
+end)
+CreateDropdown(TabFarm, "ជ្រើសរើសទីតាំង (Areas)", allAreaNames, "SelectedAreas", function(selected) selectedModules = selected end)
+CreateToggle(TabFarm, "លួចEggប្រភេទ (Rainbow)", "AutoRainbowEgg", function(value) getgenv().AutoRainbowEgg = value end)
+CreateToggle(TabFarm, "លួចតែEggនៅទីតាំងដែលរើស", "AutoInteract", function(value) getgenv().AutoInteract = value end)
+
+
+
+
+CreateToggle(TabFarm, "រត់លើម៉ាស៊ីនពេលទំនេរ", "AutoTreadmill", function(value) getgenv().AutoTreadmill = value end)
+CreateToggle(TabFarm, "វ៉ៃមេ ស្វ័យប្រវត្តិ (Boss)", "AutoFarmEvent", function(value) getgenv().AutoFarmEvent = value end)
+
+
+CreateButton(TabSettings, "📍 កំណត់ទីតាំងបច្ចុប្បន្នជា Base", function()
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then originalCFrame = char.HumanoidRootPart.CFrame end
+end)
+CreateToggle(TabSettings, "ការពារអន្ទាក់ (Anti-Trap)", "AntiTrap", function(value) getgenv().AutoAntiTrap = value end)
+CreateToggle(TabSettings, "បន្ថយការឡេគ (Optimize)", "Optimization", function(value) 
+    if value then
+        for _, v in pairs(Workspace:GetDescendants()) do pcall(optimizeObject, v) end
+        Workspace.DescendantAdded:Connect(function(v) pcall(optimizeObject, v) end)
+        Lighting.GlobalShadows = false
+    else
+        Lighting.GlobalShadows = true
+    end
+end)
