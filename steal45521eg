@@ -32,7 +32,10 @@ end)
 
 
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
-
+pcall(function(...)
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/kokakola1234523/4411/refs/heads/main/by435pas"))()
+end)
+task.wait(1)
 -- ==========================================
 -- [STEAL AN EGG] ToaToa Hub - Bulletproof Auto-Reset Fixed
 -- ==========================================
@@ -1030,10 +1033,7 @@ task.wait(1)
 -- ==========================================
 
 
-pcall(function(...)
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/kokakola1234523/4411/refs/heads/main/by435pas"))()
-end)
-task.wait(1)
+
 pcall(function(...)
     loadstring(game:HttpGet("https://raw.githubusercontent.com/kokakola1234523/4411/refs/heads/main/fps"))()
 end)
