@@ -80,7 +80,7 @@ getgenv().IsDoingEgg = false
 
 local allAreaNames = {"Enchanted Forest","Light Dark", "Titan Temple", "Cherry Blossom", "Cosmic", "Prehistoric", "Abyss Ocean", "Desert", "Jungle",  "Snow", "Volcano","Lake"}
 local selectedModules = {""}
-local originalCFrame = CFrame.new(548.139465, 70.2762833, -298.811737, 0.860891819, 1.13331433e-08, -0.50878799, -3.94499455e-09, 1, 1.5599678e-08, 0.50878799, -1.14224701e-08, 0.860891819)
+local originalCFrame = CFrame.new(550.458801, 70.8011246, -361.656342, 0.0523559861, 9.16517919e-08, -0.998628497, -2.36705961e-08, 1, 9.05366733e-08, 0.998628497, 1.88979961e-08, 0.0523559861)
 getgenv().SelectedSpecialEggs = {""} -- លំនាំដើមយកទាំងអស់
 
 local isCurrentlyOnTreadmill = false
