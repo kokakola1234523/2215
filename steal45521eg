@@ -689,7 +689,11 @@ end
                     if (hrp.Position - targetPart.Position).Magnitude > 3 then
                         runToExactPosition(hum, hrp, targetPart)
                     end
+                    task.wait(1)
+                    for i = 1, 3 do
                     firePromptsInRadius(1)
+                    task.wait(0.05) -- រង់ចាំ 0.05 វិនាទីមុននឹង Fire ម្តងទៀត
+                    end
                 end
             elseif eggInWorkspace or eggInChar then
                 local actualEgg = eggInChar or eggInWorkspace
