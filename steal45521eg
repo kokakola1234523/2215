@@ -695,8 +695,8 @@ end
                         -- =======================================================
                         pcall(function()
                             -- ១. ហក់ឡើងលើកម្ពស់ ៣០ 
-                            hrp.CFrame = hrp.CFrame + Vector3.new(0, 30, 0)
-                            task.wait(0.1)
+                            hrp.CFrame = hrp.CFrame + Vector3.new(0, 0, 0)
+                            task.wait(0.05)
                             
                             -- ២. រំកិលទៅមុខចម្ងាយ ៥០ (Studs) ឆ្ពោះទៅ Base
                             local dir = (basePos - hrp.Position).Unit
@@ -704,13 +704,13 @@ end
                             
                             -- ឆែកមើលក្រែងលោ Base នៅជិតជាង ៥០ យើងរំកិលត្រឹម Base បានហើយកុំឲ្យហួស
                             local flatDistToBase = (Vector3.new(basePos.X, 0, basePos.Z) - Vector3.new(hrp.Position.X, 0, hrp.Position.Z)).Magnitude
-                            local moveDist = math.min(500, flatDistToBase)
+                            local moveDist = math.min(300, flatDistToBase)
                             
                             hrp.CFrame = hrp.CFrame + (flatDir * moveDist)
                             task.wait(0.1)
                             
                             -- ៣. ចុះមកដីវិញ
-                            hrp.CFrame = hrp.CFrame - Vector3.new(0, 30, 0)
+                            hrp.CFrame = hrp.CFrame - Vector3.new(0, 0, 0)
                             task.wait(0.1)
                         end)
                         
