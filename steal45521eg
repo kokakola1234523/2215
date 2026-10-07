@@ -1,30 +1,4 @@
-local CoreGui = game:GetService("CoreGui")
-local TeleportService = game:GetService("TeleportService")
-local Players = game:GetService("Players")
 
--- Link Script របស់អ្នកសម្រាប់ទាញមក Run វិញពេលលោតចូល Server ថ្មី
-local scriptToLoad = [[
-    task.wait(3)
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/kokakola1234523/2215/main/steal45521eg"))()
-]]
-
-local queue_on_teleport = queue_on_teleport or syn and syn.queue_on_teleport or fluxus and fluxus.queue_on_teleport
-if queue_on_teleport then
-    pcall(function() queue_on_teleport(scriptToLoad) end)
-end
-
--- ចាប់ផ្ទាំង Error ពេលដាច់អ៊ីនធឺណិត ឫគេ Kick
-task.spawn(function()
-    local promptOverlay = CoreGui:FindFirstChild("RobloxPromptGui") and CoreGui.RobloxPromptGui:FindFirstChild("promptOverlay")
-    if promptOverlay then
-        promptOverlay.ChildAdded:Connect(function(child)
-            if child.Name == 'ErrorPrompt' then
-                task.wait(3)
-                TeleportService:Teleport(game.PlaceId, Players.LocalPlayer)
-            end
-        end)
-    end
-end)
 
 
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
@@ -637,196 +611,154 @@ end
 end
 
     local function stealEggAtLocation(hitbox)
-        local char = player.Character
-        local hum = char and char:FindFirstChild("Humanoid")
-        local hrp = getHRP()
-        local basePos = originalCFrame.Position
-        
-        if not hrp or not hitbox or not hum then return end
+    local char = player.Character
+    local hum = char and char:FindFirstChild("Humanoid")
+    local hrp = getHRP()
+    local basePos = originalCFrame.Position
+    if not hrp or not hitbox or not hum then return end
 
-        pcall(function()
-            local portal = workspace:FindFirstChild("ScrambleArenaPortal")
-            if portal then
-                if portal:IsA("BasePart") then portal.CanCollide = false end
-                for _, part in ipairs(portal:GetDescendants()) do
-                    if part:IsA("BasePart") then part.CanCollide = false end
-                end
+    pcall(function()
+        local portal = workspace:FindFirstChild("ScrambleArenaPortal")
+        if portal then
+            if portal:IsA("BasePart") then portal.CanCollide = false end
+            for _, part in ipairs(portal:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
             end
-        end)
+        end
+    end)
 
-        hrp.Anchored = false
-        hum.PlatformStand = false
-        
-        hrp.CFrame = CFrame.new(basePos)
-        hrp.AssemblyLinearVelocity = Vector3.zero
-        hrp.AssemblyAngularVelocity = Vector3.zero
-        task.wait(0.2)
-        
-        local eggName = hitbox.Parent.Name
-        if eggName == "AreaEggSlotsClient" or eggName == "Workspace" then
-            eggName = hitbox.Name
+    hrp.Anchored = false
+    hum.PlatformStand = false
+    
+    local eggName = hitbox.Parent.Name
+    if eggName == "AreaEggSlotsClient" or eggName == "Workspace" then
+        eggName = hitbox.Name
+    end
+    
+    runToExactPosition(hum, hrp, hitbox)
+
+    local loopCount = 0
+    local maxTime = 400 
+    local initialHum = hum
+
+    while loopCount < maxTime do
+        task.wait(0)
+        loopCount = loopCount + 1
+        if not isWallOpenOrCountdownFinished() then break end
+
+        local currentChar = player.Character
+        if not currentChar then
+            getgenv().IsDoingEgg = false
+            break
         end
 
-        runToExactPosition(hum, hrp, hitbox)
+        local currentHum = currentChar:FindFirstChild("Humanoid")
+        local currentHrp = currentChar:FindFirstChild("HumanoidRootPart")
 
-        local loopCount = 0
-        local maxTime = 150
-        local initialHum = hum
+        if not currentHum or currentHum.Health <= 0 or not currentHrp or currentHum ~= initialHum then
+            getgenv().IsDoingEgg = false
+            break
+        end
+        char = currentChar
+        hum = currentHum
+        hrp = currentHrp
 
-        while loopCount < maxTime do
-            task.wait(0)
-            loopCount = loopCount + 1
+        local eggInArea = Workspace:FindFirstChild("AreaEggSlotsClient") and Workspace.AreaEggSlotsClient:FindFirstChild(eggName)
+        local eggInWorkspace = Workspace:FindFirstChild(eggName)
+        local eggInChar = char:FindFirstChild(eggName, true)
 
-            if not isWallOpenOrCountdownFinished() then break end
+        if not eggInArea and not eggInWorkspace and not eggInChar then break end
 
-            local currentChar = player.Character
-            if not currentChar then 
-                getgenv().IsDoingEgg = false
-                break 
-            end
-            
-            local currentHum = currentChar:FindFirstChild("Humanoid")
-            local currentHrp = currentChar:FindFirstChild("HumanoidRootPart")
-
-            if not currentHum or currentHum.Health <= 0 or not currentHrp or currentHum ~= initialHum then 
-                getgenv().IsDoingEgg = false
-                break 
-            end
-            
-            char = currentChar
-            hum = currentHum
-            hrp = currentHrp
-
-            local eggInArea = Workspace:FindFirstChild("AreaEggSlotsClient") and Workspace.AreaEggSlotsClient:FindFirstChild(eggName)
-            local eggInWorkspace = Workspace:FindFirstChild(eggName)
-            local eggInChar = char:FindFirstChild(eggName, true)
-
-            if not eggInArea and not eggInWorkspace and not eggInChar then break end
-
-            if eggInArea then
-                local targetPart = eggInArea:IsA("BasePart") and eggInArea or eggInArea:FindFirstChild("Hitbox", true) or eggInArea:FindFirstChildWhichIsA("BasePart", true)
-                if targetPart then
-                    if (hrp.Position - targetPart.Position).Magnitude > 3 then
-                        runToExactPosition(hum, hrp, targetPart)
-                    end
-                    task.wait(0.3)
-                    for i = 1, 3 do
-                    firePromptsInRadius(1)
-                    task.wait(0.01) -- រង់ចាំ 0.05 វិនាទីមុននឹង Fire ម្តងទៀត
-                    end
+        if eggInArea then
+            local targetPart = eggInArea:IsA("BasePart") and eggInArea or eggInArea:FindFirstChild("Hitbox", true) or eggInArea:FindFirstChildWhichIsA("BasePart", true)
+            if targetPart then
+                if (hrp.Position - targetPart.Position).Magnitude > 3 then
+                    runToExactPosition(hum, hrp, targetPart)
                 end
-            elseif eggInWorkspace or eggInChar then
-                local actualEgg = eggInChar or eggInWorkspace
-                local targetPart = actualEgg:IsA("BasePart") and actualEgg or actualEgg:FindFirstChild("Hitbox", true) or actualEgg:FindFirstChildWhichIsA("BasePart", true)
-                if targetPart then
-                    local distToEgg = (hrp.Position - targetPart.Position).Magnitude
-                    if eggInChar or distToEgg <= 26 then
-                        local distToBase = (hrp.Position - basePos).Magnitude
-                        if distToBase > 3 then
-                            local dropCFrame = CFrame.new(960.46814, 70.2761765, -411.626953, -0.125948429, -9.17669709e-08, -0.992036819, -2.63757052e-08, 1, -8.91549519e-08, 0.992036819, 1.49367452e-08, -0.125948429)
-                            hrp.CFrame = dropCFrame
-                            hrp.AssemblyLinearVelocity = Vector3.zero
-                            hrp.AssemblyAngularVelocity = Vector3.zero
-                            task.wait(0.5)
+                task.wait(0.1)
+                for i = 1, 3 do
+                    firePromptsInRadius(1)
+                    task.wait(0.01)
+                end
+            end
+        elseif eggInWorkspace or eggInChar then
+            local actualEgg = eggInChar or eggInWorkspace
+            local targetPart = actualEgg:IsA("BasePart") and actualEgg or actualEgg:FindFirstChild("Hitbox", true) or actualEgg:FindFirstChildWhichIsA("BasePart", true)
+            if targetPart then
+                local distToEgg = (hrp.Position - targetPart.Position).Magnitude
+                if eggInChar or distToEgg <= 26 then
+                    local distToBase = (hrp.Position - basePos).Magnitude
+                    if distToBase > 3 then
+                        
+                        -- =======================================================
+                        -- [ប្រព័ន្ធថ្មី] ឡើងលើ ៣០ ទៅមុខចំងាយ ៥០ សិន ចាំទម្លាក់ចុះមកដី
+                        -- =======================================================
+                        pcall(function()
+                            -- ១. ហក់ឡើងលើកម្ពស់ ៣០ 
+                            hrp.CFrame = hrp.CFrame + Vector3.new(0, 30, 0)
+                            task.wait(0.1)
                             
-                            pcall(function()
-                                local ReplicatedStorage = game:GetService("ReplicatedStorage")
-                                local AreaEggs = require(ReplicatedStorage.Shared.Types.AreaEggs)
-                                local EggState = require(ReplicatedStorage.Client.EggState)
-                                local PlayerRequest = AreaEggs.DropReasons.PlayerRequest
-                                EggState.DropFieldEgg(PlayerRequest)
-                            end)
-                            task.wait(0.5)
-                            if typeof(basePos) == "Vector3" then hrp.CFrame = CFrame.new(basePos)
-                            else hrp.CFrame = basePos.CFrame or basePos end
-                            hrp.AssemblyLinearVelocity = Vector3.zero
-                            hrp.AssemblyAngularVelocity = Vector3.zero
-                            task.wait(0.3)
+                            -- ២. រំកិលទៅមុខចម្ងាយ ៥០ (Studs) ឆ្ពោះទៅ Base
+                            local dir = (basePos - hrp.Position).Unit
+                            local flatDir = Vector3.new(dir.X, 0, dir.Z).Unit
                             
-
-                            teleportToTreadmillRoot()
-                            task.wait(0.5)
-
-                            local repStorage = game:GetService("ReplicatedStorage")
-                            local networking = repStorage:FindFirstChild("Packages") and repStorage.Packages:FindFirstChild("Networking")
-                            local askWearStillRemote = networking and networking:FindFirstChild("RF/Treadmill/AskWearStill")
-                            local askDoffRemote = networking and networking:FindFirstChild("RF/Treadmill/AskDoff")
-
-                            if askWearStillRemote then
-                                for attempt = 1, 3 do
-                                    local success, response = pcall(function() return askWearStillRemote:InvokeServer() end)
-                                    if success and response then break end
-                                    task.wait(0.2)
-                                end
-                            end
-                            task.wait(0.6)
-
-                            if askDoffRemote then
-                                for attempt = 1, 6 do
-                                    local success = pcall(function() return askDoffRemote:InvokeServer() end)
-                                    if success then break end
-                                    task.wait(0.05)
-                                end
-                            end
-                            task.wait(1)
-
-                            if typeof(basePos) == "Vector3" then hrp.CFrame = CFrame.new(basePos)
-                            else hrp.CFrame = basePos.CFrame or basePos end
-                            hrp.AssemblyLinearVelocity = Vector3.zero
-                            hrp.AssemblyAngularVelocity = Vector3.zero
-                            task.wait(0.5)
+                            -- ឆែកមើលក្រែងលោ Base នៅជិតជាង ៥០ យើងរំកិលត្រឹម Base បានហើយកុំឲ្យហួស
+                            local flatDistToBase = (Vector3.new(basePos.X, 0, basePos.Z) - Vector3.new(hrp.Position.X, 0, hrp.Position.Z)).Magnitude
+                            local moveDist = math.min(1000, flatDistToBase)
                             
-                            hrp.CFrame = dropCFrame
-                            hrp.AssemblyLinearVelocity = Vector3.zero
-                            hrp.AssemblyAngularVelocity = Vector3.zero
-                            task.wait(0.5)
+                            hrp.CFrame = hrp.CFrame + (flatDir * moveDist)
+                            task.wait(0.1)
                             
-                            
-                            for i = 1, 6 do
-                            firePromptsInRadius(20)
-                            task.wait(0.05) -- រង់ចាំ 0.05 វិនាទីមុននឹង Fire ម្តងទៀត
-                            end
-
-                            if typeof(basePos) == "Vector3" then hrp.CFrame = CFrame.new(basePos)
-                            else hrp.CFrame = basePos.CFrame or basePos end
-                            hrp.AssemblyLinearVelocity = Vector3.zero
-                            hrp.AssemblyAngularVelocity = Vector3.zero
-                            task.wait(2)
-                            break
-                        else
-                            task.wait(0.3)
-                            firePromptsInRadius(20)
-                        end
-                    else
-                        if typeof(targetPart) == "Vector3" then hrp.CFrame = CFrame.new(targetPart)
-                        else hrp.CFrame = targetPart.CFrame end
+                            -- ៣. ចុះមកដីវិញ
+                            hrp.CFrame = hrp.CFrame - Vector3.new(0, 30, 0)
+                            task.wait(0.1)
+                        end)
+                        
+                        -- ៤. រត់តាមដីធម្មតាមក Base វិញ (ចម្ងាយដែលនៅសល់)
+                        runToExactPosition(hum, hrp, typeof(basePos) == "Vector3" and basePos or basePos.Position) 
                         hrp.AssemblyLinearVelocity = Vector3.zero
                         hrp.AssemblyAngularVelocity = Vector3.zero
-                        task.wait(0.3)
+                        
+                        -- ៥. មកដល់ Base ភ្លាម Collect យកស៊ុតភ្លាមៗតែម្តង
+                        for i = 1, 4 do
+                            firePromptsInRadius(20)
+                            task.wait(0.05)
+                        end
+                        
+                        task.wait(0.5) 
+                        break
+                        -- =======================================================
+                        
+                    else
+                        task.wait(0.1)
                         firePromptsInRadius(20)
                     end
                 else
-                    if typeof(basePos) == "Vector3" then hrp.CFrame = CFrame.new(basePos)
-                    else hrp.CFrame = basePos.CFrame or basePos end
+                    runToExactPosition(hum, hrp, typeof(targetPart) == "Vector3" and targetPart or targetPart.Position)
                     hrp.AssemblyLinearVelocity = Vector3.zero
                     hrp.AssemblyAngularVelocity = Vector3.zero
+                    task.wait(0.1)
+                    firePromptsInRadius(20)
                 end
+            else
+                runToExactPosition(hum, hrp, typeof(basePos) == "Vector3" and basePos or basePos.Position)
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
             end
         end
-        
-        pcall(function()
-            local portal = workspace:FindFirstChild("ScrambleArenaPortal")
-            if portal then
-                if portal:IsA("BasePart") then portal.CanCollide = true end
-                for _, part in ipairs(portal:GetDescendants()) do
-                    if part:IsA("BasePart") then part.CanCollide = true end
-                end
-            end
-        end)
-        
-        task.wait(Config.Farm.WaitAtBase)
     end
 
+    pcall(function()
+        local portal = workspace:FindFirstChild("ScrambleArenaPortal")
+        if portal then
+            if portal:IsA("BasePart") then portal.CanCollide = true end
+            for _, part in ipairs(portal:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = true end
+            end
+        end
+    end)
+    task.wait(Config.Farm.WaitAtBase)
+end
     local function leaveTreadmill()
         local askDoffRemote = nil
         pcall(function()
@@ -1451,6 +1383,7 @@ CreateDropdown(TabFarm, "ជ្រើសរើសEggប្រភេទ(Rainbow)"
 end)
 CreateDropdown(TabFarm, "ជ្រើសរើសទីតាំង/បើមិនចាំបាច់មិនបាច់រើសទេ (Areas)", allAreaNames, "SelectedAreas", function(selected) selectedModules = selected end)
 CreateToggle(TabFarm, "លួចEggប្រភេទ (Rainbow)/បើចង់លួចពងល្អៗបើកវា", "AutoRainbowEgg", function(value) getgenv().AutoRainbowEgg = value end)
+CreateToggle(TabFarm, "លួចតែEggនៅទីតាំងដែលរើស/មិនចាំបាច់កុំបើក", "AutoInteract", function(value) getgenv().AutoInteract = value end)
 
 CreateToggle(TabFarm, "រត់លើម៉ាស៊ីនពេលទំនេរ/ចាំបាច់ត្រូវបើក", "AutoTreadmill", function(value) getgenv().AutoTreadmill = value end)
 
