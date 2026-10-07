@@ -1,4 +1,3 @@
--- ==========================================
 -- Auto Rejoin & Auto Execute (ដាក់ខាងលើគេបង្អស់នៃកូដ)
 -- ==========================================
 local CoreGui = game:GetService("CoreGui")
@@ -28,7 +27,6 @@ task.spawn(function()
         end)
     end
 end)
--- ==========================================
 
 
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
@@ -41,7 +39,7 @@ task.wait(1)
 -- ==========================================
 
 -- Services
-local TweenService = game:GetService("TweenService")
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -405,52 +403,60 @@ task.spawn(function()
 
     -- មុខងារនេះត្រូវកំណត់ជា Global ធម្មតា
     function runToExactPosition(hum, hrp, target)
-        if not hrp or not hum then return false end
+    if not hrp or not hum then return false end
+
+    local walkSpeed = (hum.WalkSpeed and hum.WalkSpeed > 0) and hum.WalkSpeed or 25
+    hum.WalkSpeed = walkSpeed
+
+    local targetPos = typeof(target) == "Vector3" and target or target.Position
+    local exactPos = Vector3.new(targetPos.X, hrp.Position.Y, targetPos.Z)
+    
+    local maxDuration = ((hrp.Position - exactPos).Magnitude / walkSpeed) + 3
+    local startTime = tick()
+
+    while true do
+        task.wait(0.1) 
         
-        local targetPos = typeof(target) == "Vector3" and target or target.Position
-        local exactPos = Vector3.new(targetPos.X, hrp.Position.Y, targetPos.Z)
+        if not hum or hum.Health <= 0 or not hrp or not hrp.Parent then
+            return false
+        end
+
+        -- ធ្វើបច្ចុប្បន្នភាពទីតាំង (បើវត្ថុគោលដៅមានការផ្លាស់ទី)
+        targetPos = typeof(target) == "Vector3" and target or target.Position
+        exactPos = Vector3.new(targetPos.X, hrp.Position.Y, targetPos.Z)
+        
         local distance = (hrp.Position - exactPos).Magnitude
         
-        if distance < 1.5 then
-            hum:Move(Vector3.zero)
-            hrp.AssemblyLinearVelocity = Vector3.zero
-            hrp.AssemblyAngularVelocity = Vector3.zero
-            return true
+        -- កំណត់ថា "ជិតដល់" (ចម្ងាយតិចជាង 5 Studs គឺឈប់រត់ ហើយរៀបចំ Teleport)
+        if distance < 5 then 
+            break 
+        end
+        if tick() - startTime > maxDuration then 
+            break 
         end
 
-        local walkSpeed = (hum.WalkSpeed and hum.WalkSpeed > 0) and hum.WalkSpeed or 25
-        local duration = distance / walkSpeed
-        local lookCFrame = CFrame.lookAt(hrp.Position, exactPos)
-        hrp.CFrame = lookCFrame
-        local targetCFrame = CFrame.new(exactPos) * lookCFrame.Rotation
-        
-        local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
-        local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
-        local direction = (exactPos - hrp.Position).Unit
-        local animConn
-
-        animConn = RunService.Heartbeat:Connect(function()
-            if not hum or hum.Health <= 0 or not hrp or not hrp.Parent then
-                tween:Cancel()
-                if animConn then animConn:Disconnect() end
-                return
-            end
-            hum:Move(direction)
-            hrp.AssemblyLinearVelocity = direction * walkSpeed
-        end)
-        
-        tween:Play()
-        tween.Completed:Wait()
-        
-        if animConn then animConn:Disconnect() end
-        
-        if hum and hum.Health > 0 and hrp and hrp.Parent then
-            hum:Move(Vector3.zero)
-            hrp.AssemblyLinearVelocity = Vector3.zero
-            hrp.AssemblyAngularVelocity = Vector3.zero
-        end
-        return true
+        -- បញ្ជាឲ្យ Humanoid ដើរទៅកាន់គោលដៅ
+        hum:MoveTo(exactPos)
     end
+
+    -- បន្ទាប់ពីរត់ទៅដល់កៀក (ឬ Timeout) យើង Teleport វាឲ្យចំកណ្តាល Egg តែម្តង
+    if hum and hum.Health > 0 and hrp and hrp.Parent then
+        -- យកទីតាំង targetPos ជាក់ស្តែង (បូករួមទាំងកម្ពស់ Y របស់ Egg)
+        targetPos = typeof(target) == "Vector3" and target or target.Position
+        
+        -- Teleport ឲ្យចំកណ្តាល Egg ហើយរក្សាទិសដៅបែរមុខនៅដដែល
+        hrp.CFrame = CFrame.new(targetPos) * hrp.CFrame.Rotation
+        
+        -- បញ្ឈប់ចលនាជើង និងកម្លាំងរុញ
+        hum:Move(Vector3.zero)
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+    end
+
+    return true
+end
+
+
 
     local function getTargetEgg()
     local slots = areaEggSlotsClient:GetChildren()
@@ -689,7 +695,7 @@ end
                     if (hrp.Position - targetPart.Position).Magnitude > 3 then
                         runToExactPosition(hum, hrp, targetPart)
                     end
-                    task.wait(1)
+                    task.wait(0.5)
                     for i = 1, 3 do
                     firePromptsInRadius(1)
                     task.wait(0.05) -- រង់ចាំ 0.05 វិនាទីមុននឹង Fire ម្តងទៀត
