@@ -704,7 +704,7 @@ end
                             
                             -- ឆែកមើលក្រែងលោ Base នៅជិតជាង ៥០ យើងរំកិលត្រឹម Base បានហើយកុំឲ្យហួស
                             local flatDistToBase = (Vector3.new(basePos.X, 0, basePos.Z) - Vector3.new(hrp.Position.X, 0, hrp.Position.Z)).Magnitude
-                            local moveDist = math.min(1000, flatDistToBase)
+                            local moveDist = math.min(500, flatDistToBase)
                             
                             hrp.CFrame = hrp.CFrame + (flatDir * moveDist)
                             task.wait(0.1)
