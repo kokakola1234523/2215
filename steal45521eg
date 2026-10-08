@@ -676,16 +676,14 @@ end
                     runToExactPosition(hum, hrp, targetPart)
                 end
                 
-                -- =======================================================
-                -- [កែប្រែថ្មី] ចុចយក Egg ព្រមគ្នាដោយមិនបាច់រង់ចាំ Delay (task.wait)
-                -- =======================================================
+                -- [កែត្រង់នេះ] ប្រើ task.spawn ឱ្យចុចយកស៊ុតព្រមគ្នា ដោយមិនបាច់ចាំ (គ្មាន delay)
                 task.spawn(function()
-                    for i = 1, 6 do
-                        firePromptsInRadius(15) -- ប្រើ Radius រាងធំបន្តិច
+                    for i = 1, 3 do
+                        firePromptsInRadius(15) -- ដំឡើង Radius បន្តិចឲ្យប្រាកដថាចំ
                         task.wait(0.01)
                     end
                 end)
-                -- លុប task.wait(0.5) ចាស់ចេញ ដើម្បីអោយដំណើរការបន្ទាប់ (ការត្រឡប់មក Base) អាចចាប់ផ្តើមភ្លាមៗ
+                
             end
         elseif eggInWorkspace or eggInChar then
             local actualEgg = eggInChar or eggInWorkspace
@@ -696,6 +694,9 @@ end
                     local distToBase = (hrp.Position - basePos).Magnitude
                     if distToBase > 3 then
                         
+                        -- =======================================================
+                        -- [ប្រព័ន្ធដើមរបស់អ្នករក្សាទុកដដែល]
+                        -- =======================================================
                         pcall(function()
                             -- ១. ហក់ឡើងលើកម្ពស់ ៣០ 
                             hrp.CFrame = hrp.CFrame + Vector3.new(0, 0, 0)
@@ -716,13 +717,11 @@ end
                             task.wait(0.01)
                         end)
                         
-                        -- =======================================================
-                        -- [កែប្រែថ្មី] ពេលកំពុងរត់មក Base បន្តិចចុងក្រោយ អោយវាចុច Collect ស៊ុតព្រមគ្នា
-                        -- =======================================================
+                        -- [កែត្រង់នេះ] ឱ្យវាចុច Collect បណ្តើរ ពេលកំពុងរត់មក Base បណ្តើរ
                         task.spawn(function()
-                            for i = 1, 8 do
+                            for i = 1, 10 do
                                 firePromptsInRadius(25)
-                                task.wait(0.05)
+                                task.wait(0.1)
                             end
                         end)
                         
@@ -731,8 +730,15 @@ end
                         hrp.AssemblyLinearVelocity = Vector3.zero
                         hrp.AssemblyAngularVelocity = Vector3.zero
                         
-                        task.wait(0.2) 
+                        -- ៥. មកដល់ Base ភ្លាម Collect យកស៊ុតភ្លាមៗតែម្តង
+                        for i = 1, 4 do
+                            firePromptsInRadius(20)
+                            task.wait(0.05)
+                        end
+                        
+                        task.wait(0.5) 
                         break
+                        -- =======================================================
                         
                     else
                         task.wait(0.1)
