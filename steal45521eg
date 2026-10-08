@@ -1,4 +1,6 @@
 
+
+
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 pcall(function(...)
     loadstring(game:HttpGet("https://raw.githubusercontent.com/kokakola1234523/4411/refs/heads/main/by435pas"))()
@@ -202,6 +204,139 @@ RunService.Stepped:Connect(function()
 end)
 
 
+
+local function getBestTool(player, character)
+    local backpack = player:FindFirstChild("Backpack")
+    if not character then return nil end
+    for _, item in ipairs(character:GetChildren()) do
+        if item:IsA("Tool") and item:FindFirstChild("Controller") then return item end
+    end
+    if backpack then
+        for _, item in ipairs(backpack:GetChildren()) do
+            if item:IsA("Tool") and item:FindFirstChild("Controller") then return item end
+        end
+    end
+    local fallback = character:FindFirstChild("Bat [X1]") or (backpack and backpack:FindFirstChild("Bat [X1]"))
+    if fallback then return fallback end
+    return character:FindFirstChildOfClass("Tool") or (backpack and backpack:FindFirstChildOfClass("Tool"))
+end
+
+local function isMechAttacking(arena)
+    if not arena then return false end
+    local mech = arena:FindFirstChild("Mech")
+    if mech then
+        for _, obj in ipairs(mech:GetDescendants()) do
+            if obj:IsA("Highlight") and obj.Name ~= "HitFlash" and obj.Enabled then
+                local r = math.floor(obj.OutlineColor.R * 255 + 0.5)
+                local g = math.floor(obj.OutlineColor.G * 255 + 0.5)
+                local b = math.floor(obj.OutlineColor.B * 255 + 0.5)
+                if r == 255 and g == 45 and b == 45 then return true end
+            end
+        end
+    end
+    local badParts = {"Warning", "Attack", "Danger", "AttackArea"}
+    for _, name in ipairs(badParts) do
+        if arena:FindFirstChild(name) then return true end
+    end
+    return false
+end
+
+-- Boss Event Loop
+task.spawn(function()
+    while task.wait(0.05) do
+        if not getgenv().AutoFarmEvent or getgenv().IsDoingEgg then continue end
+
+        local arena = workspace:FindFirstChild("ScrambleArena")
+        local portal = workspace:FindFirstChild("ScrambleArenaPortal")
+        if not portal and not arena then continue end
+
+        pcall(function()
+            local hrp = getHRP()
+            if not hrp or not hrp.Parent then return end
+            local character = hrp.Parent
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if not humanoid or humanoid.Health <= 0 then return end
+
+            local target = nil
+            local beam = workspace:FindFirstChild("TutorialBeam", true)
+            if beam and beam:IsA("Beam") then
+                target = (beam.Attachment1 and beam.Attachment1.Parent) or (beam.Attachment0 and beam.Attachment0.Parent)
+            elseif beam and (beam:IsA("BasePart") or beam:IsA("Model")) then
+                target = beam
+            end
+
+            if not target and arena then
+                local mech = arena:FindFirstChild("Mech")
+                if mech then
+                    target = mech:FindFirstChild("Pilot") or mech:FindFirstChild("Hitbox") or mech:FindFirstChild("Torso") or mech:FindFirstChild("RootPart") or mech
+                else
+                    target = arena:FindFirstChild("Ball")
+                end
+            end
+
+            local targetPos = target and (target:IsA("Model") and target:GetPivot().Position or target:IsA("BasePart") and target.Position) or nil
+            local arenaPos = arena and (arena:IsA("Model") and arena:GetPivot().Position or arena:IsA("BasePart") and arena.Position)
+            local portalPart = portal and (portal:IsA("Model") and portal.PrimaryPart or portal:IsA("BasePart") and portal or portal:FindFirstChildWhichIsA("BasePart", true))
+
+            local finalTargetPos = targetPos or arenaPos
+            local distToTarget = math.huge
+            local distToPortal = math.huge
+            
+            if finalTargetPos then
+                distToTarget = (hrp.Position - finalTargetPos).Magnitude
+            end
+
+            -- ឆែកមើលចម្ងាយពីតួអង្គយើង ទៅកាន់ Portal
+            if portalPart then
+                distToPortal = (hrp.Position - portalPart.Position).Magnitude
+            end
+
+            -- បើនៅឆ្ងាយពីមេ លើសពី 1000 (ទើបកើតវិញនៅ Base)
+            if distToTarget > 1000 then
+                if portalPart and isWallOpenOrCountdownFinished() then
+                    -- ឆែកមើលចម្ងាយពីយើងទៅ Portal
+                    if distToPortal > 15 then
+                        -- ១. បើនៅឆ្ងាយពី Portal (លើសពី 15 Studs) ឲ្យរត់ទៅរក Portal សិន
+                        runToExactPosition(humanoid, hrp, portalPart)
+                        task.wait(0.2)
+                    else
+                        -- ២. បើមកដល់ជិត Portal (ក្នុងគម្លាត 15 Studs) ឲ្យ Teleport ទៅវ៉ៃមេផ្ទាល់យកតែម្តង!
+                        hrp.CFrame = CFrame.new(finalTargetPos + Vector3.new(0, 5, 0))
+                        task.wait(0.3)
+                    end
+                else
+                    -- បើជញ្ជាំងមិនទាន់បើក ត្រូវ return ផ្អាកសិន ដើម្បីការពារកុំឲ្យវា CFrame ទៅរកមេដោយផ្ទាល់
+                    return
+                end
+            end
+
+            -- ពេលវា Teleport ទៅដល់ក្បែរមេរួចហើយ ចាប់ផ្តើមវ៉ៃ
+            if finalTargetPos then
+                -- ធ្វើបច្ចុប្បន្នភាពចម្ងាយសាជាថ្មី (ព្រោះវាអាចទើបតែ Teleport មកពី Portal)
+                local currentDistToTarget = (hrp.Position - finalTargetPos).Magnitude
+                if currentDistToTarget <= 1000 then
+                    local currentlyAttacking = isMechAttacking(arena)
+                    if currentlyAttacking then
+                        hrp.CFrame = CFrame.lookAt(finalTargetPos + Vector3.new(0, 30, 0), finalTargetPos)
+                    else
+                        hrp.CFrame = CFrame.lookAt(finalTargetPos + Vector3.new(0, 0, 1.5), finalTargetPos)
+                    end
+                    hrp.AssemblyLinearVelocity = Vector3.zero
+                    hrp.AssemblyAngularVelocity = Vector3.zero
+
+                    local tool = getBestTool(player, character)
+                    if tool then
+                        if tool.Parent ~= character then
+                            humanoid:EquipTool(tool)
+                            tool.Parent = character
+                        end
+                        tool:Activate()
+                    end
+                end
+            end
+        end)
+    end
+end)
 task.spawn(function()
     local areaEggSlotsClient = Workspace:WaitForChild("AreaEggSlotsClient")
     local rootFolder = Workspace:FindFirstChild("World") or Workspace:FindFirstChild("__OBJECTS")
@@ -255,7 +390,7 @@ task.spawn(function()
 
     local RunService = game:GetService("RunService")
 
-function runToExactPosition (hum, hrp, target)
+function runToExactPosition(hum, hrp, target)
     if not hrp or not hum then return false end
     
     local targetPos = typeof(target) == "Vector3" and target or target.Position
@@ -1247,7 +1382,7 @@ CreateToggle(TabFarm, "លួចតែEggនៅទីតាំងដែលរើ
 CreateToggle(TabFarm, "រត់លើម៉ាស៊ីនពេលទំនេរ/ចាំបាច់ត្រូវបើក", "AutoTreadmill", function(value) getgenv().AutoTreadmill = value end)
 
 
-
+CreateToggle(TabFarm, "វ៉ៃមេ ស្វ័យប្រវត្តិ (Boss)", "AutoFarmEvent", function(value) getgenv().AutoFarmEvent = value end)
 
 
 CreateButton(TabSettings, "📍 កំណត់ទីតាំងបច្ចុប្បន្នជា Base", function()
