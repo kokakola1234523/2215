@@ -675,11 +675,17 @@ end
                 if (hrp.Position - targetPart.Position).Magnitude > 3 then
                     runToExactPosition(hum, hrp, targetPart)
                 end
-                task.wait(0.5)
-                for i = 1, 6 do
-                    firePromptsInRadius(1)
-                    task.wait(0.01)
-                end
+                
+                -- =======================================================
+                -- [កែប្រែថ្មី] ចុចយក Egg ព្រមគ្នាដោយមិនបាច់រង់ចាំ Delay (task.wait)
+                -- =======================================================
+                task.spawn(function()
+                    for i = 1, 6 do
+                        firePromptsInRadius(15) -- ប្រើ Radius រាងធំបន្តិច
+                        task.wait(0.01)
+                    end
+                end)
+                -- លុប task.wait(0.5) ចាស់ចេញ ដើម្បីអោយដំណើរការបន្ទាប់ (ការត្រឡប់មក Base) អាចចាប់ផ្តើមភ្លាមៗ
             end
         elseif eggInWorkspace or eggInChar then
             local actualEgg = eggInChar or eggInWorkspace
@@ -690,9 +696,6 @@ end
                     local distToBase = (hrp.Position - basePos).Magnitude
                     if distToBase > 3 then
                         
-                        -- =======================================================
-                        -- [ប្រព័ន្ធថ្មី] ឡើងលើ ៣០ ទៅមុខចំងាយ ៥០ សិន ចាំទម្លាក់ចុះមកដី
-                        -- =======================================================
                         pcall(function()
                             -- ១. ហក់ឡើងលើកម្ពស់ ៣០ 
                             hrp.CFrame = hrp.CFrame + Vector3.new(0, 0, 0)
@@ -702,7 +705,6 @@ end
                             local dir = (basePos - hrp.Position).Unit
                             local flatDir = Vector3.new(dir.X, 0, dir.Z).Unit
                             
-                            -- ឆែកមើលក្រែងលោ Base នៅជិតជាង ៥០ យើងរំកិលត្រឹម Base បានហើយកុំឲ្យហួស
                             local flatDistToBase = (Vector3.new(basePos.X, 0, basePos.Z) - Vector3.new(hrp.Position.X, 0, hrp.Position.Z)).Magnitude
                             local moveDist = math.min(300, flatDistToBase)
                             
@@ -714,20 +716,23 @@ end
                             task.wait(0.01)
                         end)
                         
+                        -- =======================================================
+                        -- [កែប្រែថ្មី] ពេលកំពុងរត់មក Base បន្តិចចុងក្រោយ អោយវាចុច Collect ស៊ុតព្រមគ្នា
+                        -- =======================================================
+                        task.spawn(function()
+                            for i = 1, 8 do
+                                firePromptsInRadius(25)
+                                task.wait(0.05)
+                            end
+                        end)
+                        
                         -- ៤. រត់តាមដីធម្មតាមក Base វិញ (ចម្ងាយដែលនៅសល់)
                         runToExactPosition(hum, hrp, typeof(basePos) == "Vector3" and basePos or basePos.Position) 
                         hrp.AssemblyLinearVelocity = Vector3.zero
                         hrp.AssemblyAngularVelocity = Vector3.zero
                         
-                        -- ៥. មកដល់ Base ភ្លាម Collect យកស៊ុតភ្លាមៗតែម្តង
-                        for i = 1, 4 do
-                            firePromptsInRadius(20)
-                            task.wait(0.05)
-                        end
-                        
-                        task.wait(0.5) 
+                        task.wait(0.2) 
                         break
-                        -- =======================================================
                         
                     else
                         task.wait(0.1)
@@ -757,8 +762,8 @@ end
             end
         end
     end)
-    task.wait(Config.Farm.WaitAtBase)
 end
+
     local function leaveTreadmill()
         local askDoffRemote = nil
         pcall(function()
