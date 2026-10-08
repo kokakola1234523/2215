@@ -1240,7 +1240,7 @@ CreateDropdown(TabFarm, "ជ្រើសរើសEggប្រភេទ(Rainbow)"
     getgenv().SelectedSpecialEggs = selected
     getgenv().AutoRainbowEgg = #selected > 0
 end)
---CreateDropdown(TabFarm, "ជ្រើសរើសទីតាំង/បើមិនចាំបាច់មិនបាច់រើសទេ (Areas)", allAreaNames, "SelectedAreas", function(selected) selectedModules = selected end)
+CreateDropdown(TabFarm, "ជ្រើសរើសទីតាំង/បើមិនចាំបាច់មិនបាច់រើសទេ (Areas)", allAreaNames, "SelectedAreas", function(selected) selectedModules = selected end)
 CreateToggle(TabFarm, "លួចEggប្រភេទ (Rainbow)/បើចង់លួចពងល្អៗបើកវា", "AutoRainbowEgg", function(value) getgenv().AutoRainbowEgg = value end)
 --CreateToggle(TabFarm, "លួចតែEggនៅទីតាំងដែលរើស/មិនចាំបាច់កុំបើក", "AutoInteract", function(value) getgenv().AutoInteract = value end)
 
