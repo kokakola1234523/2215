@@ -388,60 +388,75 @@ task.spawn(function()
         end
     end
 
-    -- មុខងារនេះត្រូវកំណត់ជា Global ធម្មតា
-    function runToExactPosition(hum, hrp, target)
+    local RunService = game:GetService("RunService")
+
+function runToExactPosition(hum, hrp, target)
     if not hrp or not hum then return false end
-
-    local walkSpeed = (hum.WalkSpeed and hum.WalkSpeed > 0) and hum.WalkSpeed or 25
-    hum.WalkSpeed = walkSpeed
-
+    
     local targetPos = typeof(target) == "Vector3" and target or target.Position
     local exactPos = Vector3.new(targetPos.X, hrp.Position.Y, targetPos.Z)
+    local distance = (hrp.Position - exactPos).Magnitude
     
-    local maxDuration = ((hrp.Position - exactPos).Magnitude / walkSpeed) + 3
-    local startTime = tick()
-
-    while true do
-        task.wait(0.1) 
-        
-        if not hum or hum.Health <= 0 or not hrp or not hrp.Parent then
-            return false
-        end
-
-        -- ធ្វើបច្ចុប្បន្នភាពទីតាំង (បើវត្ថុគោលដៅមានការផ្លាស់ទី)
-        targetPos = typeof(target) == "Vector3" and target or target.Position
-        exactPos = Vector3.new(targetPos.X, hrp.Position.Y, targetPos.Z)
-        
-        local distance = (hrp.Position - exactPos).Magnitude
-        
-        -- កំណត់ថា "ជិតដល់" (ចម្ងាយតិចជាង 5 Studs គឺឈប់រត់ ហើយរៀបចំ Teleport)
-        if distance < 20 then 
-            break 
-        end
-        if tick() - startTime > maxDuration then 
-            break 
-        end
-
-        -- បញ្ជាឲ្យ Humanoid ដើរទៅកាន់គោលដៅ
-        hum:MoveTo(exactPos)
+    if distance < 1.5 then
+        hum:Move(Vector3.zero)
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+        return true
     end
 
-    -- បន្ទាប់ពីរត់ទៅដល់កៀក (ឬ Timeout) យើង Teleport វាឲ្យចំកណ្តាល Egg តែម្តង
+    local walkSpeed = (hum.WalkSpeed and hum.WalkSpeed > 0) and hum.WalkSpeed or 25
+    local duration = distance / walkSpeed
+    
+    local startCFrame = hrp.CFrame
+    local lookCFrame = CFrame.lookAt(startCFrame.Position, exactPos)
+    local targetCFrame = CFrame.new(exactPos) * lookCFrame.Rotation
+    local direction = (exactPos - startCFrame.Position).Unit
+
+    local startTime = tick()
+    local reached = false
+    local animConn
+
+    animConn = RunService.Heartbeat:Connect(function()
+        if not hum or hum.Health <= 0 or not hrp or not hrp.Parent then
+            if animConn then animConn:Disconnect() end
+            return
+        end
+
+        local elapsed = tick() - startTime
+        local alpha = math.clamp(elapsed / duration, 0, 1)
+
+        if alpha < 1 then
+            -- ១. ផ្លាស់ទី CFrame ទៅមុខយ៉ាងរលូន
+            hrp.CFrame = startCFrame:Lerp(targetCFrame, alpha)
+            
+            -- ២. បញ្ចូល walkSpeed ពេញលេញ ដើម្បីឱ្យជើងរត់ក្នុងល្បឿនធម្មតា (មិន Slow Motion)
+            hum:Move(direction)
+            hrp.AssemblyLinearVelocity = direction * walkSpeed
+        else
+            -- ៣. ពេលដល់ target (alpha >= 1) ផ្តាច់ Velocity ភ្លាមៗក្នុង Frame តែមួយ ការពារមិនឱ្យលោតទៅមុខ/ក្រោយ
+            hrp.CFrame = targetCFrame
+            hum:Move(Vector3.zero)
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            reached = true
+            if animConn then animConn:Disconnect() end
+        end
+    end)
+    
+    repeat task.wait() until reached or not (hum and hum.Health > 0 and hrp and hrp.Parent)
+    
+    -- Lock ទីតាំង និងកម្លាំងម្តងទៀតដើម្បីធានាសុវត្ថិភាព 100%
     if hum and hum.Health > 0 and hrp and hrp.Parent then
-        -- យកទីតាំង targetPos ជាក់ស្តែង (បូករួមទាំងកម្ពស់ Y របស់ Egg)
-        targetPos = typeof(target) == "Vector3" and target or target.Position
-        
-        -- Teleport ឲ្យចំកណ្តាល Egg ហើយរក្សាទិសដៅបែរមុខនៅដដែល
-        hrp.CFrame = CFrame.new(targetPos) * hrp.CFrame.Rotation
-        
-        -- បញ្ឈប់ចលនាជើង និងកម្លាំងរុញ
+        hrp.CFrame = targetCFrame
         hum:Move(Vector3.zero)
         hrp.AssemblyLinearVelocity = Vector3.zero
         hrp.AssemblyAngularVelocity = Vector3.zero
     end
-
-    return true
+    
+    return reached
 end
+
+
     
 
 
@@ -634,7 +649,11 @@ end
     if eggName == "AreaEggSlotsClient" or eggName == "Workspace" then
         eggName = hitbox.Name
     end
-    
+
+    runToExactPosition(hum, hrp, typeof(basePos) == "Vector3" and basePos or basePos.Position) 
+    hrp.AssemblyLinearVelocity = Vector3.zero
+    hrp.AssemblyAngularVelocity = Vector3.zero
+    task.wait(0.5)
     runToExactPosition(hum, hrp, hitbox)
 
     local loopCount = 0
@@ -676,7 +695,14 @@ end
                     runToExactPosition(hum, hrp, targetPart)
                 end
                 
-                firePromptsInRadius(1) -- ដំឡើង Radius បន្តិចឲ្យប្រាកដថាចំ          
+                
+                task.spawn(function()
+                    for i = 1, 3 do
+                        firePromptsInRadius(1) -- ដំឡើង Radius បន្តិចឲ្យប្រាកដថាចំ
+                        task.wait(3)
+                    end
+                end)
+                                  
                 
             end
         elseif eggInWorkspace or eggInChar then
@@ -687,32 +713,6 @@ end
                 if eggInChar or distToEgg <= 26 then
                     local distToBase = (hrp.Position - basePos).Magnitude
                     if distToBase > 3 then
-                        
-                        -- =======================================================
-                        -- [ប្រព័ន្ធដើមរបស់អ្នករក្សាទុកដដែល]
-                        -- =======================================================
-                        pcall(function()
-                            -- ១. ហក់ឡើងលើកម្ពស់ ៣០ 
-                            hrp.CFrame = hrp.CFrame + Vector3.new(0, 0, 0)
-                            task.wait(0.05)
-                            
-                            -- ២. រំកិលទៅមុខចម្ងាយ ៥០ (Studs) ឆ្ពោះទៅ Base
-                            local dir = (basePos - hrp.Position).Unit
-                            local flatDir = Vector3.new(dir.X, 0, dir.Z).Unit
-                            
-                            local flatDistToBase = (Vector3.new(basePos.X, 0, basePos.Z) - Vector3.new(hrp.Position.X, 0, hrp.Position.Z)).Magnitude
-                            local moveDist = math.min(300, flatDistToBase)
-                            
-                            hrp.CFrame = hrp.CFrame + (flatDir * moveDist)
-                            task.wait(0.1)
-                            
-                            -- ៣. ចុះមកដីវិញ
-                            hrp.CFrame = hrp.CFrame - Vector3.new(0, 0, 0)
-                            task.wait(0.01)
-                        end)
-                        
-                        
-                        firePromptsInRadius(25)
                         
                         
                         -- ៤. រត់តាមដីធម្មតាមក Base វិញ (ចម្ងាយដែលនៅសល់)
