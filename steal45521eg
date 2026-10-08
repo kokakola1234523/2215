@@ -415,7 +415,7 @@ task.spawn(function()
         local distance = (hrp.Position - exactPos).Magnitude
         
         -- កំណត់ថា "ជិតដល់" (ចម្ងាយតិចជាង 5 Studs គឺឈប់រត់ ហើយរៀបចំ Teleport)
-        if distance < 15 then 
+        if distance < 20 then 
             break 
         end
         if tick() - startTime > maxDuration then 
@@ -676,13 +676,7 @@ end
                     runToExactPosition(hum, hrp, targetPart)
                 end
                 
-                -- [កែត្រង់នេះ] ប្រើ task.spawn ឱ្យចុចយកស៊ុតព្រមគ្នា ដោយមិនបាច់ចាំ (គ្មាន delay)
-                task.spawn(function()
-                    for i = 1, 3 do
-                        firePromptsInRadius(15) -- ដំឡើង Radius បន្តិចឲ្យប្រាកដថាចំ
-                        task.wait(0.01)
-                    end
-                end)
+                firePromptsInRadius(1) -- ដំឡើង Radius បន្តិចឲ្យប្រាកដថាចំ          
                 
             end
         elseif eggInWorkspace or eggInChar then
@@ -717,28 +711,17 @@ end
                             task.wait(0.01)
                         end)
                         
-                        -- [កែត្រង់នេះ] ឱ្យវាចុច Collect បណ្តើរ ពេលកំពុងរត់មក Base បណ្តើរ
-                        task.spawn(function()
-                            for i = 1, 10 do
-                                firePromptsInRadius(25)
-                                task.wait(0.1)
-                            end
-                        end)
+                        
+                        firePromptsInRadius(25)
+                        
                         
                         -- ៤. រត់តាមដីធម្មតាមក Base វិញ (ចម្ងាយដែលនៅសល់)
                         runToExactPosition(hum, hrp, typeof(basePos) == "Vector3" and basePos or basePos.Position) 
                         hrp.AssemblyLinearVelocity = Vector3.zero
                         hrp.AssemblyAngularVelocity = Vector3.zero
                         
-                        -- ៥. មកដល់ Base ភ្លាម Collect យកស៊ុតភ្លាមៗតែម្តង
-                        for i = 1, 4 do
-                            firePromptsInRadius(20)
-                            task.wait(0.05)
-                        end
-                        
                         task.wait(0.5) 
                         break
-                        -- =======================================================
                         
                     else
                         task.wait(0.1)
