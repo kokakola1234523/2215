@@ -658,6 +658,7 @@ end
     local loopCount = 0
     local maxTime = 400
     local initialHum = hum
+    task.wait(1)
 
     -- ========================================================
     local function smartMoveTo(targetPosition, isRunningToBase)
@@ -690,7 +691,7 @@ end
         
         local status = "running"
         repeat
-            task.wait(1)
+            task.wait()
             firePromptsInRadius(1)
             
             local currEggInChar = char:FindFirstChild(targetEggName, true)
@@ -703,7 +704,7 @@ end
             if isRunningToBase then
                 -- កំពុងរត់មក Base: គណនាចំងាយ ២៦។ បើជ្រុះឆ្ងាយជាង ២៦ ផ្តាច់ការរត់ទៅ Base!
                 if not currEggInChar and currentTargetPart then
-                    if (hrp.Position - currentTargetPart.Position).Magnitude > 26 then
+                    if (hrp.Position - currentTargetPart.Position).Magnitude > 21 then
                         status = "egg_dropped"
                     end
                 elseif not currEggInChar and not currEggInWS then
