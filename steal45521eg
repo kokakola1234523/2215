@@ -690,7 +690,7 @@ end
         
         local status = "running"
         repeat
-            task.wait()
+            task.wait(1)
             firePromptsInRadius(1)
             
             local currEggInChar = char:FindFirstChild(targetEggName, true)
