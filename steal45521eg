@@ -658,7 +658,7 @@ end
     local loopCount = 0
     local maxTime = 400
     local initialHum = hum
-    task.wait(1)
+    task.wait(0.5)
 
     -- ========================================================
     local function smartMoveTo(targetPosition, isRunningToBase)
